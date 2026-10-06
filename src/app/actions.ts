@@ -204,6 +204,7 @@ export async function updateProfileAction(formData: FormData) {
     },
   });
 
+  revalidatePath("/", "layout");
   revalidatePath("/profile");
   revalidatePath("/dashboard");
   revalidatePath("/invoices");
@@ -239,6 +240,7 @@ export async function savePastTurnoverAction(formData: FormData) {
     },
   });
 
+  revalidatePath("/", "layout");
   revalidatePath("/profile");
   revalidatePath("/dashboard");
 
@@ -280,7 +282,9 @@ export async function createClientAction(formData: FormData) {
     },
   });
 
+  revalidatePath("/", "layout");
   revalidatePath("/clients");
+  revalidatePath("/invoices/new");
   return { success: true, client };
 }
 
@@ -315,7 +319,9 @@ export async function updateClientAction(id: string, formData: FormData) {
     },
   });
 
+  revalidatePath("/", "layout");
   revalidatePath("/clients");
+  revalidatePath("/invoices/new");
   return { success: true };
 }
 
@@ -328,7 +334,9 @@ export async function toggleArchiveClientAction(id: string, isArchived: boolean)
     data: { isArchived },
   });
 
+  revalidatePath("/", "layout");
   revalidatePath("/clients");
+  revalidatePath("/invoices/new");
   return { success: true };
 }
 
@@ -366,6 +374,7 @@ export async function createInvoiceAction(payload: {
       lineItems: payload.lineItems,
     });
 
+    revalidatePath("/", "layout");
     revalidatePath("/invoices");
     revalidatePath("/dashboard");
     return { success: true, invoiceId: invoice.id };
@@ -401,8 +410,10 @@ export async function updateInvoiceAction(
       lineItems: payload.lineItems,
     });
 
+    revalidatePath("/", "layout");
     revalidatePath(`/invoices/${invoiceId}`);
     revalidatePath("/invoices");
+    revalidatePath("/dashboard");
     return { success: true };
   } catch (err: any) {
     return { error: err.message };
@@ -415,6 +426,7 @@ export async function issueInvoiceAction(invoiceId: string) {
 
   try {
     const issued = await issueInvoice(session.tenantId, invoiceId);
+    revalidatePath("/", "layout");
     revalidatePath(`/invoices/${invoiceId}`);
     revalidatePath("/invoices");
     revalidatePath("/dashboard");
@@ -430,6 +442,7 @@ export async function toggleInvoicePaymentAction(invoiceId: string, paid: boolea
 
   try {
     await toggleInvoicePayment(session.tenantId, invoiceId, paid);
+    revalidatePath("/", "layout");
     revalidatePath(`/invoices/${invoiceId}`);
     revalidatePath("/invoices");
     revalidatePath("/dashboard");
@@ -445,6 +458,7 @@ export async function cancelInvoiceAction(invoiceId: string, reason: string) {
 
   try {
     await cancelInvoice(session.tenantId, invoiceId, reason);
+    revalidatePath("/", "layout");
     revalidatePath(`/invoices/${invoiceId}`);
     revalidatePath("/invoices");
     revalidatePath("/dashboard");
@@ -460,6 +474,7 @@ export async function deleteInvoiceAction(invoiceId: string) {
 
   try {
     await deleteDraftInvoice(session.tenantId, invoiceId);
+    revalidatePath("/", "layout");
     revalidatePath("/invoices");
     revalidatePath("/dashboard");
     return { success: true };

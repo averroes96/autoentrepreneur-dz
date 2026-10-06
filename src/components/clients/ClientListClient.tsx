@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   createClientAction,
   updateClientAction,
@@ -43,6 +44,7 @@ export function ClientListClient({
 }: {
   initialClients: ClientData[];
 }) {
+  const router = useRouter();
   const [clients, setClients] = useState<ClientData[]>(initialClients);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"ALL" | "PROFESSIONAL" | "INDIVIDUAL" | "ARCHIVED">("ALL");
@@ -125,6 +127,7 @@ export function ClientListClient({
         }
       }
       closeModal();
+      router.refresh();
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'enregistrement");
     } finally {
@@ -138,6 +141,7 @@ export function ClientListClient({
     setClients((prev) =>
       prev.map((c) => (c.id === client.id ? { ...c, isArchived: newArchived } : c))
     );
+    router.refresh();
   };
 
   return (

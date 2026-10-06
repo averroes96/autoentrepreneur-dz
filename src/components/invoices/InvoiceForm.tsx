@@ -178,6 +178,7 @@ export function InvoiceForm({
           return;
         }
         router.push(`/invoices/${existingInvoice.id}`);
+        router.refresh();
       } else {
         const res = await createInvoiceAction({
           clientId,
@@ -192,6 +193,7 @@ export function InvoiceForm({
           return;
         }
         router.push(`/invoices/${res.invoiceId}`);
+        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'enregistrement");

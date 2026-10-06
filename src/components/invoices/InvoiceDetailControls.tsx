@@ -104,6 +104,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       }
       deleteModalRef.current?.close();
       router.push("/invoices");
+      router.refresh();
     } catch (err: any) {
       alert(err.message || "Erreur lors de la suppression");
       setLoading(false);

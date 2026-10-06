@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { updateProfileAction, savePastTurnoverAction } from "@/app/actions";
 import { formatDZD } from "@/lib/tax";
 import { REGULATORY_CONFIG } from "@/config/regulatory";
@@ -51,6 +52,7 @@ export function ProfileFormClient({
   profile: ProfileData;
   pastTurnovers: PastTurnoverData[];
 }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export function ProfileFormClient({
       } else {
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
+        router.refresh();
       }
     } catch (err: any) {
       setError(err.message || "Erreur lors de la mise à jour");
@@ -100,6 +103,7 @@ export function ProfileFormClient({
         setTurnoverSuccess(true);
         setTurnoverAmount("");
         setTimeout(() => setTurnoverSuccess(false), 3000);
+        router.refresh();
       }
     } catch (err: any) {
       alert(err.message || "Erreur enregistrement historique");
