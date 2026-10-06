@@ -104,6 +104,42 @@ for (const f of files) {
     modified = true;
   }
 
+  // 10. Guard against sparse _info2 in flushComponentPerformance
+  if (content.includes("var _info2 = debugInfo[_i7];\n          if (\"number\" === typeof _info2.time)")) {
+    content = content.replaceAll(
+      "var _info2 = debugInfo[_i7];\n          if (\"number\" === typeof _info2.time)",
+      "var _info2 = debugInfo[_i7];\n          if (_info2 && \"number\" === typeof _info2.time)"
+    );
+    modified = true;
+  }
+
+  // 11. Guard against sparse candidateInfo in flushComponentPerformance
+  if (content.includes("var candidateInfo = debugInfo[j];\n                if (\"string\" === typeof candidateInfo.name)")) {
+    content = content.replaceAll(
+      "var candidateInfo = debugInfo[j];\n                if (\"string\" === typeof candidateInfo.name)",
+      "var candidateInfo = debugInfo[j];\n                if (candidateInfo && \"string\" === typeof candidateInfo.name)"
+    );
+    modified = true;
+  }
+
+  // 12. Guard against sparse _candidateInfo in flushComponentPerformance
+  if (content.includes("var _candidateInfo = debugInfo[_j];\n                if (\"string\" === typeof _candidateInfo.name)")) {
+    content = content.replaceAll(
+      "var _candidateInfo = debugInfo[_j];\n                if (\"string\" === typeof _candidateInfo.name)",
+      "var _candidateInfo = debugInfo[_j];\n                if (_candidateInfo && \"string\" === typeof _candidateInfo.name)"
+    );
+    modified = true;
+  }
+
+  // 13. Guard flushInitialRenderPerformance against throwing unhandled errors into setTimeout
+  if (content.includes("function flushInitialRenderPerformance(response) {\n      if (response._replayConsole) {")) {
+    content = content.replaceAll(
+      "flushInitialRenderPerformance(response) {\n      if (response._replayConsole) {\n        var rootChunk = getChunk(response, 0);\n        isArrayImpl(rootChunk._children) &&\n          (markAllTracksInOrder(),\n          flushComponentPerformance(\n            response,\n            rootChunk,\n            0,\n            -Infinity,\n            -Infinity\n          ));\n      }\n    }",
+      "flushInitialRenderPerformance(response) {\n      try { if (response._replayConsole) {\n        var rootChunk = getChunk(response, 0);\n        isArrayImpl(rootChunk._children) &&\n          (markAllTracksInOrder(),\n          flushComponentPerformance(\n            response,\n            rootChunk,\n            0,\n            -Infinity,\n            -Infinity\n          ));\n      } } catch (e) {}\n    }"
+    );
+    modified = true;
+  }
+
   if (modified) {
     fs.writeFileSync(f, content, "utf8");
     count++;
