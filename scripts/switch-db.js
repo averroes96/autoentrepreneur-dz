@@ -27,11 +27,14 @@ if (target === "postgres" || target === "postgresql") {
   }
 } else {
   console.log("Switching Prisma schema to SQLite (Local Dev)...");
-  content = content.replace(
+  let baseContent = fs.existsSync(postgresSchemaPath)
+    ? fs.readFileSync(postgresSchemaPath, "utf8")
+    : fs.readFileSync(schemaPath, "utf8");
+  baseContent = baseContent.replace(
     /datasource db \{[\s\S]*?\}/,
     `datasource db {\n  provider = "sqlite"\n  url      = env("DATABASE_URL")\n}`
   );
-  fs.writeFileSync(schemaPath, content, "utf8");
+  fs.writeFileSync(schemaPath, baseContent, "utf8");
 }
 
 console.log("Regenerating Prisma client...");

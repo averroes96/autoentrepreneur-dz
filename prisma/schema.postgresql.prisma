@@ -14,12 +14,16 @@ model Tenant {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  users              User[]
-  profile            AutoEntrepreneurProfile?
-  clients            Client[]
-  invoices           Invoice[]
-  invoiceSequences   InvoiceSequence[]
-  pastTurnovers      PastTurnover[]
+  users               User[]
+  profile             AutoEntrepreneurProfile?
+  clients             Client[]
+  invoices            Invoice[]
+  invoiceSequences    InvoiceSequence[]
+  quotes              Quote[]
+  quoteSequences      QuoteSequence[]
+  creditNotes         CreditNote[]
+  creditNoteSequences CreditNoteSequence[]
+  pastTurnovers       PastTurnover[]
 }
 
 model User {
@@ -56,6 +60,8 @@ model AutoEntrepreneurProfile {
   casnosScheme       String    @default("FLAT_24000") // FLAT_24000, STANDARD
   vatExemptionNote   String    @default("Exonéré de la TVA en vertu de la loi n° 22-23 relative au statut de l'auto-entrepreneur et du Code des Impôts Directs.")
   invoicePrefix      String    @default("FAC")
+  quotePrefix        String    @default("DEV")
+  creditNotePrefix   String    @default("AVR")
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -63,22 +69,24 @@ model AutoEntrepreneurProfile {
 }
 
 model Client {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   tenantId    String
   name        String
-  clientType  String   @default("PROFESSIONAL") // PROFESSIONAL, INDIVIDUAL
+  clientType  String       @default("PROFESSIONAL") // PROFESSIONAL, INDIVIDUAL
   address     String
   nif         String?
   nis         String?
   rc          String?
   email       String?
   phone       String?
-  isArchived  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isArchived  Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoices    Invoice[]
+  quotes      Quote[]
+  creditNotes CreditNote[]
 
   @@index([tenantId])
 }
@@ -114,16 +122,20 @@ model Invoice {
   cancellationReason String?
   notes              String?
   showDetailedItems  Boolean   @default(false)
+  sourceQuoteId      String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  client             Client    @relation(fields: [clientId], references: [id])
+  tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client             Client            @relation(fields: [clientId], references: [id])
   lineItems          InvoiceLineItem[]
+  sourceQuote        Quote?            @relation(fields: [sourceQuoteId], references: [id], onDelete: SetNull)
+  creditNotes        CreditNote[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
   @@index([clientId])
+  @@index([sourceQuoteId])
 }
 
 model InvoiceLineItem {
@@ -139,6 +151,125 @@ model InvoiceLineItem {
   invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
+}
+
+model Quote {
+  id                 String          @id @default(uuid())
+  tenantId           String
+  clientId           String
+  quoteNumber        String?
+  sequenceNumber     Int?
+  fiscalYear         Int
+  status             String          @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED, CONVERTED
+  issueDate          DateTime
+  validUntil         DateTime?
+  currency           String          @default("DZD")
+  total              Float           @default(0)
+  notes              String?
+  vatExemptionNote   String
+  showDetailedItems  Boolean         @default(false)
+  sellerSnapshot     String?
+  clientSnapshot     String?
+  sentAt             DateTime?
+  convertedAt        DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client             Client          @relation(fields: [clientId], references: [id])
+  lineItems          QuoteLineItem[]
+  invoices           Invoice[]
+
+  @@unique([tenantId, quoteNumber])
+  @@index([tenantId])
+  @@index([clientId])
+}
+
+model QuoteLineItem {
+  id          String  @id @default(uuid())
+  quoteId     String
+  description String
+  quantity    Float
+  unitPrice   Float
+  totalPrice  Float
+  currency    String  @default("DZD")
+  position    Int     @default(0)
+
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+}
+
+model QuoteSequence {
+  id           String @id @default(uuid())
+  tenantId     String
+  fiscalYear   Int
+  lastSequence Int    @default(0)
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fiscalYear])
+}
+
+model CreditNote {
+  id                 String               @id @default(uuid())
+  tenantId           String
+  clientId           String
+  originalInvoiceId  String
+  creditNoteNumber   String?
+  sequenceNumber     Int?
+  fiscalYear         Int
+  status             String               @default("DRAFT") // DRAFT, ISSUED
+  refundStatus       String               @default("PENDING") // PENDING, REFUNDED
+  issueDate          DateTime
+  refundedAt         DateTime?
+  reason             String
+  currency           String               @default("DZD")
+  total              Float                @default(0)
+  notes              String?
+  vatExemptionNote   String
+  sellerSnapshot     String?
+  clientSnapshot     String?
+  issuedAt           DateTime?
+  showDetailedItems  Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client             Client               @relation(fields: [clientId], references: [id])
+  originalInvoice    Invoice              @relation(fields: [originalInvoiceId], references: [id], onDelete: Restrict)
+  lineItems          CreditNoteLineItem[]
+
+  @@unique([tenantId, creditNoteNumber])
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([originalInvoiceId])
+}
+
+model CreditNoteLineItem {
+  id           String     @id @default(uuid())
+  creditNoteId String
+  description  String
+  quantity     Float
+  unitPrice    Float
+  totalPrice   Float
+  currency     String     @default("DZD")
+  position     Int        @default(0)
+
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  @@index([creditNoteId])
+}
+
+model CreditNoteSequence {
+  id           String @id @default(uuid())
+  tenantId     String
+  fiscalYear   Int
+  lastSequence Int    @default(0)
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fiscalYear])
 }
 
 model PastTurnover {

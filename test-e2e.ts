@@ -10,7 +10,21 @@ import {
   calculateIfu,
   evaluateThreeYearRule,
 } from "./src/lib/tax";
-import { generateInvoicePdfBuffer } from "./src/lib/pdfGenerator";
+import {
+  generateInvoicePdfBuffer,
+  generateQuotePdfBuffer,
+  generateCreditNotePdfBuffer,
+} from "./src/lib/pdfGenerator";
+import {
+  createDraftQuote,
+  finalizeAndSendQuote,
+  updateQuoteStatus,
+  convertQuoteToInvoice,
+} from "./src/lib/quotes";
+import {
+  createCreditNoteFromInvoice,
+  toggleCreditNoteRefundStatus,
+} from "./src/lib/creditNotes";
 
 async function runTests() {
   console.log("=== STARTING PHASE 1 COMPLIANCE & INTEGRATION TEST ===");
@@ -115,6 +129,154 @@ async function runTests() {
   }
 
   console.log("=== ALL PHASE 1 INTEGRATION TESTS PASSED PERFECTLY ===");
+
+  console.log("\n=== STARTING PHASE 2 QUOTES & CREDIT NOTES INTEGRATION TEST ===");
+
+  // 10. Create Draft Quote (Devis)
+  const quoteDraft = await createDraftQuote({
+    tenantId,
+    clientId: client.id,
+    issueDate: new Date(),
+    validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    notes: "Offre valable 30 jours. Acompte de 30% à la commande.",
+    lineItems: [
+      { description: "Développement Application Web Next.js", quantity: 1, unitPrice: 180_000 },
+      { description: "Hébergement et configuration DNS Cloudflare", quantity: 1, unitPrice: 20_000 },
+    ],
+  });
+  console.log("✓ Draft Quote Created:", quoteDraft.id, "| Total:", quoteDraft.total, "| Status:", quoteDraft.status);
+  if (quoteDraft.status !== "DRAFT" || quoteDraft.quoteNumber !== null || quoteDraft.total !== 200_000) {
+    throw new Error("Draft quote validation failed");
+  }
+
+  // 11. Finalize and Send Quote
+  const sentQuote = await finalizeAndSendQuote(tenantId, quoteDraft.id);
+  console.log("✓ Quote Finalized with sequential number:", sentQuote.quoteNumber, "| Status:", sentQuote.status);
+  if (sentQuote.status !== "SENT" || !sentQuote.quoteNumber?.startsWith("DEV-2026-")) {
+    throw new Error("Finalized quote must have valid DEV-2026- sequential number");
+  }
+
+  // 12. Generate Quote PDF
+  console.log("Testing Quote PDF generation with PDFKit engine...");
+  const quotePdfBuffer = await generateQuotePdfBuffer({
+    quote: sentQuote as any,
+    seller: profile,
+    client: client as any,
+  });
+  console.log("✓ Quote PDF generated successfully, byte size:", quotePdfBuffer.length);
+  if (quotePdfBuffer.length < 1000) {
+    throw new Error("Quote PDF buffer too small");
+  }
+
+  // 13. Accept Quote
+  const acceptedQuote = await updateQuoteStatus(tenantId, sentQuote.id, "ACCEPTED");
+  console.log("✓ Quote marked as ACCEPTED:", acceptedQuote.status);
+
+  // 14. Convert Quote to Invoice (1-Click Conversion)
+  const convertedInvoiceDraft = await convertQuoteToInvoice(tenantId, acceptedQuote.id);
+  console.log(
+    "✓ Quote converted to Invoice Draft:",
+    convertedInvoiceDraft.id,
+    "| Linked sourceQuoteId:",
+    convertedInvoiceDraft.sourceQuoteId,
+    "| Total:",
+    convertedInvoiceDraft.total
+  );
+  if (
+    convertedInvoiceDraft.sourceQuoteId !== acceptedQuote.id ||
+    convertedInvoiceDraft.total !== 200_000 ||
+    convertedInvoiceDraft.status !== "DRAFT"
+  ) {
+    throw new Error("Converted invoice does not match source quote");
+  }
+
+  // Verify quote status changed to CONVERTED
+  const verifiedQuote = await db.quote.findUnique({ where: { id: acceptedQuote.id } });
+  if (verifiedQuote?.status !== "CONVERTED" || !verifiedQuote.convertedAt) {
+    throw new Error("Quote status should be CONVERTED with convertedAt timestamp");
+  }
+  console.log("✓ Source quote status confirmed as CONVERTED at:", verifiedQuote.convertedAt);
+
+  // 15. Issue the converted Invoice
+  const issuedConvertedInvoice = await issueInvoice(tenantId, convertedInvoiceDraft.id);
+  console.log("✓ Converted Invoice Issued:", issuedConvertedInvoice.invoiceNumber);
+
+  // 16. Mark Converted Invoice as Paid
+  await toggleInvoicePayment(tenantId, issuedConvertedInvoice.id, true);
+  console.log("✓ Converted Invoice marked as PAID");
+
+  // 17. Create Credit Note (Avoir) referencing the issued invoice
+  const creditNote = await createCreditNoteFromInvoice({
+    tenantId,
+    originalInvoiceId: issuedConvertedInvoice.id,
+    reason: "Remise commerciale exceptionnelle suite à accord client",
+    lineItems: [
+      { description: "Remise accordée sur développement", quantity: 1, unitPrice: 50_000, totalPrice: 50_000 },
+    ],
+  });
+  console.log(
+    "✓ Credit Note (Avoir) Issued:",
+    creditNote.creditNoteNumber,
+    "| Ref Invoice:",
+    creditNote.originalInvoice.invoiceNumber,
+    "| Total:",
+    creditNote.total,
+    "| RefundStatus:",
+    creditNote.refundStatus
+  );
+  if (
+    !creditNote.creditNoteNumber?.startsWith("AVR-2026-") ||
+    creditNote.total !== 50_000 ||
+    creditNote.status !== "ISSUED" ||
+    creditNote.refundStatus !== "PENDING"
+  ) {
+    throw new Error("Credit note validation failed");
+  }
+
+  // 18. Generate Credit Note PDF
+  console.log("Testing Credit Note PDF generation with PDFKit engine...");
+  const creditNotePdfBuffer = await generateCreditNotePdfBuffer({
+    creditNote: {
+      ...creditNote,
+      originalInvoiceNumber: issuedConvertedInvoice.invoiceNumber,
+    } as any,
+    seller: profile,
+    client: client as any,
+  });
+  console.log("✓ Credit Note PDF generated successfully, byte size:", creditNotePdfBuffer.length);
+  if (creditNotePdfBuffer.length < 1000) {
+    throw new Error("Credit note PDF buffer too small");
+  }
+
+  // 19. Refund the Credit Note & Test Net Turnover Deduction
+  const refundedCreditNote = await toggleCreditNoteRefundStatus(tenantId, creditNote.id, true);
+  console.log(
+    "✓ Credit Note refunded:",
+    refundedCreditNote.refundStatus,
+    "| RefundedAt:",
+    refundedCreditNote.refundedAt
+  );
+
+  // Calculate net turnover with refund deduction
+  const allPaid = await db.invoice.findMany({
+    where: { tenantId, status: "ISSUED", paymentStatus: "PAID", fiscalYear: 2026 },
+  });
+  const grossPaid = allPaid.reduce((acc, i) => acc + i.total, 0);
+
+  const allRefundedNotes = await db.creditNote.findMany({
+    where: { tenantId, fiscalYear: 2026, status: "ISSUED", refundStatus: "REFUNDED" },
+  });
+  const totalRefunded = allRefundedNotes.reduce((acc, cn) => acc + cn.total, 0);
+  const netPaid = Math.max(0, grossPaid - totalRefunded);
+
+  console.log(
+    `✓ Turnover verification: Gross Paid = ${grossPaid} DZD | Total Refunded = ${totalRefunded} DZD | Net Paid = ${netPaid} DZD`
+  );
+  if (totalRefunded < 50_000) {
+    throw new Error("Refunded credit note should be included in turnover deduction");
+  }
+
+  console.log("=== ALL PHASE 2 QUOTE & CREDIT NOTE TESTS PASSED PERFECTLY ===");
 }
 
 runTests()

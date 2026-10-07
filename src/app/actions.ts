@@ -18,9 +18,30 @@ import {
   cancelInvoice,
   deleteDraftInvoice,
 } from "@/lib/invoicing";
+import {
+  createDraftQuote,
+  updateDraftQuote,
+  finalizeAndSendQuote,
+  updateQuoteStatus,
+  convertQuoteToInvoice,
+  deleteDraftQuote,
+} from "@/lib/quotes";
+import {
+  createCreditNoteFromInvoice,
+  toggleCreditNoteRefundStatus,
+} from "@/lib/creditNotes";
 import { REGULATORY_CONFIG } from "@/config/regulatory";
-import { generateInvoicePdfBuffer } from "@/lib/pdfGenerator";
-import { sendInvoiceEmail, sendPaymentReceiptEmail } from "@/lib/email";
+import {
+  generateInvoicePdfBuffer,
+  generateQuotePdfBuffer,
+  generateCreditNotePdfBuffer,
+} from "@/lib/pdfGenerator";
+import {
+  sendInvoiceEmail,
+  sendPaymentReceiptEmail,
+  sendQuoteEmail,
+  sendCreditNoteEmail,
+} from "@/lib/email";
 import { persistInvoicePdf } from "@/lib/storage";
 import { captureException } from "@/lib/sentry";
 
@@ -171,6 +192,8 @@ export async function updateProfileAction(formData: FormData) {
   const activityCode = (formData.get("activityCode") as string)?.trim() || "";
   const activityLabel = (formData.get("activityLabel") as string)?.trim() || "";
   const invoicePrefix = (formData.get("invoicePrefix") as string)?.trim().toUpperCase() || "FAC";
+  const quotePrefix = (formData.get("quotePrefix") as string)?.trim().toUpperCase() || "DEV";
+  const creditNotePrefix = (formData.get("creditNotePrefix") as string)?.trim().toUpperCase() || "AVR";
   const vatExemptionNote = (formData.get("vatExemptionNote") as string)?.trim() || REGULATORY_CONFIG.defaultVatExemptionNote;
   const casnosStatus = (formData.get("casnosStatus") as string) || "AFFILIATED";
   const casnosScheme = (formData.get("casnosScheme") as string) || "FLAT_24000";
@@ -193,6 +216,8 @@ export async function updateProfileAction(formData: FormData) {
       activityCode,
       activityLabel,
       invoicePrefix,
+      quotePrefix,
+      creditNotePrefix,
       vatExemptionNote,
       casnosStatus,
       casnosScheme,
@@ -210,6 +235,8 @@ export async function updateProfileAction(formData: FormData) {
       activityCode,
       activityLabel,
       invoicePrefix,
+      quotePrefix,
+      creditNotePrefix,
       vatExemptionNote,
       casnosStatus,
       casnosScheme,
@@ -574,6 +601,386 @@ export async function emailInvoiceAction(invoiceId: string, recipientEmail?: str
     };
   } catch (err: any) {
     captureException(err, { action: "emailInvoiceAction", invoiceId });
+    return { error: err.message || "Erreur interne lors de l'envoi." };
+  }
+}
+
+/* =========================================================================
+   QUOTE (DEVIS) ACTIONS
+========================================================================= */
+
+export async function createQuoteAction(payload: {
+  clientId: string;
+  issueDate: string;
+  validUntil?: string | null;
+  notes?: string;
+  showDetailedItems?: boolean;
+  lineItems: Array<{
+    description: string;
+    quantity?: number;
+    unitPrice?: number;
+    totalPrice?: number;
+  }>;
+}) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  if (!payload.clientId) return { error: "Veuillez sélectionner un client." };
+  if (!payload.lineItems || payload.lineItems.length === 0) {
+    return { error: "Veuillez ajouter au moins une prestation." };
+  }
+
+  try {
+    const quote = await createDraftQuote({
+      tenantId: session.tenantId,
+      clientId: payload.clientId,
+      issueDate: new Date(payload.issueDate),
+      validUntil: payload.validUntil ? new Date(payload.validUntil) : null,
+      notes: payload.notes,
+      showDetailedItems: payload.showDetailedItems,
+      lineItems: payload.lineItems,
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath("/quotes");
+    revalidatePath("/dashboard");
+
+    return { success: true, quoteId: quote.id };
+  } catch (err: any) {
+    captureException(err, { action: "createQuoteAction" });
+    return { error: err.message || "Erreur lors de la création du devis." };
+  }
+}
+
+export async function updateQuoteAction(
+  quoteId: string,
+  payload: {
+    clientId?: string;
+    issueDate?: string;
+    validUntil?: string | null;
+    notes?: string;
+    showDetailedItems?: boolean;
+    lineItems?: Array<{
+      description: string;
+      quantity?: number;
+      unitPrice?: number;
+      totalPrice?: number;
+    }>;
+  }
+) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    await updateDraftQuote(session.tenantId, quoteId, {
+      clientId: payload.clientId,
+      issueDate: payload.issueDate ? new Date(payload.issueDate) : undefined,
+      validUntil: payload.validUntil !== undefined ? (payload.validUntil ? new Date(payload.validUntil) : null) : undefined,
+      notes: payload.notes,
+      showDetailedItems: payload.showDetailedItems,
+      lineItems: payload.lineItems,
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath("/quotes");
+    revalidatePath(`/quotes/${quoteId}`);
+
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "updateQuoteAction", quoteId });
+    return { error: err.message || "Erreur lors de la modification du devis." };
+  }
+}
+
+export async function finalizeAndSendQuoteAction(quoteId: string) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    const quote = await finalizeAndSendQuote(session.tenantId, quoteId);
+
+    revalidatePath("/", "layout");
+    revalidatePath("/quotes");
+    revalidatePath(`/quotes/${quoteId}`);
+    revalidatePath("/dashboard");
+
+    return { success: true, quoteNumber: quote.quoteNumber };
+  } catch (err: any) {
+    captureException(err, { action: "finalizeAndSendQuoteAction", quoteId });
+    return { error: err.message || "Erreur lors de la finalisation du devis." };
+  }
+}
+
+export async function updateQuoteStatusAction(
+  quoteId: string,
+  status: "ACCEPTED" | "REJECTED"
+) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    await updateQuoteStatus(session.tenantId, quoteId, status);
+
+    revalidatePath("/", "layout");
+    revalidatePath("/quotes");
+    revalidatePath(`/quotes/${quoteId}`);
+
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "updateQuoteStatusAction", quoteId, status });
+    return { error: err.message || "Erreur lors de la mise à jour du statut." };
+  }
+}
+
+export async function convertQuoteToInvoiceAction(quoteId: string) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    const invoice = await convertQuoteToInvoice(session.tenantId, quoteId);
+
+    revalidatePath("/", "layout");
+    revalidatePath("/quotes");
+    revalidatePath(`/quotes/${quoteId}`);
+    revalidatePath("/invoices");
+    revalidatePath("/dashboard");
+
+    return { success: true, invoiceId: invoice.id };
+  } catch (err: any) {
+    captureException(err, { action: "convertQuoteToInvoiceAction", quoteId });
+    return { error: err.message || "Erreur lors de la conversion en facture." };
+  }
+}
+
+export async function deleteQuoteAction(quoteId: string) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    await deleteDraftQuote(session.tenantId, quoteId);
+
+    revalidatePath("/", "layout");
+    revalidatePath("/quotes");
+
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "deleteQuoteAction", quoteId });
+    return { error: err.message || "Erreur lors de la suppression." };
+  }
+}
+
+export async function emailQuoteAction(quoteId: string, recipientEmail?: string) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    const quote = await db.quote.findFirst({
+      where: { id: quoteId, tenantId: session.tenantId },
+      include: {
+        client: true,
+        lineItems: { orderBy: { position: "asc" } },
+      },
+    });
+
+    if (!quote) return { error: "Devis introuvable." };
+
+    const targetEmail = recipientEmail?.trim() || quote.client.email?.trim();
+    if (!targetEmail) {
+      return { error: "Veuillez renseigner l'adresse email du client." };
+    }
+
+    const profile = await db.autoEntrepreneurProfile.findUnique({
+      where: { tenantId: session.tenantId },
+    });
+
+    if (!profile) return { error: "Profil non configuré." };
+
+    const pdfBuffer = await generateQuotePdfBuffer({
+      quote,
+      seller: {
+        fullName: profile.fullName,
+        rnaeNumber: profile.rnaeNumber,
+        nif: profile.nif,
+        address: profile.address,
+        email: profile.email,
+        phone: profile.phone,
+        activityCode: profile.activityCode,
+        activityLabel: profile.activityLabel,
+      },
+      client: quote.client,
+    });
+
+    const result = await sendQuoteEmail({
+      to: targetEmail,
+      clientName: quote.client.name,
+      quoteNumber: quote.quoteNumber || "BROUILLON",
+      totalAmount: quote.total,
+      currency: quote.currency,
+      pdfBuffer,
+      validUntil: quote.validUntil,
+      notes: quote.notes,
+      sellerName: profile.fullName,
+      sellerEmail: profile.email,
+    });
+
+    if (!result.success) {
+      return { error: result.error || "Erreur lors de l'envoi de l'email." };
+    }
+
+    return {
+      success: true,
+      recipient: targetEmail,
+      mocked: (result as any).mocked,
+    };
+  } catch (err: any) {
+    captureException(err, { action: "emailQuoteAction", quoteId });
+    return { error: err.message || "Erreur interne lors de l'envoi." };
+  }
+}
+
+/* =========================================================================
+   CREDIT NOTE (AVOIR) ACTIONS
+========================================================================= */
+
+export async function createCreditNoteAction(payload: {
+  originalInvoiceId: string;
+  reason: string;
+  issueDate?: string;
+  notes?: string;
+  showDetailedItems?: boolean;
+  lineItems?: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice?: number;
+  }>;
+}) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  if (!payload.reason || payload.reason.trim().length === 0) {
+    return { error: "Le motif de l'avoir est obligatoire." };
+  }
+
+  try {
+    const creditNote = await createCreditNoteFromInvoice({
+      tenantId: session.tenantId,
+      originalInvoiceId: payload.originalInvoiceId,
+      reason: payload.reason,
+      issueDate: payload.issueDate ? new Date(payload.issueDate) : undefined,
+      notes: payload.notes,
+      showDetailedItems: payload.showDetailedItems,
+      lineItems: payload.lineItems,
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath("/invoices");
+    revalidatePath(`/invoices/${payload.originalInvoiceId}`);
+    revalidatePath("/credit-notes");
+    revalidatePath("/dashboard");
+
+    return { success: true, creditNoteId: creditNote.id, creditNoteNumber: creditNote.creditNoteNumber };
+  } catch (err: any) {
+    captureException(err, { action: "createCreditNoteAction" });
+    return { error: err.message || "Erreur lors de la création de l'avoir." };
+  }
+}
+
+export async function toggleCreditNoteRefundAction(
+  creditNoteId: string,
+  refunded: boolean
+) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    await toggleCreditNoteRefundStatus(session.tenantId, creditNoteId, refunded);
+
+    revalidatePath("/", "layout");
+    revalidatePath("/credit-notes");
+    revalidatePath(`/credit-notes/${creditNoteId}`);
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "toggleCreditNoteRefundAction", creditNoteId });
+    return { error: err.message || "Erreur lors de la mise à jour du statut." };
+  }
+}
+
+export async function emailCreditNoteAction(
+  creditNoteId: string,
+  recipientEmail?: string
+) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    const creditNote = await db.creditNote.findFirst({
+      where: { id: creditNoteId, tenantId: session.tenantId },
+      include: {
+        client: true,
+        originalInvoice: true,
+        lineItems: { orderBy: { position: "asc" } },
+      },
+    });
+
+    if (!creditNote) return { error: "Avoir introuvable." };
+
+    const targetEmail = recipientEmail?.trim() || creditNote.client.email?.trim();
+    if (!targetEmail) {
+      return { error: "Veuillez renseigner l'adresse email du client." };
+    }
+
+    const profile = await db.autoEntrepreneurProfile.findUnique({
+      where: { tenantId: session.tenantId },
+    });
+
+    if (!profile) return { error: "Profil non configuré." };
+
+    const pdfBuffer = await generateCreditNotePdfBuffer({
+      creditNote: {
+        ...creditNote,
+        originalInvoiceNumber: creditNote.originalInvoice.invoiceNumber,
+      },
+      seller: {
+        fullName: profile.fullName,
+        rnaeNumber: profile.rnaeNumber,
+        nif: profile.nif,
+        address: profile.address,
+        email: profile.email,
+        phone: profile.phone,
+        activityCode: profile.activityCode,
+        activityLabel: profile.activityLabel,
+      },
+      client: creditNote.client,
+    });
+
+    const result = await sendCreditNoteEmail({
+      to: targetEmail,
+      clientName: creditNote.client.name,
+      creditNoteNumber: creditNote.creditNoteNumber || "BROUILLON",
+      originalInvoiceNumber: creditNote.originalInvoice.invoiceNumber || "—",
+      totalAmount: creditNote.total,
+      currency: creditNote.currency,
+      pdfBuffer,
+      reason: creditNote.reason,
+      notes: creditNote.notes,
+      sellerName: profile.fullName,
+      sellerEmail: profile.email,
+    });
+
+    if (!result.success) {
+      return { error: result.error || "Erreur lors de l'envoi de l'email." };
+    }
+
+    return {
+      success: true,
+      recipient: targetEmail,
+      mocked: (result as any).mocked,
+    };
+  } catch (err: any) {
+    captureException(err, { action: "emailCreditNoteAction", creditNoteId });
     return { error: err.message || "Erreur interne lors de l'envoi." };
   }
 }

@@ -25,6 +25,8 @@ import {
   ShieldCheck,
   Building,
   ArrowRight,
+  FileSpreadsheet,
+  RotateCcw,
 } from "lucide-react";
 import { calculateProfileCompletion } from "@/lib/profile";
 
@@ -87,16 +89,39 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
     orderBy: { fiscalYear: "desc" },
   });
 
+  // Fetch credit notes for the active fiscal year
+  const creditNotes = await db.creditNote.findMany({
+    where: {
+      tenantId: session.tenantId,
+      fiscalYear: activeYear,
+      status: "ISSUED",
+    },
+  });
+
+  // Fetch count of active quotes
+  const quotesCount = await db.quote.count({
+    where: {
+      tenantId: session.tenantId,
+      fiscalYear: activeYear,
+    },
+  });
+
   // Calculate metrics for the active fiscal year
   const issuedInvoices = invoices.filter((i) => i.status === "ISSUED");
   const paidInvoices = issuedInvoices.filter((i) => i.paymentStatus === "PAID");
   const draftInvoices = invoices.filter((i) => i.status === "DRAFT");
 
-  const totalBilledDzd = issuedInvoices.reduce((acc, i) => acc + i.total, 0);
-  const totalPaidDzd = paidInvoices.reduce((acc, i) => acc + i.total, 0);
-  const pendingPaymentDzd = totalBilledDzd - totalPaidDzd;
+  const refundedCreditNotes = creditNotes.filter((cn) => cn.refundStatus === "REFUNDED");
+  const totalRefundedCreditDzd = refundedCreditNotes.reduce((acc, cn) => acc + cn.total, 0);
 
-  // Legal turnover & tax calculations (based on paid turnover as confirmed in decision #4)
+  const totalBilledDzd = issuedInvoices.reduce((acc, i) => acc + i.total, 0);
+  const rawTotalPaidDzd = paidInvoices.reduce((acc, i) => acc + i.total, 0);
+
+  // Net collected turnover deducting refunded credit notes
+  const totalPaidDzd = Math.max(0, rawTotalPaidDzd - totalRefundedCreditDzd);
+  const pendingPaymentDzd = Math.max(0, totalBilledDzd - rawTotalPaidDzd);
+
+  // Legal turnover & tax calculations (based on net collected turnover as required by IFU regime)
   const ceiling = calculateCeilingStatus(totalPaidDzd);
   const ifu = calculateIfu(totalPaidDzd);
   const threeYearRule = evaluateThreeYearRule(activeYear, totalPaidDzd, pastTurnovers);
@@ -200,20 +225,34 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Link
               href="/invoices/new"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm shadow-sm transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-xs transition"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-3.5 h-3.5" />
               <span>Créer une facture</span>
             </Link>
             <Link
-              href="/clients"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm transition"
+              href="/quotes/new"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs shadow-xs transition"
             >
-              <Users className="w-4 h-4" />
-              <span>Nouveau client</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-sky-400" />
+              <span>Nouveau devis</span>
+            </Link>
+            <Link
+              href="/credit-notes"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-rose-500" />
+              <span>Avoirs</span>
+            </Link>
+            <Link
+              href="/clients"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs transition"
+            >
+              <Users className="w-3.5 h-3.5 text-slate-500" />
+              <span>Clients</span>
             </Link>
           </div>
         </div>

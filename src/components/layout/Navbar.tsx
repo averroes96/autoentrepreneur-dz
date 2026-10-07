@@ -7,6 +7,8 @@ import { logoutAction } from "@/app/actions";
 import {
   LayoutDashboard,
   FileText,
+  FileSpreadsheet,
+  RotateCcw,
   Users,
   Settings,
   LogOut,
@@ -28,6 +30,8 @@ export function Navbar({ user, tenantName }: NavbarProps) {
   const navItems = [
     { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
     { href: "/invoices", label: "Factures", icon: FileText },
+    { href: "/quotes", label: "Devis", icon: FileSpreadsheet },
+    { href: "/credit-notes", label: "Avoirs", icon: RotateCcw },
     { href: "/clients", label: "Clients", icon: Users },
     { href: "/profile", label: "Profil & Conformité", icon: Settings },
   ];

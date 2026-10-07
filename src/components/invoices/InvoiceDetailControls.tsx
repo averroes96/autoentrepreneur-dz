@@ -9,6 +9,7 @@ import {
   cancelInvoiceAction,
   deleteInvoiceAction,
   emailInvoiceAction,
+  createCreditNoteAction,
 } from "@/app/actions";
 import {
   Download,
@@ -23,6 +24,7 @@ import {
   CreditCard,
   Mail,
   Send,
+  RotateCcw,
 } from "lucide-react";
 
 interface InvoiceData {
@@ -30,6 +32,7 @@ interface InvoiceData {
   invoiceNumber: string | null;
   status: string;
   paymentStatus: string;
+  total?: number;
   client?: {
     email?: string | null;
     name?: string;
@@ -45,8 +48,12 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
   const issueModalRef = useRef<HTMLDialogElement>(null);
   const cancelModalRef = useRef<HTMLDialogElement>(null);
   const deleteModalRef = useRef<HTMLDialogElement>(null);
+  const creditNoteModalRef = useRef<HTMLDialogElement>(null);
 
   const [cancelReason, setCancelReason] = useState("");
+  const [creditNoteReason, setCreditNoteReason] = useState("Annulation de mission / prestation");
+  const [creditNoteNotes, setCreditNoteNotes] = useState("");
+  const [creditNoteLoading, setCreditNoteLoading] = useState(false);
 
   const emailModalRef = useRef<HTMLDialogElement>(null);
   const [recipientEmail, setRecipientEmail] = useState(invoice.client?.email || "");
@@ -146,6 +153,35 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
     }
   };
 
+  const handleCreateCreditNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!creditNoteReason.trim()) {
+      alert("Le motif de l'avoir est obligatoire.");
+      return;
+    }
+    setCreditNoteLoading(true);
+    try {
+      const res = await createCreditNoteAction({
+        originalInvoiceId: invoice.id,
+        reason: creditNoteReason.trim(),
+        notes: creditNoteNotes.trim() || undefined,
+      });
+
+      if (res?.error) {
+        alert(res.error);
+        setCreditNoteLoading(false);
+        return;
+      }
+
+      creditNoteModalRef.current?.close();
+      router.push(`/credit-notes/${res.creditNoteId}`);
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || "Erreur lors de la création de l'avoir");
+      setCreditNoteLoading(false);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
       {/* If DRAFT */}
@@ -225,6 +261,17 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             <Download className="w-3.5 h-3.5" />
             <span>Télécharger PDF</span>
           </a>
+
+          {/* Create Credit Note Action */}
+          <button
+            type="button"
+            onClick={() => creditNoteModalRef.current?.showModal()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50/70 hover:bg-rose-100/80 text-rose-700 text-xs font-medium border border-rose-200/80 shadow-2xs transition cursor-pointer"
+            title="Émettre une facture d'avoir pour rectifier ou rembourser cette facture"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Créer un Avoir</span>
+          </button>
 
           {/* Cancel Action */}
           <button
@@ -471,6 +518,105 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{emailLoading ? "Envoi en cours..." : "Envoyez"}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </dialog>
+
+      {/* Modal: Create Credit Note */}
+      <dialog
+        ref={creditNoteModalRef}
+        className="rounded-2xl shadow-2xl p-0 backdrop:bg-slate-900/50 backdrop:backdrop-blur-xs max-w-lg w-full m-auto border border-slate-200"
+      >
+        <div className="bg-white p-6">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center">
+                <RotateCcw className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Émettre une Facture d'Avoir</h2>
+                <p className="text-xs text-slate-500">Rattachée à la facture {invoice.invoiceNumber || "en cours"}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => creditNoteModalRef.current?.close()}
+              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <form onSubmit={handleCreateCreditNote} className="space-y-4">
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">
+              <strong>Obligation réglementaire :</strong> L'émission d'un avoir génère un document comptable officiel avec numéro séquentiel unique (AVR-YYYY-XXXX). Il rectifie la facture d'origine et déduit le montant de votre chiffre d'affaires imposable au titre de l'IFU.
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Motif légal de l'avoir <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {[
+                  "Annulation de mission / prestation",
+                  "Remise commerciale accordée",
+                  "Erreur de facturation sur montant",
+                  "Prestation partielle non exécutée",
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setCreditNoteReason(preset)}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg border transition cursor-pointer ${
+                      creditNoteReason === preset
+                        ? "bg-rose-50 border-rose-300 text-rose-700 font-semibold"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                required
+                value={creditNoteReason}
+                onChange={(e) => setCreditNoteReason(e.target.value)}
+                placeholder="Précisez le motif légal..."
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Modalités de remboursement ou remarques (facultatif)
+              </label>
+              <textarea
+                rows={2}
+                value={creditNoteNotes}
+                onChange={(e) => setCreditNoteNotes(e.target.value)}
+                placeholder="Ex : Virement de remboursement émis le..."
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => creditNoteModalRef.current?.close()}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={creditNoteLoading || !creditNoteReason.trim()}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{creditNoteLoading ? "Génération..." : "Émettre l'Avoir officiel"}</span>
               </button>
             </div>
           </form>

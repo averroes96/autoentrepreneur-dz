@@ -246,3 +246,500 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
     }
   });
 }
+
+export interface QuotePdfData {
+  quote: {
+    quoteNumber: string | null;
+    issueDate: Date | string;
+    validUntil?: Date | string | null;
+    total: number;
+    currency: string;
+    vatExemptionNote: string;
+    notes?: string | null;
+    sellerSnapshot?: string | null;
+    clientSnapshot?: string | null;
+    lineItems: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }>;
+  };
+  seller: {
+    fullName: string;
+    rnaeNumber: string;
+    nif: string;
+    address: string;
+    email: string;
+    phone: string;
+    activityCode: string;
+    activityLabel: string;
+  };
+  client: {
+    name: string;
+    clientType: string;
+    address: string;
+    nif?: string | null;
+    nis?: string | null;
+    rc?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  };
+}
+
+export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 40,
+        info: {
+          Title: `Devis ${data.quote.quoteNumber || "Brouillon"}`,
+          Author: data.seller.fullName,
+          Subject: "Devis Auto-Entrepreneur Algérie (Loi 22-23)",
+        },
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", (err) => reject(err));
+
+      const seller = data.quote.sellerSnapshot
+        ? JSON.parse(data.quote.sellerSnapshot)
+        : data.seller;
+
+      const client = data.quote.clientSnapshot
+        ? JSON.parse(data.quote.clientSnapshot)
+        : data.client;
+
+      const pageWidth = 595.28;
+      const margin = 40;
+      const contentWidth = pageWidth - margin * 2;
+
+      // Theme colors for Devis: Classic slate & sky accent
+      const accentColor = "#0284c7"; // Sky 600
+      const darkColor = "#0f172a";   // Slate 900
+      const mutedColor = "#64748b";  // Slate 500
+      const lightBg = "#f8fafc";     // Slate 50
+      const borderColor = "#e2e8f0"; // Slate 200
+
+      // Top colored bar
+      doc.rect(margin, margin, contentWidth, 3).fill(accentColor);
+
+      doc.y = margin + 15;
+      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("DEVIS", margin, doc.y);
+      doc
+        .fontSize(8.5)
+        .font("Helvetica-Bold")
+        .fillColor(accentColor)
+        .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / PROFORMA)");
+
+      // Metadata on the right
+      const metaY = margin + 15;
+      const dateStr = new Date(data.quote.issueDate).toLocaleDateString("fr-DZ", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
+      doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
+      doc.text("N° de Devis :", 360, metaY, { width: 90, align: "right" });
+      doc
+        .font("Helvetica-Bold")
+        .fillColor(darkColor)
+        .text(data.quote.quoteNumber || "PROJET BROUILLON", 455, metaY, { width: 100, align: "right" });
+
+      doc.font("Helvetica").fillColor(mutedColor);
+      doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
+      doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
+
+      if (data.quote.validUntil) {
+        const validStr = new Date(data.quote.validUntil).toLocaleDateString("fr-DZ", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        doc.font("Helvetica").fillColor(mutedColor);
+        doc.text("Valable jusqu'au :", 350, metaY + 28, { width: 100, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 455, metaY + 28, { width: 100, align: "right" });
+      }
+
+      // --- SENDER & CLIENT CARDS ---
+      const cardY = margin + 65;
+      const cardWidth = (contentWidth - 16) / 2;
+      const cardHeight = 110;
+
+      // Prestataire
+      doc.roundedRect(margin, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("PRESTATAIRE (AUTO-ENTREPRENEUR)", margin + 10, cardY + 8);
+      doc.fontSize(9).font("Helvetica-Bold").text(seller.fullName || "—", margin + 10, cardY + 22);
+
+      doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
+      let sY = cardY + 34;
+      doc.text(`RNAE N° : ${seller.rnaeNumber || "—"}  •  NIF : ${seller.nif || "—"}`, margin + 10, sY);
+      sY += 11;
+      doc.text(`Activité : ${seller.activityLabel || "—"} (${seller.activityCode || "—"})`, margin + 10, sY, { width: cardWidth - 20 });
+      sY += 13;
+      if (seller.address) {
+        doc.text(`Adresse : ${seller.address}`, margin + 10, sY, { width: cardWidth - 20 });
+        sY += 11;
+      }
+      doc.text(`Email : ${seller.email || "—"}  •  Tél : ${seller.phone || "—"}`, margin + 10, sY);
+
+      // Client
+      const clientX = margin + cardWidth + 16;
+      doc.roundedRect(clientX, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("CLIENT DESTINATAIRE", clientX + 10, cardY + 8);
+      doc.fontSize(9).font("Helvetica-Bold").text(client.name, clientX + 10, cardY + 22);
+
+      doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
+      let cY = cardY + 34;
+      doc.text(`Type : ${client.clientType === "PROFESSIONAL" ? "Société / Professionnel" : "Particulier"}`, clientX + 10, cY);
+      cY += 11;
+      if (client.nif) {
+        doc.text(`NIF : ${client.nif}${client.nis ? `  •  NIS : ${client.nis}` : ""}${client.rc ? `  •  RC : ${client.rc}` : ""}`, clientX + 10, cY);
+        cY += 11;
+      }
+      if (client.address) {
+        doc.text(`Adresse : ${client.address}`, clientX + 10, cY, { width: cardWidth - 20 });
+        cY += 11;
+      }
+      if (client.email || client.phone) {
+        doc.text(`${client.email ? `Email : ${client.email}` : ""} ${client.phone ? ` • Tél : ${client.phone}` : ""}`, clientX + 10, cY);
+      }
+
+      // --- LINE ITEMS TABLE ---
+      let tableY = cardY + cardHeight + 20;
+
+      // Table Header
+      doc.rect(margin, tableY, contentWidth, 22).fill("#0f172a");
+      doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold");
+      doc.text("DESCRIPTION DES PRESTATIONS", margin + 10, tableY + 7);
+      doc.text("QTÉ", margin + 300, tableY + 7, { width: 40, align: "center" });
+      doc.text("P.U (DZD)", margin + 345, tableY + 7, { width: 75, align: "right" });
+      doc.text("TOTAL (DZD)", margin + 425, tableY + 7, { width: 80, align: "right" });
+
+      tableY += 22;
+
+      // Rows
+      doc.font("Helvetica").fontSize(8);
+      data.quote.lineItems.forEach((item, idx) => {
+        const rowBg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+        doc.rect(margin, tableY, contentWidth, 24).fill(rowBg);
+        doc.rect(margin, tableY + 23, contentWidth, 1).fill("#f1f5f9");
+
+        doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 7, { width: 285 });
+        doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 7, { width: 40, align: "center" });
+        doc.text(formatDZD(item.unitPrice), margin + 345, tableY + 7, { width: 75, align: "right" });
+        doc.fillColor(darkColor).font("Helvetica-Bold").text(formatDZD(item.totalPrice), margin + 425, tableY + 7, { width: 80, align: "right" });
+
+        doc.font("Helvetica");
+        tableY += 24;
+      });
+
+      // --- TOTAL BOX ---
+      const totalBoxWidth = 240;
+      const totalBoxX = margin + contentWidth - totalBoxWidth;
+      tableY += 12;
+
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, 42, 4).fillAndStroke("#f0f9ff", "#bae6fd");
+      doc.rect(totalBoxX, tableY, 4, 42).fill(accentColor);
+      doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL ESTIMÉ (NET) :", totalBoxX + 12, tableY + 14);
+      doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(formatDZD(data.quote.total), totalBoxX + 110, tableY + 13, {
+        width: 115,
+        align: "right",
+      });
+
+      tableY += 54;
+
+      // --- LEGAL NOTE ---
+      doc.roundedRect(margin, tableY, contentWidth, 38, 4).fillAndStroke("#f0fdf4", "#bbf7d0");
+      doc.rect(margin, tableY, 4, 38).fill("#059669");
+      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 6);
+      doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.quote.vatExemptionNote, margin + 12, tableY + 18, {
+        width: contentWidth - 24,
+      });
+
+      tableY += 48;
+
+      // --- NOTES & APPROVAL BOX ---
+      if (data.quote.notes) {
+        doc.roundedRect(margin, tableY, contentWidth - 180, 50, 4).fillAndStroke(lightBg, borderColor);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("CONDITIONS DU DEVIS :", margin + 10, tableY + 7);
+        doc.fillColor(darkColor).fontSize(8).font("Helvetica").text(data.quote.notes, margin + 10, tableY + 18, { width: contentWidth - 200 });
+      }
+
+      // Client Signature & Stamp Box
+      const sigX = margin + contentWidth - 165;
+      doc.roundedRect(sigX, tableY, 165, 50, 4).fillAndStroke("#ffffff", borderColor);
+      doc.fillColor(mutedColor).fontSize(7).font("Helvetica-Bold").text("BON POUR ACCORD ET COMMANDE", sigX + 8, tableY + 6, { width: 150, align: "center" });
+      doc.fontSize(6.5).font("Helvetica").text("Date et signature précédées de la mention 'Bon pour accord'", sigX + 8, tableY + 17, { width: 150, align: "center" });
+
+      // --- FOOTER ---
+      const footerY = 770;
+      doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
+      doc.fontSize(7).font("Helvetica").fillColor(mutedColor);
+      doc.text(
+        `Devis établi conformément aux dispositions de la loi n° 22-23 du 18 décembre 2022 portant statut de l'auto-entrepreneur.`,
+        margin,
+        footerY + 8,
+        { align: "center", width: contentWidth }
+      );
+      doc.text(
+        `Titulaire immatriculé au Registre National de l'Auto-Entrepreneur (RNAE N° ${seller.rnaeNumber || "—"}) — NIF : ${seller.nif || "—"}`,
+        margin,
+        footerY + 18,
+        { align: "center", width: contentWidth }
+      );
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+export interface CreditNotePdfData {
+  creditNote: {
+    creditNoteNumber: string | null;
+    issueDate: Date | string;
+    reason: string;
+    total: number;
+    currency: string;
+    vatExemptionNote: string;
+    notes?: string | null;
+    sellerSnapshot?: string | null;
+    clientSnapshot?: string | null;
+    originalInvoiceNumber?: string | null;
+    lineItems: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+    }>;
+  };
+  seller: {
+    fullName: string;
+    rnaeNumber: string;
+    nif: string;
+    address: string;
+    email: string;
+    phone: string;
+    activityCode: string;
+    activityLabel: string;
+  };
+  client: {
+    name: string;
+    clientType: string;
+    address: string;
+    nif?: string | null;
+    nis?: string | null;
+    rc?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  };
+}
+
+export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 40,
+        info: {
+          Title: `Avoir ${data.creditNote.creditNoteNumber || "Brouillon"}`,
+          Author: data.seller.fullName,
+          Subject: "Facture d'Avoir Auto-Entrepreneur Algérie (Loi 22-23)",
+        },
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", (err) => reject(err));
+
+      const seller = data.creditNote.sellerSnapshot
+        ? JSON.parse(data.creditNote.sellerSnapshot)
+        : data.seller;
+
+      const client = data.creditNote.clientSnapshot
+        ? JSON.parse(data.creditNote.clientSnapshot)
+        : data.client;
+
+      const pageWidth = 595.28;
+      const margin = 40;
+      const contentWidth = pageWidth - margin * 2;
+
+      // Theme colors for Avoir: Slate & Rose/Crimson accent
+      const accentColor = "#e11d48"; // Rose 600
+      const darkColor = "#0f172a";   // Slate 900
+      const mutedColor = "#64748b";  // Slate 500
+      const lightBg = "#f8fafc";     // Slate 50
+      const borderColor = "#e2e8f0"; // Slate 200
+
+      // Top colored bar
+      doc.rect(margin, margin, contentWidth, 3).fill(accentColor);
+
+      doc.y = margin + 15;
+      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE D'AVOIR", margin, doc.y);
+      doc
+        .fontSize(8.5)
+        .font("Helvetica-Bold")
+        .fillColor(accentColor)
+        .text("NOTE DE CRÉDIT COMPTABLE — ALGÉRIE (LOI 22-23 / IFU)");
+
+      // Metadata on the right
+      const metaY = margin + 15;
+      const dateStr = new Date(data.creditNote.issueDate).toLocaleDateString("fr-DZ", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
+      doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
+      doc.text("N° d'Avoir :", 360, metaY, { width: 90, align: "right" });
+      doc
+        .font("Helvetica-Bold")
+        .fillColor(darkColor)
+        .text(data.creditNote.creditNoteNumber || "BROUILLON", 455, metaY, { width: 100, align: "right" });
+
+      doc.font("Helvetica").fillColor(mutedColor);
+      doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
+      doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
+
+      // Referenced invoice badge
+      const refY = margin + 50;
+      doc.roundedRect(margin, refY, contentWidth, 24, 4).fillAndStroke("#fff1f2", "#fecdd3");
+      doc.rect(margin, refY, 4, 24).fill(accentColor);
+      doc.fillColor("#9f1239").fontSize(8).font("Helvetica-Bold").text("RÉFÉRENCE FACTURE D'ORIGINE :", margin + 12, refY + 7);
+      doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text(data.creditNote.originalInvoiceNumber || "—", margin + 165, refY + 6.5);
+      doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica").text(`Motif : ${data.creditNote.reason}`, margin + 270, refY + 7.5, { width: contentWidth - 280 });
+
+      // --- SENDER & CLIENT CARDS ---
+      const cardY = refY + 34;
+      const cardWidth = (contentWidth - 16) / 2;
+      const cardHeight = 105;
+
+      // Prestataire
+      doc.roundedRect(margin, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("ÉMETTEUR (AUTO-ENTREPRENEUR)", margin + 10, cardY + 8);
+      doc.fontSize(9).font("Helvetica-Bold").text(seller.fullName || "—", margin + 10, cardY + 22);
+
+      doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
+      let sY = cardY + 34;
+      doc.text(`RNAE N° : ${seller.rnaeNumber || "—"}  •  NIF : ${seller.nif || "—"}`, margin + 10, sY);
+      sY += 11;
+      doc.text(`Activité : ${seller.activityLabel || "—"} (${seller.activityCode || "—"})`, margin + 10, sY, { width: cardWidth - 20 });
+      sY += 13;
+      if (seller.address) {
+        doc.text(`Adresse : ${seller.address}`, margin + 10, sY, { width: cardWidth - 20 });
+        sY += 11;
+      }
+      doc.text(`Email : ${seller.email || "—"}  •  Tél : ${seller.phone || "—"}`, margin + 10, sY);
+
+      // Client
+      const clientX = margin + cardWidth + 16;
+      doc.roundedRect(clientX, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("BÉNÉFICIAIRE (CLIENT)", clientX + 10, cardY + 8);
+      doc.fontSize(9).font("Helvetica-Bold").text(client.name, clientX + 10, cardY + 22);
+
+      doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
+      let cY = cardY + 34;
+      doc.text(`Type : ${client.clientType === "PROFESSIONAL" ? "Société / Professionnel" : "Particulier"}`, clientX + 10, cY);
+      cY += 11;
+      if (client.nif) {
+        doc.text(`NIF : ${client.nif}${client.nis ? `  •  NIS : ${client.nis}` : ""}${client.rc ? `  •  RC : ${client.rc}` : ""}`, clientX + 10, cY);
+        cY += 11;
+      }
+      if (client.address) {
+        doc.text(`Adresse : ${client.address}`, clientX + 10, cY, { width: cardWidth - 20 });
+        cY += 11;
+      }
+      if (client.email || client.phone) {
+        doc.text(`${client.email ? `Email : ${client.email}` : ""} ${client.phone ? ` • Tél : ${client.phone}` : ""}`, clientX + 10, cY);
+      }
+
+      // --- LINE ITEMS TABLE ---
+      let tableY = cardY + cardHeight + 20;
+
+      // Table Header
+      doc.rect(margin, tableY, contentWidth, 22).fill("#0f172a");
+      doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold");
+      doc.text("LIGNES CRÉDITÉES / ANNULÉES", margin + 10, tableY + 7);
+      doc.text("QTÉ", margin + 300, tableY + 7, { width: 40, align: "center" });
+      doc.text("P.U (DZD)", margin + 345, tableY + 7, { width: 75, align: "right" });
+      doc.text("CRÉDIT (DZD)", margin + 425, tableY + 7, { width: 80, align: "right" });
+
+      tableY += 22;
+
+      // Rows
+      doc.font("Helvetica").fontSize(8);
+      data.creditNote.lineItems.forEach((item, idx) => {
+        const rowBg = idx % 2 === 0 ? "#ffffff" : "#fff1f2";
+        doc.rect(margin, tableY, contentWidth, 24).fill(rowBg);
+        doc.rect(margin, tableY + 23, contentWidth, 1).fill("#f1f5f9");
+
+        doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 7, { width: 285 });
+        doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 7, { width: 40, align: "center" });
+        doc.text(formatDZD(item.unitPrice), margin + 345, tableY + 7, { width: 75, align: "right" });
+        doc.fillColor(accentColor).font("Helvetica-Bold").text(`- ${formatDZD(item.totalPrice)}`, margin + 425, tableY + 7, { width: 80, align: "right" });
+
+        doc.font("Helvetica");
+        tableY += 24;
+      });
+
+      // --- TOTAL BOX ---
+      const totalBoxWidth = 240;
+      const totalBoxX = margin + contentWidth - totalBoxWidth;
+      tableY += 12;
+
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, 42, 4).fillAndStroke("#fff1f2", "#fecdd3");
+      doc.rect(totalBoxX, tableY, 4, 42).fill(accentColor);
+      doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL CRÉDIT NET :", totalBoxX + 12, tableY + 14);
+      doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(`- ${formatDZD(data.creditNote.total)}`, totalBoxX + 100, tableY + 13, {
+        width: 125,
+        align: "right",
+      });
+
+      tableY += 54;
+
+      // --- LEGAL NOTE ---
+      doc.roundedRect(margin, tableY, contentWidth, 38, 4).fillAndStroke("#f0fdf4", "#bbf7d0");
+      doc.rect(margin, tableY, 4, 38).fill("#059669");
+      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 6);
+      doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.creditNote.vatExemptionNote, margin + 12, tableY + 18, {
+        width: contentWidth - 24,
+      });
+
+      tableY += 48;
+
+      if (data.creditNote.notes) {
+        doc.roundedRect(margin, tableY, contentWidth, 36, 4).fillAndStroke(lightBg, borderColor);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("REMARQUES & MODALITÉS :", margin + 10, tableY + 7);
+        doc.fillColor(darkColor).fontSize(8).font("Helvetica").text(data.creditNote.notes, margin + 10, tableY + 18, { width: contentWidth - 20 });
+      }
+
+      // --- FOOTER ---
+      const footerY = 770;
+      doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
+      doc.fontSize(7).font("Helvetica").fillColor(mutedColor);
+      doc.text(
+        `Avoir émis conformément aux obligations comptables de la loi n° 22-23 portant statut de l'auto-entrepreneur.`,
+        margin,
+        footerY + 8,
+        { align: "center", width: contentWidth }
+      );
+      doc.text(
+        `Titulaire immatriculé au Registre National de l'Auto-Entrepreneur (RNAE N° ${seller.rnaeNumber || "—"}) — NIF : ${seller.nif || "—"}`,
+        margin,
+        footerY + 18,
+        { align: "center", width: contentWidth }
+      );
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}

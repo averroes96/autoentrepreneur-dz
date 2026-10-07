@@ -18,6 +18,8 @@ import {
   Ban,
   FileText,
   AlertTriangle,
+  RotateCcw,
+  FileSpreadsheet,
 } from "lucide-react";
 import { InvoiceDetailControls } from "@/components/invoices/InvoiceDetailControls";
 
@@ -42,6 +44,8 @@ export default async function InvoiceDetailPage({
       lineItems: {
         orderBy: { position: "asc" },
       },
+      creditNotes: true,
+      sourceQuote: true,
     },
   });
 
@@ -139,6 +143,49 @@ export default async function InvoiceDetailPage({
               <strong className="font-semibold">Facture Annulée :</strong>{" "}
               Motif : <em>{invoice.cancellationReason || "Non précisé"}</em>. Le numéro séquentiel reste réservé dans l'historique légal.
             </p>
+          </div>
+        )}
+
+        {/* Source Quote Banner */}
+        {invoice.sourceQuote && (
+          <div className="p-3.5 rounded-xl bg-sky-50/70 border border-sky-200/80 text-sky-900 text-xs flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <FileSpreadsheet className="w-4 h-4 text-sky-600 shrink-0" />
+              <p>
+                <strong>Facture issue du devis :</strong> Cette facture a été générée à partir du devis commercial{" "}
+                <strong className="font-mono">{invoice.sourceQuote.quoteNumber || "en brouillon"}</strong>.
+              </p>
+            </div>
+            <Link
+              href={`/quotes/${invoice.sourceQuote.id}`}
+              className="inline-flex items-center gap-1 font-bold text-sky-700 hover:text-sky-900 underline shrink-0"
+            >
+              Consulter le devis &rarr;
+            </Link>
+          </div>
+        )}
+
+        {/* Linked Credit Notes Banner */}
+        {invoice.creditNotes && invoice.creditNotes.length > 0 && (
+          <div className="p-3.5 rounded-xl bg-rose-50/80 border border-rose-200 text-rose-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <RotateCcw className="w-4 h-4 text-rose-600 shrink-0" />
+              <p>
+                <strong>Facture rectifiée par Avoir :</strong> {invoice.creditNotes.length} facture(s) d'avoir officielle(s) rattachée(s) à ce document.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {invoice.creditNotes.map((cn) => (
+                <Link
+                  key={cn.id}
+                  href={`/credit-notes/${cn.id}`}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold transition text-[11px]"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>{cn.creditNoteNumber || "Avoir"} ({formatDZD(cn.total)})</span>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 
