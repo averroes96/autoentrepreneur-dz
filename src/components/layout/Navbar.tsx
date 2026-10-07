@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "@/app/actions";
@@ -14,6 +14,7 @@ import {
   LogOut,
   ShieldCheck,
   Building2,
+  ChevronDown,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -26,14 +27,55 @@ interface NavbarProps {
 
 export function Navbar({ user, tenantName }: NavbarProps) {
   const pathname = usePathname();
+  const [invoicingDropdownOpen, setInvoicingDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const navItems = [
-    { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-    { href: "/invoices", label: "Factures", icon: FileText },
-    { href: "/quotes", label: "Devis", icon: FileSpreadsheet },
-    { href: "/credit-notes", label: "Avoirs", icon: RotateCcw },
-    { href: "/clients", label: "Clients", icon: Users },
-    { href: "/profile", label: "Profil & Conformité", icon: Settings },
+  const isInvoicingActive =
+    pathname.startsWith("/invoices") ||
+    pathname.startsWith("/quotes") ||
+    pathname.startsWith("/credit-notes");
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setInvoicingDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setInvoicingDropdownOpen(false);
+  }, [pathname]);
+
+  const invoicingSubItems = [
+    {
+      href: "/invoices",
+      label: "Factures",
+      desc: "Factures de vente & encaissements",
+      icon: FileText,
+      isActive: pathname.startsWith("/invoices"),
+      color: "text-emerald-600 bg-emerald-50",
+    },
+    {
+      href: "/quotes",
+      label: "Devis & Proformas",
+      desc: "Propositions & devis clients",
+      icon: FileSpreadsheet,
+      isActive: pathname.startsWith("/quotes"),
+      color: "text-sky-600 bg-sky-50",
+    },
+    {
+      href: "/credit-notes",
+      label: "Factures d'Avoir",
+      desc: "Notes de crédit & rectifications",
+      icon: RotateCcw,
+      isActive: pathname.startsWith("/credit-notes"),
+      color: "text-rose-600 bg-rose-50",
+    },
   ];
 
   return (
@@ -57,28 +99,149 @@ export function Navbar({ user, tenantName }: NavbarProps) {
             </Link>
 
             {/* Nav links */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            <nav className="hidden md:flex items-center gap-1.5">
+              {/* Dashboard */}
+              <Link
+                href="/dashboard"
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pathname === "/dashboard"
+                    ? "bg-emerald-50 text-emerald-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                <LayoutDashboard
+                  className={`w-4 h-4 ${
+                    pathname === "/dashboard" ? "text-emerald-600" : "text-slate-400"
+                  }`}
+                />
+                <span>Tableau de bord</span>
+              </Link>
 
-                return (
+              {/* Invoicing Menu with Dropdown (Factures, Devis, Avoirs) */}
+              <div
+                ref={dropdownRef}
+                className="relative"
+                onMouseEnter={() => setInvoicingDropdownOpen(true)}
+                onMouseLeave={() => setInvoicingDropdownOpen(false)}
+              >
+                <div className="flex items-center">
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                      isActive
+                    href="/invoices"
+                    className={`flex items-center gap-1.5 pl-3.5 pr-1.5 py-2 rounded-l-lg text-sm font-medium transition-all ${
+                      isInvoicingActive
                         ? "bg-emerald-50 text-emerald-700 shadow-xs"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? "text-emerald-600" : "text-slate-400"}`} />
-                    <span>{item.label}</span>
+                    <FileText
+                      className={`w-4 h-4 ${
+                        isInvoicingActive ? "text-emerald-600" : "text-slate-400"
+                      }`}
+                    />
+                    <span>Facturation</span>
                   </Link>
-                );
-              })}
+
+                  <button
+                    type="button"
+                    onClick={() => setInvoicingDropdownOpen(!invoicingDropdownOpen)}
+                    aria-label="Ouvrir le menu facturation"
+                    className={`px-1.5 py-2 rounded-r-lg text-sm font-medium transition-all cursor-pointer ${
+                      isInvoicingActive
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    }`}
+                  >
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        invoicingDropdownOpen ? "rotate-180" : ""
+                      } ${isInvoicingActive ? "text-emerald-600" : "text-slate-400"}`}
+                    />
+                  </button>
+                </div>
+
+                {/* Dropdown Menu */}
+                {invoicingDropdownOpen && (
+                  <div className="absolute left-0 mt-1 w-72 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 py-1.5">
+                      Cycle de facturation (Loi 22-23)
+                    </div>
+                    <div className="space-y-1">
+                      {invoicingSubItems.map((sub) => {
+                        const Icon = sub.icon;
+                        return (
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            onClick={() => setInvoicingDropdownOpen(false)}
+                            className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
+                              sub.isActive
+                                ? "bg-slate-50 border border-slate-200/80"
+                                : "hover:bg-slate-50"
+                            }`}
+                          >
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${sub.color}`}
+                            >
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span
+                                  className={`text-xs font-semibold ${
+                                    sub.isActive ? "text-slate-900" : "text-slate-800"
+                                  }`}
+                                >
+                                  {sub.label}
+                                </span>
+                                {sub.isActive && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-snug">
+                                {sub.desc}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Clients */}
+              <Link
+                href="/clients"
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pathname.startsWith("/clients")
+                    ? "bg-emerald-50 text-emerald-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                <Users
+                  className={`w-4 h-4 ${
+                    pathname.startsWith("/clients") ? "text-emerald-600" : "text-slate-400"
+                  }`}
+                />
+                <span>Clients</span>
+              </Link>
+
+              {/* Profil & Conformité */}
+              <Link
+                href="/profile"
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pathname.startsWith("/profile")
+                    ? "bg-emerald-50 text-emerald-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                <Settings
+                  className={`w-4 h-4 ${
+                    pathname.startsWith("/profile") ? "text-emerald-600" : "text-slate-400"
+                  }`}
+                />
+                <span>Profil & Conformité</span>
+              </Link>
             </nav>
           </div>
 
@@ -112,30 +275,51 @@ export function Navbar({ user, tenantName }: NavbarProps) {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation (Clean 4 items) */}
         <div className="md:hidden flex items-center justify-around border-t border-slate-100 py-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          <Link
+            href="/dashboard"
+            className={`flex flex-col items-center gap-1 py-1 px-2 text-xs font-medium ${
+              pathname === "/dashboard" ? "text-emerald-600" : "text-slate-500"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Accueil</span>
+          </Link>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center gap-1 py-1 px-2 text-xs font-medium ${
-                  isActive ? "text-emerald-600" : "text-slate-500"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+          <Link
+            href="/invoices"
+            className={`flex flex-col items-center gap-1 py-1 px-2 text-xs font-medium ${
+              isInvoicingActive ? "text-emerald-600" : "text-slate-500"
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Facturation</span>
+          </Link>
+
+          <Link
+            href="/clients"
+            className={`flex flex-col items-center gap-1 py-1 px-2 text-xs font-medium ${
+              pathname.startsWith("/clients") ? "text-emerald-600" : "text-slate-500"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Clients</span>
+          </Link>
+
+          <Link
+            href="/profile"
+            className={`flex flex-col items-center gap-1 py-1 px-2 text-xs font-medium ${
+              pathname.startsWith("/profile") ? "text-emerald-600" : "text-slate-500"
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Profil</span>
+          </Link>
         </div>
       </div>
     </header>
   );
 }
+
 export default Navbar;

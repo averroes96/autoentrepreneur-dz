@@ -18,6 +18,8 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import InvoicingTabs from "@/components/invoicing/InvoicingTabs";
+
 export const dynamic = "force-dynamic";
 
 export default async function QuotesPage({
@@ -34,23 +36,27 @@ export default async function QuotesPage({
   const statusFilter = resolvedParams?.status;
   const searchFilter = resolvedParams?.search?.toLowerCase();
 
-  const quotes = await db.quote.findMany({
-    where: {
-      tenantId: session.tenantId,
-      ...(statusFilter && statusFilter !== "ALL" ? { status: statusFilter } : {}),
-    },
-    include: {
-      client: true,
-      invoices: {
-        select: {
-          id: true,
-          invoiceNumber: true,
-          status: true,
+  const [quotes, invoicesCount, creditNotesCount] = await Promise.all([
+    db.quote.findMany({
+      where: {
+        tenantId: session.tenantId,
+        ...(statusFilter && statusFilter !== "ALL" ? { status: statusFilter } : {}),
+      },
+      include: {
+        client: true,
+        invoices: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            status: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    db.invoice.count({ where: { tenantId: session.tenantId } }),
+    db.creditNote.count({ where: { tenantId: session.tenantId } }),
+  ]);
 
   const filteredQuotes = searchFilter
     ? quotes.filter(
@@ -75,6 +81,15 @@ export default async function QuotesPage({
       <Navbar user={session} tenantName={tenant.name} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Navigation tabs between Factures, Devis, and Avoirs */}
+        <InvoicingTabs
+          counts={{
+            invoices: invoicesCount,
+            quotes: totalQuotesCount,
+            creditNotes: creditNotesCount,
+          }}
+        />
+
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
