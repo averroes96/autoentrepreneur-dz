@@ -147,34 +147,35 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
       {/* If DRAFT */}
       {invoice.status === "DRAFT" && (
         <>
           <Link
             href={`/invoices/${invoice.id}/edit`}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition"
           >
-            <Edit className="w-3.5 h-3.5" />
+            <Edit className="w-3.5 h-3.5 text-slate-500" />
             <span>Modifier</span>
           </Link>
 
           <button
             type="button"
-            onClick={() => deleteModalRef.current?.showModal()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-semibold transition cursor-pointer"
+            onClick={() => issueModalRef.current?.showModal()}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium shadow-2xs transition cursor-pointer"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Supprimer</span>
+            <FileCheck className="w-3.5 h-3.5" />
+            <span>Émettre la facture</span>
           </button>
 
           <button
             type="button"
-            onClick={() => issueModalRef.current?.showModal()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+            onClick={() => deleteModalRef.current?.showModal()}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
+            title="Supprimer le brouillon"
           >
-            <FileCheck className="w-3.5 h-3.5" />
-            <span>Émettre la facture</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Supprimer</span>
           </button>
         </>
       )}
@@ -182,50 +183,55 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       {/* If ISSUED */}
       {invoice.status === "ISSUED" && (
         <>
+          {/* Payment Toggle */}
           <button
             type="button"
             disabled={loading}
             onClick={handleTogglePayment}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer shadow-2xs ${
               invoice.paymentStatus === "PAID"
-                ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                ? "bg-amber-50/70 text-amber-800 border-amber-200 hover:bg-amber-100/80"
+                : "bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100/80"
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
             <span>
               {invoice.paymentStatus === "PAID"
-                ? "Marquer comme Impayée"
-                : "Marquer comme Payée (Encaissée)"}
+                ? "Marquer impayée"
+                : "Marquer payée"}
             </span>
           </button>
 
-          <a
-            href={`/api/invoices/${invoice.id}/pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Télécharger PDF</span>
-          </a>
-
+          {/* Send Email Action */}
           <button
             type="button"
             onClick={() => {
               setEmailFeedback(null);
               emailModalRef.current?.showModal();
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200 shadow-2xs transition cursor-pointer"
           >
-            <Mail className="w-3.5 h-3.5" />
-            <span>Envoyer par email</span>
+            <Mail className="w-3.5 h-3.5 text-slate-500" />
+            <span>Envoyer email</span>
           </button>
 
+          {/* Download PDF Action */}
+          <a
+            href={`/api/invoices/${invoice.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Télécharger PDF</span>
+          </a>
+
+          {/* Cancel Action */}
           <button
             type="button"
             onClick={() => cancelModalRef.current?.showModal()}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 text-xs font-semibold transition cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
+            title="Annuler cette facture"
           >
             <Ban className="w-3.5 h-3.5" />
             <span>Annuler</span>
@@ -239,10 +245,10 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
           href={`/api/invoices/${invoice.id}/pdf`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shadow-xs transition"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
         >
           <Download className="w-3.5 h-3.5" />
-          <span>Télécharger le PDF d'archive</span>
+          <span>Télécharger archive PDF</span>
         </a>
       )}
 

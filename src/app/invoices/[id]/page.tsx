@@ -62,47 +62,47 @@ export default async function InvoiceDetailPage({
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Navigation & Controls Top Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Header with Title and Actions */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-1">
           <div className="flex items-center gap-3">
             <Link
               href="/invoices"
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-200 transition"
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-200/80 transition shrink-0"
+              title="Retour aux factures"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
                   {invoice.invoiceNumber || "Facture Brouillon"}
                 </h1>
-                {invoice.status === "ISSUED" ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                    Émise
-                  </span>
-                ) : invoice.status === "DRAFT" ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">
+
+                {/* Single Refined Status Pill */}
+                {invoice.status === "DRAFT" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
                     Brouillon
                   </span>
-                ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                ) : invoice.status === "CANCELLED" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                     Annulée
                   </span>
-                )}
-
-                {invoice.status === "ISSUED" && (
-                  invoice.paymentStatus === "PAID" ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300">
-                      Payée
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-300">
-                      En attente de paiement
-                    </span>
-                  )
+                ) : invoice.paymentStatus === "PAID" ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Payée • Encaissée
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    En attente de paiement
+                  </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Émise pour : <strong className="text-slate-700">{invoice.client.name}</strong> • Date :{" "}
+              <p className="text-xs text-slate-500 mt-1">
+                Client : <strong className="text-slate-700">{invoice.client.name}</strong> • Date :{" "}
                 {new Date(invoice.issueDate).toLocaleDateString("fr-DZ")}
               </p>
             </div>
@@ -111,54 +111,34 @@ export default async function InvoiceDetailPage({
           <InvoiceDetailControls invoice={invoice} />
         </div>
 
-        {/* Status Callout Banner */}
+        {/* Compact Notice Banners (without redundant action buttons) */}
         {invoice.status === "DRAFT" && (
-          <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-amber-600 shrink-0" />
-              <div>
-                <p className="font-bold">Projet de facture en mode Brouillon</p>
-                <p className="text-amber-800">
-                  Vous pouvez modifier ou supprimer ce document. Aucun numéro séquentiel définitif n'a encore été attribué.
-                </p>
-              </div>
-            </div>
+          <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs flex items-center gap-2.5">
+            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+            <p>
+              <strong className="font-semibold">Projet de facture en mode Brouillon :</strong>{" "}
+              Modifiable librement. Le numéro séquentiel officiel sera attribué lors de l'émission.
+            </p>
           </div>
         )}
 
         {invoice.status === "ISSUED" && (
-          <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-              <div>
-                <p className="font-bold">Facture officielle validée (Immuable)</p>
-                <p className="text-emerald-800">
-                  Ce document est scellé conformément aux obligations légales. Pour toute correction, utilisez l'option d'annulation.
-                </p>
-              </div>
-            </div>
-            <a
-              href={`/api/invoices/${invoice.id}/pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shrink-0"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Télécharger le PDF</span>
-            </a>
+          <div className="p-3.5 rounded-xl bg-slate-100/70 border border-slate-200/80 text-slate-600 text-xs flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <p>
+              <strong className="font-semibold text-slate-800">Facture officielle validée (Immuable) :</strong>{" "}
+              Scellée conformément à la Loi 22-23. Pour toute modification comptable, utilisez l'annulation.
+            </p>
           </div>
         )}
 
         {invoice.status === "CANCELLED" && (
-          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-3">
-            <Ban className="w-5 h-5 text-rose-600 shrink-0" />
-            <div>
-              <p className="font-bold">Facture Annulée</p>
-              <p className="text-rose-800">
-                Motif d'annulation : <strong>{invoice.cancellationReason || "Non précisé"}</strong>.
-                Le numéro séquentiel reste réservé dans l'historique comptable.
-              </p>
-            </div>
+          <div className="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200/80 text-rose-900 text-xs flex items-center gap-2.5">
+            <Ban className="w-4 h-4 text-rose-600 shrink-0" />
+            <p>
+              <strong className="font-semibold">Facture Annulée :</strong>{" "}
+              Motif : <em>{invoice.cancellationReason || "Non précisé"}</em>. Le numéro séquentiel reste réservé dans l'historique légal.
+            </p>
           </div>
         )}
 
