@@ -4,6 +4,19 @@ import { captureException } from "./sentry";
 const resendApiKey = process.env.RESEND_API_KEY;
 const resendFromEmail = process.env.RESEND_FROM_EMAIL || "Moukawil.dz <notifications@resend.dev>";
 
+export function getAppUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}
+
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 export interface SendInvoiceEmailParams {
@@ -207,7 +220,7 @@ export async function sendCeilingAlertEmail({
           <p>Bonjour ${entrepreneurName},</p>
           <p>Votre chiffre d'affaires encaissé pour l'exercice <strong>${fiscalYear}</strong> s'élève à <strong>${currentTurnover.toLocaleString("fr-DZ")} DZD</strong>, soit <strong>${percentage.toFixed(1)}%</strong> du plafond légal de <strong>${ceilingLimit.toLocaleString("fr-DZ")} DZD</strong> (Loi 22-23).</p>
           <p>Attention : tout dépassement consécutif sur 3 ans entraîne l'exclusion du régime simplifié de l'auto-entrepreneur et le basculement vers le régime du réel.</p>
-          <p style="margin-top: 24px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || "https://moukawil.dz"}/dashboard" style="background-color: #dc2626; color: white; padding: 10px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">Accéder au tableau de bord</a></p>
+          <p style="margin-top: 24px;"><a href="${getAppUrl()}/dashboard" style="background-color: #dc2626; color: white; padding: 10px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">Accéder au tableau de bord</a></p>
         </div>
       </body>
     </html>
