@@ -162,6 +162,31 @@ for (const f of files) {
     modified = true;
   }
 
+  // 16. Guard against undefined stack in buildFakeCallStack
+  if (content.includes("function buildFakeCallStack(") && !content.includes("if (!stack || typeof stack.length !== \"number\") return innerCall;")) {
+    content = content.replace(
+      /function buildFakeCallStack\([\s\S]*?\)\s*\{/g,
+      (match) => match + "\n      if (!stack || typeof stack.length !== \"number\") return innerCall;"
+    );
+    modified = true;
+  }
+
+  // 17. Guard against undefined stack in initializeElement
+  if (content.includes(": null !== stack &&\n          (normalizedStackTrace = createFakeJSXCallStackInDEV(")) {
+    content = content.replaceAll(
+      ": null !== stack &&\n          (normalizedStackTrace = createFakeJSXCallStackInDEV(",
+      ": null != stack &&\n          (normalizedStackTrace = createFakeJSXCallStackInDEV("
+    );
+    modified = true;
+  }
+  if (content.includes("supportsCreateTask &&\n        null !== stack &&")) {
+    content = content.replaceAll(
+      "supportsCreateTask &&\n        null !== stack &&",
+      "supportsCreateTask &&\n        null != stack &&"
+    );
+    modified = true;
+  }
+
   if (modified) {
     fs.writeFileSync(f, content, "utf8");
     count++;
