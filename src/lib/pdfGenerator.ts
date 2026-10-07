@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import { formatDZD } from "./tax";
+import type { AnnualTaxSummary } from "./taxSummary";
 
 export interface InvoicePdfData {
   invoice: {
@@ -734,6 +735,265 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
         `Titulaire immatriculé au Registre National de l'Auto-Entrepreneur (RNAE N° ${seller.rnaeNumber || "—"}) — NIF : ${seller.nif || "—"}`,
         margin,
         footerY + 18,
+        { align: "center", width: contentWidth }
+      );
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
+ * Génère le Bordereau Récapitulatif Fiscal Annuel officiel (Déclaration IFU / Série G n° 12 bis).
+ * Document certifié vectoriel destiné à la Recette / Inspection des Impôts (DGI) et Jibayatic.
+ */
+export async function generateTaxSummaryPdfBuffer(summary: AnnualTaxSummary): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: "A4",
+        margin: 36,
+        info: {
+          Title: `Bordereau Récapitulatif Fiscal ${summary.fiscalYear} - IFU G12 bis`,
+          Author: summary.seller.fullName,
+          Subject: "Bordereau Récapitulatif IFU Auto-Entrepreneur Algérie (Loi 22-23)",
+        },
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk) => chunks.push(chunk));
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+      doc.on("error", (err) => reject(err));
+
+      const pageWidth = 595.28;
+      const margin = 36;
+      const contentWidth = pageWidth - margin * 2;
+
+      const primaryColor = "#0f172a"; // Slate 900
+      const accentColor = "#059669";  // Emerald 600
+      const mutedColor = "#64748b";   // Slate 500
+      const lightBg = "#f8fafc";      // Slate 50
+      const borderColor = "#cbd5e1";  // Slate 300
+
+      // Top colored bar
+      doc.rect(margin, margin, contentWidth, 3).fill(accentColor);
+
+      // --- ADMINISTRATIVE HEADER ---
+      doc.y = margin + 12;
+      doc.fontSize(8.5).font("Helvetica-Bold").fillColor(primaryColor).text(
+        "RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE",
+        margin,
+        doc.y,
+        { align: "center", width: contentWidth }
+      );
+      doc.y += 3;
+      doc.fontSize(8).font("Helvetica").fillColor(mutedColor).text(
+        "MINISTÈRE DES FINANCES — DIRECTION GÉNÉRALE DES IMPÔTS",
+        margin,
+        doc.y,
+        { align: "center", width: contentWidth }
+      );
+      doc.y += 8;
+      doc.fontSize(12).font("Helvetica-Bold").fillColor(primaryColor).text(
+        "BORDEREAU RÉCAPITULATIF FISCAL ANNUEL — RÉGIME DE L'AUTO-ENTREPRENEUR",
+        margin,
+        doc.y,
+        { align: "center", width: contentWidth }
+      );
+      doc.y += 3;
+      doc.fontSize(8.5).font("Helvetica-Bold").fillColor(accentColor).text(
+        `IMPÔT FORFAITAIRE UNIQUE (IFU) — DÉCLARATION SÉRIE G N° 12 BIS • EXERCICE ${summary.fiscalYear}`,
+        margin,
+        doc.y,
+        { align: "center", width: contentWidth }
+      );
+
+      // --- CADRE I : IDENTIFICATION DU CONTRIBUABLE ---
+      let curY = doc.y + 14;
+      doc.rect(margin, curY, contentWidth, 18).fill(primaryColor);
+      doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold").text(
+        "I. RENSEIGNEMENTS RELATIFS AU CONTRIBUABLE",
+        margin + 8,
+        curY + 5
+      );
+      curY += 18;
+
+      const idHeight = 58;
+      doc.rect(margin, curY, contentWidth, idHeight).fillAndStroke(lightBg, borderColor);
+      doc.fillColor(primaryColor).fontSize(8).font("Helvetica");
+
+      const col1X = margin + 10;
+      const col2X = margin + 270;
+
+      doc.font("Helvetica-Bold").text("Nom et Prénom : ", col1X, curY + 6, { continued: true });
+      doc.font("Helvetica").text(summary.seller.fullName);
+
+      doc.font("Helvetica-Bold").text("N° RNAE (Carte Auto-Entrepreneur) : ", col1X, curY + 19, { continued: true });
+      doc.font("Helvetica").text(summary.seller.rnaeNumber || "—");
+
+      doc.font("Helvetica-Bold").text("NIF (15 chiffres) : ", col1X, curY + 32, { continued: true });
+      doc.font("Helvetica").text(summary.seller.nif || "—");
+
+      doc.font("Helvetica-Bold").text("Activité ANAE : ", col1X, curY + 45, { continued: true });
+      doc.font("Helvetica").text(`${summary.seller.activityCode || "—"} - ${summary.seller.activityLabel || "—"}`, { width: 245 });
+
+      doc.font("Helvetica-Bold").text("Adresse professionnelle : ", col2X, curY + 6, { continued: true });
+      doc.font("Helvetica").text(summary.seller.address || "—", { width: 240 });
+
+      doc.font("Helvetica-Bold").text("Email : ", col2X, curY + 22, { continued: true });
+      doc.font("Helvetica").text(summary.seller.email || "—");
+
+      doc.font("Helvetica-Bold").text("Téléphone : ", col2X, curY + 35, { continued: true });
+      doc.font("Helvetica").text(summary.seller.phone || "—");
+
+      curY += idHeight + 10;
+
+      // --- CADRE II : TABLEAU DE LIQUIDATION FISCALE IFU ---
+      doc.rect(margin, curY, contentWidth, 18).fill(primaryColor);
+      doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold").text(
+        "II. DÉTERMINATION DU CHIFFRE D'AFFAIRES IMPOSABLE & LIQUIDATION DE L'IFU (0,5%)",
+        margin + 8,
+        curY + 5
+      );
+      curY += 18;
+
+      const metricsRows = [
+        { label: "1. Chiffre d'Affaires Brut Facturé (Total des factures émises)", value: formatDZD(summary.metrics.grossBilledDzd) },
+        { label: "2. Chiffre d'Affaires Réellement Encaissé (Paiements perçus)", value: formatDZD(summary.metrics.rawCollectedDzd) },
+        { label: "3. Déductions légales pour Avoirs / Notes de Crédit remboursées", value: `- ${formatDZD(summary.metrics.totalRefundedCreditDzd)}` },
+        { label: "4. CHIFFRE D'AFFAIRES NET IMPOSABLE RETENU (Base de calcul IFU)", value: formatDZD(summary.metrics.netTaxableTurnoverDzd), isHighlight: true },
+        { label: "5. Taux applicable de l'Impôt Forfaitaire Unique (Loi de Finances 2024)", value: "0,5 %" },
+        { label: "6. Montant calculé de l'IFU (Base nette × 0,5%)", value: formatDZD(summary.metrics.rawIfuTaxDzd) },
+        { label: "7. Minimum forfaitaire légal de perception (Code des Impôts)", value: formatDZD(summary.metrics.minimumTaxDzd) },
+        { label: "8. MONTANT TOTAL DE L'IMPÔT DÛ AU TRÉSOR PUBLIC", value: formatDZD(summary.metrics.finalTaxOwedDzd), isFinal: true },
+      ];
+
+      metricsRows.forEach((r, idx) => {
+        const rowH = 17;
+        const bg = r.isFinal ? "#ecfdf5" : r.isHighlight ? "#f1f5f9" : (idx % 2 === 0 ? "#ffffff" : "#f8fafc");
+        doc.rect(margin, curY, contentWidth, rowH).fillAndStroke(bg, "#e2e8f0");
+
+        doc.fontSize(8);
+        if (r.isFinal) {
+          doc.font("Helvetica-Bold").fillColor(accentColor);
+        } else if (r.isHighlight) {
+          doc.font("Helvetica-Bold").fillColor(primaryColor);
+        } else {
+          doc.font("Helvetica").fillColor(primaryColor);
+        }
+
+        doc.text(r.label, margin + 8, curY + 4, { width: 380 });
+        doc.text(r.value, margin + 390, curY + 4, { width: contentWidth - 400, align: "right" });
+        curY += rowH;
+      });
+
+      curY += 10;
+
+      // --- CADRE III : LIVRE-JOURNAL DES ENCAISSEMENTS ---
+      doc.rect(margin, curY, contentWidth, 18).fill(primaryColor);
+      doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold").text(
+        `III. LIVRE-JOURNAL DES ENCAISSEMENTS EFFECTIFS (${summary.paidInvoices.length} FACTURES PAYÉES)`,
+        margin + 8,
+        curY + 5
+      );
+      curY += 18;
+
+      // Table Header
+      doc.rect(margin, curY, contentWidth, 16).fill("#e2e8f0");
+      doc.fillColor(primaryColor).fontSize(7).font("Helvetica-Bold");
+      doc.text("N° FACTURE", margin + 6, curY + 5, { width: 90 });
+      doc.text("DATE ÉMISSION", margin + 100, curY + 5, { width: 65 });
+      doc.text("DATE ENCAISS.", margin + 170, curY + 5, { width: 65 });
+      doc.text("CLIENT BÉNÉFICIAIRE", margin + 240, curY + 5, { width: 175 });
+      doc.text("MONTANT ENCAISSÉ (DZD)", margin + 420, curY + 5, { width: contentWidth - 426, align: "right" });
+      curY += 16;
+
+      const maxRows = Math.min(summary.paidInvoices.length, 12);
+      for (let i = 0; i < maxRows; i++) {
+        const inv = summary.paidInvoices[i];
+        const rowBg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
+        doc.rect(margin, curY, contentWidth, 15).fillAndStroke(rowBg, "#f1f5f9");
+
+        doc.font("Helvetica").fontSize(7).fillColor(primaryColor);
+        doc.text(inv.invoiceNumber, margin + 6, curY + 4, { width: 90 });
+        doc.text(new Date(inv.issueDate).toLocaleDateString("fr-DZ"), margin + 100, curY + 4, { width: 65 });
+        doc.text(new Date(inv.paidAt || inv.issueDate).toLocaleDateString("fr-DZ"), margin + 170, curY + 4, { width: 65 });
+        doc.text(inv.clientName, margin + 240, curY + 4, { width: 175, lineBreak: false });
+        doc.font("Helvetica-Bold").text(formatDZD(inv.total), margin + 420, curY + 4, { width: contentWidth - 426, align: "right" });
+        curY += 15;
+      }
+
+      if (summary.paidInvoices.length > maxRows) {
+        doc.rect(margin, curY, contentWidth, 14).fill("#f8fafc");
+        doc.font("Helvetica-Oblique").fontSize(7).fillColor(mutedColor).text(
+          `... et ${summary.paidInvoices.length - maxRows} autres factures (voir livre des recettes complet exporté en annexe)`,
+          margin + 6,
+          curY + 3
+        );
+        curY += 14;
+      }
+
+      if (summary.paidInvoices.length === 0) {
+        doc.rect(margin, curY, contentWidth, 18).fill("#ffffff");
+        doc.font("Helvetica-Oblique").fontSize(7.5).fillColor(mutedColor).text(
+          "Aucun encaissement enregistré sur cet exercice (application automatique du minimum légal de 10 000 DZD).",
+          margin + 6,
+          curY + 5
+        );
+        curY += 18;
+      }
+
+      curY += 10;
+
+      // --- CADRE IV : SIGNATURES & VISAS OFFICIELS ---
+      const boxWidth = (contentWidth - 12) / 2;
+      const boxHeight = 72;
+
+      // Attestation contribuable
+      doc.roundedRect(margin, curY, boxWidth, boxHeight, 3).strokeColor(borderColor).stroke();
+      doc.rect(margin, curY, boxWidth, 14).fill("#f1f5f9");
+      doc.fillColor(primaryColor).fontSize(7).font("Helvetica-Bold").text(
+        "ATTESTATION SUR L'HONNEUR DU CONTRIBUABLE",
+        margin + 6,
+        curY + 4
+      );
+      doc.font("Helvetica").fontSize(6.5).fillColor(mutedColor).text(
+        "Je certifie sur l'honneur l'exactitude des montants déclarés conformément aux dispositions de la loi n° 22-23 et du Code des Impôts Directs.",
+        margin + 6,
+        curY + 18,
+        { width: boxWidth - 12 }
+      );
+      doc.text(`Fait le : ${new Date().toLocaleDateString("fr-DZ")}`, margin + 6, curY + 44);
+      doc.font("Helvetica-Bold").text("Signature de l'auto-entrepreneur :", margin + 6, curY + 54);
+
+      // Cadre Recette des Impôts
+      const taxBoxX = margin + boxWidth + 12;
+      doc.roundedRect(taxBoxX, curY, boxWidth, boxHeight, 3).strokeColor(borderColor).stroke();
+      doc.rect(taxBoxX, curY, boxWidth, 14).fill("#f1f5f9");
+      doc.fillColor(primaryColor).fontSize(7).font("Helvetica-Bold").text(
+        "CADRE RÉSERVÉ À LA RECETTE DES IMPÔTS",
+        taxBoxX + 6,
+        curY + 4
+      );
+      doc.font("Helvetica").fontSize(6.5).fillColor(mutedColor).text(
+        "Date de réception : ________________________",
+        taxBoxX + 6,
+        curY + 22
+      );
+      doc.text("Quittance N° : ____________________________", taxBoxX + 6, curY + 36);
+      doc.text("Montant perçu : ___________________________", taxBoxX + 6, curY + 50);
+      doc.font("Helvetica-Bold").text("Cachet et visa de l'Inspecteur :", taxBoxX + 115, curY + 58);
+
+      // Footer
+      const footerY = 788;
+      doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
+      doc.fontSize(6.5).font("Helvetica").fillColor(mutedColor);
+      doc.text(
+        `Bordereau Récapitulatif Annuel édité par Moukawil.dz pour ${summary.seller.fullName} • NIF : ${summary.seller.nif || "—"} • Conforme Loi 22-23`,
+        margin,
+        footerY + 6,
         { align: "center", width: contentWidth }
       );
 

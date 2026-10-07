@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, FileSpreadsheet, RotateCcw } from "lucide-react";
+import { FileText, FileSpreadsheet, RotateCcw, Calendar } from "lucide-react";
 
 interface InvoicingTabsProps {
   counts?: {
@@ -22,7 +22,7 @@ export function InvoicingTabs({ counts }: InvoicingTabsProps) {
       label: "Factures",
       icon: FileText,
       count: counts?.invoices,
-      isActive: pathname === "/invoices" || pathname.startsWith("/invoices/"),
+      isActive: pathname === "/invoices" || (pathname.startsWith("/invoices/") && !pathname.includes("tax-summary")),
     },
     {
       href: "/quotes",
@@ -37,6 +37,12 @@ export function InvoicingTabs({ counts }: InvoicingTabsProps) {
       icon: RotateCcw,
       count: counts?.creditNotes,
       isActive: pathname === "/credit-notes" || pathname.startsWith("/credit-notes/"),
+    },
+    {
+      href: "/tax-summary",
+      label: "Bordereau Fiscal (IFU)",
+      icon: Calendar,
+      isActive: pathname.startsWith("/tax-summary"),
     },
   ];
 

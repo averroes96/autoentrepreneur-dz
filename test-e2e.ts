@@ -14,7 +14,10 @@ import {
   generateInvoicePdfBuffer,
   generateQuotePdfBuffer,
   generateCreditNotePdfBuffer,
+  generateTaxSummaryPdfBuffer,
 } from "./src/lib/pdfGenerator";
+import { getStatutoryDeadlines } from "./src/lib/statutoryCalendar";
+import { getAnnualTaxSummary, generateTaxSummaryCsv } from "./src/lib/taxSummary";
 import {
   createDraftQuote,
   finalizeAndSendQuote,
@@ -360,6 +363,76 @@ async function runTests() {
   );
 
   console.log("=== ALL SECTION 3 ANAE NOMENCLATURE & NIF VALIDATION TESTS PASSED PERFECTLY ===");
+
+  console.log("\n=== STARTING SECTION 4: STATUTORY CALENDAR & TAX SUMMARY (IFU G12 BIS) ===");
+
+  // 23. Statutory Obligations Calendar & Deadlines Engine
+  console.log("Testing Statutory Obligations Calendar Engine...");
+  const statutoryDeadlines = getStatutoryDeadlines(2026, profile);
+  console.log(`✓ Computed ${statutoryDeadlines.length} statutory deadlines for fiscal year 2026:`);
+  for (const dl of statutoryDeadlines) {
+    console.log(`  - [${dl.category}] ${dl.title} -> Due: ${dl.targetDate.toISOString().slice(0, 10)} (${dl.badgeLabel})`);
+  }
+
+  // Verify IFU deadline: Jan 31 of N+1 (2027)
+  const ifuDl = statutoryDeadlines.find((d) => d.id === "ifu-declaration");
+  if (!ifuDl) throw new Error("Missing IFU statutory deadline");
+  if (ifuDl.targetDate.getFullYear() !== 2027 || ifuDl.targetDate.getMonth() !== 0 || ifuDl.targetDate.getDate() !== 31) {
+    throw new Error(`IFU target date incorrect: ${ifuDl.targetDate}`);
+  }
+  if (ifuDl.category !== "FISCAL") throw new Error("IFU category must be FISCAL");
+
+  // Verify CASNOS deadline: June 30 of N (2026)
+  const casnosDl = statutoryDeadlines.find((d) => d.id === "casnos-annual");
+  if (!casnosDl) throw new Error("Missing CASNOS statutory deadline");
+  if (casnosDl.targetDate.getFullYear() !== 2026 || casnosDl.targetDate.getMonth() !== 5 || casnosDl.targetDate.getDate() !== 30) {
+    throw new Error(`CASNOS target date incorrect: ${casnosDl.targetDate}`);
+  }
+  if (casnosDl.category !== "SOCIAL") throw new Error("CASNOS category must be SOCIAL");
+  console.log("✓ Key statutory dates verified: IFU = Jan 31 N+1, CASNOS = June 30 N");
+
+  // 24. Annual Tax Summary Calculation (Bordereau Récapitulatif)
+  console.log("Testing Annual Tax Summary (getAnnualTaxSummary)...");
+  const taxSummary = await getAnnualTaxSummary(tenantId, 2026);
+  console.log(`✓ Annual Tax Summary computed for ${taxSummary.fiscalYear}:`);
+  console.log(`  - Gross Billed: ${taxSummary.metrics.grossBilledDzd} DZD`);
+  console.log(`  - Gross Collected: ${taxSummary.metrics.rawCollectedDzd} DZD across ${taxSummary.metrics.totalPaidInvoicesCount} paid invoices`);
+  console.log(`  - Refunded Credit Notes: ${taxSummary.metrics.totalRefundedCreditDzd} DZD across ${taxSummary.metrics.totalRefundedNotesCount} refunded notes`);
+  console.log(`  - Net Taxable Turnover: ${taxSummary.metrics.netTaxableTurnoverDzd} DZD`);
+  console.log(`  - IFU Tax Owed (0.5% / min 10k): ${taxSummary.metrics.finalTaxOwedDzd} DZD (Floor applied: ${taxSummary.metrics.isMinimumApplied})`);
+  console.log(`  - Remaining Ceiling: ${taxSummary.metrics.remainingCeilingDzd} DZD (${taxSummary.metrics.ceilingConsumedPercentage}%)`);
+
+  if (taxSummary.fiscalYear !== 2026) throw new Error("Summary fiscal year mismatch");
+  if (taxSummary.metrics.netTaxableTurnoverDzd !== taxSummary.metrics.rawCollectedDzd - taxSummary.metrics.totalRefundedCreditDzd) {
+    throw new Error("Net turnover deduction arithmetic mismatch");
+  }
+  if (taxSummary.metrics.finalTaxOwedDzd < 10_000) {
+    throw new Error("IFU tax owed must not be less than the 10,000 DZD statutory floor");
+  }
+  if (taxSummary.paidInvoices.length !== taxSummary.metrics.totalPaidInvoicesCount) {
+    throw new Error("Paid invoices list length mismatch");
+  }
+
+  // 25. Annual Tax Summary CSV Export (Livre des Recettes)
+  console.log("Testing Tax Summary CSV Export...");
+  const csvContent = generateTaxSummaryCsv(taxSummary);
+  if (!csvContent.startsWith("\uFEFF")) {
+    throw new Error("CSV must include UTF-8 BOM for Algerian Excel compatibility");
+  }
+  if (!csvContent.includes("BORDEREAU RÉCAPITULATIF FISCAL") || !csvContent.includes("CHIFFRE D'AFFAIRES")) {
+    throw new Error("CSV missing key headers or sections");
+  }
+  console.log(`✓ CSV Export generated successfully (${csvContent.length} chars, UTF-8 BOM present)`);
+
+  // 26. High-Resolution Vector PDF Generator (Bordereau Série G n° 12 bis)
+  console.log("Testing Official Tax Summary PDF Generation (Série G n° 12 bis)...");
+  const taxPdfBuffer = await generateTaxSummaryPdfBuffer(taxSummary);
+  console.log(`✓ Tax Summary PDF generated successfully, byte size: ${taxPdfBuffer.length}`);
+  if (taxPdfBuffer.length < 1000) {
+    throw new Error("Tax Summary PDF buffer suspiciously small");
+  }
+
+  console.log("=== ALL SECTION 4 STATUTORY CALENDAR & TAX SUMMARY TESTS PASSED PERFECTLY ===");
 }
 
 runTests()

@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Building2,
   ChevronDown,
+  Calendar,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -33,7 +34,8 @@ export function Navbar({ user, tenantName }: NavbarProps) {
   const isInvoicingActive =
     pathname.startsWith("/invoices") ||
     pathname.startsWith("/quotes") ||
-    pathname.startsWith("/credit-notes");
+    pathname.startsWith("/credit-notes") ||
+    pathname.startsWith("/tax-summary");
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -75,6 +77,14 @@ export function Navbar({ user, tenantName }: NavbarProps) {
       icon: RotateCcw,
       isActive: pathname.startsWith("/credit-notes"),
       color: "text-rose-600 bg-rose-50",
+    },
+    {
+      href: "/tax-summary",
+      label: "Bordereau Fiscal (IFU)",
+      desc: "Déclaration G12 bis & Échéances",
+      icon: Calendar,
+      isActive: pathname.startsWith("/tax-summary"),
+      color: "text-amber-600 bg-amber-50",
     },
   ];
 
