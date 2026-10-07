@@ -19,6 +19,10 @@ import {
   deleteDraftInvoice,
 } from "@/lib/invoicing";
 import { REGULATORY_CONFIG } from "@/config/regulatory";
+import { generateInvoicePdfBuffer } from "@/lib/pdfGenerator";
+import { sendInvoiceEmail, sendPaymentReceiptEmail } from "@/lib/email";
+import { persistInvoicePdf } from "@/lib/storage";
+import { captureException } from "@/lib/sentry";
 
 /* =========================================================================
    AUTHENTICATION ACTIONS
@@ -482,3 +486,84 @@ export async function deleteInvoiceAction(invoiceId: string) {
     return { error: err.message };
   }
 }
+
+export async function emailInvoiceAction(invoiceId: string, recipientEmail?: string) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  try {
+    const invoice = await db.invoice.findFirst({
+      where: { id: invoiceId, tenantId: session.tenantId },
+      include: {
+        client: true,
+        lineItems: { orderBy: { position: "asc" } },
+      },
+    });
+
+    if (!invoice) return { error: "Facture introuvable." };
+    if (invoice.status === "DRAFT") {
+      return { error: "Veuillez émettre la facture avant de l'envoyer par email." };
+    }
+
+    const targetEmail = recipientEmail?.trim() || invoice.client.email?.trim();
+    if (!targetEmail) {
+      return { error: "Veuillez renseigner l'adresse email du client." };
+    }
+
+    const profile = await db.autoEntrepreneurProfile.findUnique({
+      where: { tenantId: session.tenantId },
+    });
+
+    if (!profile) return { error: "Profil d'auto-entrepreneur introuvable." };
+
+    const pdfBuffer = await generateInvoicePdfBuffer({
+      invoice,
+      seller: {
+        fullName: profile.fullName,
+        rnaeNumber: profile.rnaeNumber,
+        nif: profile.nif,
+        address: profile.address,
+        email: profile.email,
+        phone: profile.phone,
+        activityCode: profile.activityCode,
+        activityLabel: profile.activityLabel,
+      },
+      client: invoice.client,
+    });
+
+    // Backup to cloud storage (Cloudflare R2 or Supabase Storage) asynchronously
+    persistInvoicePdf({
+      tenantId: session.tenantId,
+      invoiceNumber: invoice.invoiceNumber || invoice.id,
+      pdfBuffer,
+    }).catch((storageErr) => {
+      captureException(storageErr, { context: "persistInvoicePdfBackground" });
+    });
+
+    // Send email with PDF attachment via Resend
+    const result = await sendInvoiceEmail({
+      to: targetEmail,
+      clientName: invoice.client.name,
+      invoiceNumber: invoice.invoiceNumber || "BROUILLON",
+      totalAmount: invoice.total,
+      currency: invoice.currency,
+      pdfBuffer,
+      notes: invoice.notes,
+      sellerName: profile.fullName,
+    });
+
+    if (!result.success) {
+      return { error: "Erreur lors de l'envoi de l'email via Resend." };
+    }
+
+    return {
+      success: true,
+      recipient: targetEmail,
+      mocked: (result as any).mocked,
+    };
+  } catch (err: any) {
+    captureException(err, { action: "emailInvoiceAction", invoiceId });
+    return { error: err.message || "Erreur interne lors de l'envoi." };
+  }
+}
+

@@ -1,0 +1,228 @@
+import { Resend } from "resend";
+import { captureException } from "./sentry";
+
+const resendApiKey = process.env.RESEND_API_KEY;
+const resendFromEmail = process.env.RESEND_FROM_EMAIL || "Moukawil.dz <notifications@resend.dev>";
+
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
+export interface SendInvoiceEmailParams {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  currency?: string;
+  pdfBuffer: Buffer | Uint8Array;
+  notes?: string | null;
+  sellerName?: string;
+}
+
+export interface SendPaymentReceiptEmailParams {
+  to: string;
+  clientName: string;
+  invoiceNumber: string;
+  amountPaid: number;
+  currency?: string;
+  paymentDate: Date;
+  sellerName?: string;
+}
+
+export interface SendCeilingAlertEmailParams {
+  to: string;
+  entrepreneurName: string;
+  currentTurnover: number;
+  ceilingLimit?: number;
+  percentage: number;
+  fiscalYear: number;
+}
+
+/**
+ * Send an official invoice email with PDF attached to client.
+ */
+export async function sendInvoiceEmail({
+  to,
+  clientName,
+  invoiceNumber,
+  totalAmount,
+  currency = "DZD",
+  pdfBuffer,
+  notes,
+  sellerName = "Auto-Entrepreneur",
+}: SendInvoiceEmailParams) {
+  if (!resend) {
+    console.info(
+      `[Resend Dev/Mock] sendInvoiceEmail -> To: ${to}, Invoice: ${invoiceNumber}, Amount: ${totalAmount.toLocaleString("fr-DZ")} ${currency}`
+    );
+    return { success: true, mocked: true };
+  }
+
+  const formattedAmount = `${totalAmount.toLocaleString("fr-DZ")} ${currency}`;
+  const filename = `Facture-${invoiceNumber}.pdf`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="fr">
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; padding: 24px; }
+          .card { background-color: #ffffff; border-radius: 8px; padding: 32px; max-width: 600px; margin: 0 auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+          .header { border-bottom: 2px solid #0284c7; padding-bottom: 16px; margin-bottom: 24px; }
+          .title { font-size: 20px; font-weight: bold; color: #0f172a; margin: 0; }
+          .badge { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 4px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600; }
+          .content { line-height: 1.6; font-size: 15px; }
+          .summary-table { width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f1f5f9; border-radius: 6px; }
+          .summary-table td { padding: 12px 16px; }
+          .summary-table tr:first-child td { border-bottom: 1px solid #cbd5e1; }
+          .footer { margin-top: 32px; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="header">
+            <span class="badge">Facture N° ${invoiceNumber}</span>
+            <h1 class="title" style="margin-top: 10px;">Bonjour ${clientName},</h1>
+          </div>
+          <div class="content">
+            <p>Veuillez trouver ci-joint votre facture <strong>N° ${invoiceNumber}</strong> émise par <strong>${sellerName}</strong>.</p>
+            
+            <table class="summary-table">
+              <tr>
+                <td><strong>Montant total net :</strong></td>
+                <td style="text-align: right; font-size: 17px; font-weight: bold; color: #0284c7;">${formattedAmount}</td>
+              </tr>
+              <tr>
+                <td><strong>Régime fiscal :</strong></td>
+                <td style="text-align: right; font-size: 13px; color: #475569;">Exonéré de TVA (Loi 22-23)</td>
+              </tr>
+            </table>
+
+            ${notes ? `<p><strong>Instructions / Modalités :</strong><br />${notes}</p>` : ""}
+
+            <p>Le document original certifié en format PDF est joint à cet email.</p>
+          </div>
+          <div class="footer">
+            <p>Document généré via la plateforme conforme pour auto-entrepreneurs en Algérie conformément à la Loi n° 22-23.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const data = await resend.emails.send({
+      from: resendFromEmail,
+      to,
+      subject: `Facture N° ${invoiceNumber} - ${sellerName}`,
+      html: htmlContent,
+      attachments: [
+        {
+          filename,
+          content: Buffer.from(pdfBuffer),
+        },
+      ],
+    });
+
+    return { success: true, data };
+  } catch (err) {
+    captureException(err, { action: "sendInvoiceEmail", invoiceNumber, to });
+    console.error("[Resend Error] Failed to send invoice email:", err);
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Send payment receipt confirmation email to client.
+ */
+export async function sendPaymentReceiptEmail({
+  to,
+  clientName,
+  invoiceNumber,
+  amountPaid,
+  currency = "DZD",
+  paymentDate,
+  sellerName = "Auto-Entrepreneur",
+}: SendPaymentReceiptEmailParams) {
+  if (!resend) {
+    console.info(
+      `[Resend Dev/Mock] sendPaymentReceiptEmail -> To: ${to}, Invoice: ${invoiceNumber}, Paid: ${amountPaid} ${currency}`
+    );
+    return { success: true, mocked: true };
+  }
+
+  const formattedAmount = `${amountPaid.toLocaleString("fr-DZ")} ${currency}`;
+  const formattedDate = paymentDate.toLocaleDateString("fr-DZ");
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="fr">
+      <body style="font-family: sans-serif; background-color: #f8fafc; padding: 24px; color: #1e293b;">
+        <div style="background-color: #ffffff; border-radius: 8px; padding: 32px; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0;">
+          <h2 style="color: #16a34a; margin-top: 0;">✓ Règlement Confirmé</h2>
+          <p>Bonjour ${clientName},</p>
+          <p>Nous vous confirmons la bonne réception de votre paiement de <strong>${formattedAmount}</strong> pour la facture <strong>N° ${invoiceNumber}</strong> en date du <strong>${formattedDate}</strong>.</p>
+          <p>Nous vous remercions pour votre confiance.</p>
+          <p style="margin-top: 24px; color: #64748b; font-size: 13px;">Cordialement,<br />${sellerName}</p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const data = await resend.emails.send({
+      from: resendFromEmail,
+      to,
+      subject: `Confirmation de paiement - Facture N° ${invoiceNumber}`,
+      html: htmlContent,
+    });
+    return { success: true, data };
+  } catch (err) {
+    captureException(err, { action: "sendPaymentReceiptEmail", invoiceNumber, to });
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Send an alert email to the entrepreneur when approaching annual turnover limits.
+ */
+export async function sendCeilingAlertEmail({
+  to,
+  entrepreneurName,
+  currentTurnover,
+  ceilingLimit = 5_000_000,
+  percentage,
+  fiscalYear,
+}: SendCeilingAlertEmailParams) {
+  if (!resend) {
+    console.info(`[Resend Dev/Mock] sendCeilingAlertEmail -> Alert for ${entrepreneurName}: ${percentage}%`);
+    return { success: true, mocked: true };
+  }
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="fr">
+      <body style="font-family: sans-serif; background-color: #fef2f2; padding: 24px; color: #1e293b;">
+        <div style="background-color: #ffffff; border-radius: 8px; padding: 32px; max-width: 600px; margin: 0 auto; border: 1px solid #fecaca;">
+          <h2 style="color: #dc2626; margin-top: 0;">⚠️ Alerte Seuil IFU - Exercice ${fiscalYear}</h2>
+          <p>Bonjour ${entrepreneurName},</p>
+          <p>Votre chiffre d'affaires encaissé pour l'exercice <strong>${fiscalYear}</strong> s'élève à <strong>${currentTurnover.toLocaleString("fr-DZ")} DZD</strong>, soit <strong>${percentage.toFixed(1)}%</strong> du plafond légal de <strong>${ceilingLimit.toLocaleString("fr-DZ")} DZD</strong> (Loi 22-23).</p>
+          <p>Attention : tout dépassement consécutif sur 3 ans entraîne l'exclusion du régime simplifié de l'auto-entrepreneur et le basculement vers le régime du réel.</p>
+          <p style="margin-top: 24px;"><a href="${process.env.NEXT_PUBLIC_APP_URL || "https://moukawil.dz"}/dashboard" style="background-color: #dc2626; color: white; padding: 10px 18px; text-decoration: none; border-radius: 6px; display: inline-block;">Accéder au tableau de bord</a></p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const data = await resend.emails.send({
+      from: resendFromEmail,
+      to,
+      subject: `⚠️ Alerte Plafond IFU (${percentage.toFixed(0)}%) - Exercice ${fiscalYear}`,
+      html: htmlContent,
+    });
+    return { success: true, data };
+  } catch (err) {
+    captureException(err, { action: "sendCeilingAlertEmail", to });
+    return { success: false, error: err };
+  }
+}

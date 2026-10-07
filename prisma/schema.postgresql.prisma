@@ -1,0 +1,155 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id         String   @id @default(uuid())
+  name       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users              User[]
+  profile            AutoEntrepreneurProfile?
+  clients            Client[]
+  invoices           Invoice[]
+  invoiceSequences   InvoiceSequence[]
+  pastTurnovers      PastTurnover[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         String   @default("ADMIN")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model AutoEntrepreneurProfile {
+  id                 String    @id @default(uuid())
+  tenantId           String    @unique
+  fullName           String
+  rnaeNumber         String
+  nif                String
+  address            String
+  email              String
+  phone              String
+  activityCode       String
+  activityLabel      String
+  defaultCurrency    String    @default("DZD")
+  cardIssueDate      DateTime?
+  activityStartDate  DateTime?
+  cardValidityYears  Int       @default(5)
+  casnosStatus       String    @default("AFFILIATED") // AFFILIATED, PENDING, EXEMPT
+  casnosScheme       String    @default("FLAT_24000") // FLAT_24000, STANDARD
+  vatExemptionNote   String    @default("Exonéré de la TVA en vertu de la loi n° 22-23 relative au statut de l'auto-entrepreneur et du Code des Impôts Directs.")
+  invoicePrefix      String    @default("FAC")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  clientType  String   @default("PROFESSIONAL") // PROFESSIONAL, INDIVIDUAL
+  address     String
+  nif         String?
+  nis         String?
+  rc          String?
+  email       String?
+  phone       String?
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices    Invoice[]
+
+  @@index([tenantId])
+}
+
+model InvoiceSequence {
+  id           String @id @default(uuid())
+  tenantId     String
+  fiscalYear   Int
+  lastSequence Int    @default(0)
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fiscalYear])
+}
+
+model Invoice {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  clientId           String
+  invoiceNumber      String?
+  sequenceNumber     Int?
+  fiscalYear         Int
+  status             String    @default("DRAFT") // DRAFT, ISSUED, CANCELLED
+  paymentStatus      String    @default("UNPAID") // UNPAID, PAID
+  issueDate          DateTime
+  paidAt             DateTime?
+  currency           String    @default("DZD")
+  total              Float     @default(0)
+  vatExemptionNote   String
+  sellerSnapshot     String?   // JSON snapshot of profile when issued
+  clientSnapshot     String?   // JSON snapshot of client when issued
+  issuedAt           DateTime?
+  cancellationReason String?
+  notes              String?
+  showDetailedItems  Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client             Client    @relation(fields: [clientId], references: [id])
+  lineItems          InvoiceLineItem[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([clientId])
+}
+
+model InvoiceLineItem {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Float
+  unitPrice   Float
+  totalPrice  Float
+  currency    String  @default("DZD")
+  position    Int     @default(0)
+
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model PastTurnover {
+  id          String   @id @default(uuid())
+  tenantId    String
+  fiscalYear  Int
+  turnoverDzd Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fiscalYear])
+}
