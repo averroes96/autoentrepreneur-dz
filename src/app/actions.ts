@@ -560,10 +560,11 @@ export async function emailInvoiceAction(invoiceId: string, recipientEmail?: str
       pdfBuffer,
       notes: invoice.notes,
       sellerName: profile.fullName,
+      sellerEmail: profile.email,
     });
 
     if (!result.success) {
-      return { error: "Erreur lors de l'envoi de l'email via Resend." };
+      return { error: result.error || "Erreur lors de l'envoi de l'email." };
     }
 
     return {

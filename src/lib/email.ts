@@ -2,7 +2,17 @@ import { Resend } from "resend";
 import { captureException } from "./sentry";
 
 const resendApiKey = process.env.RESEND_API_KEY;
-const resendFromEmail = process.env.RESEND_FROM_EMAIL || "Moukawil.dz <notifications@resend.dev>";
+
+export function resolveSenderEmail(): string {
+  const envFrom = process.env.RESEND_FROM_EMAIL?.trim();
+  if (envFrom) {
+    const isPublicWebmail = /@(gmail|yahoo|hotmail|outlook|live)\.[a-z]+/i.test(envFrom);
+    if (!isPublicWebmail) {
+      return envFrom;
+    }
+  }
+  return "Moukawil.dz <onboarding@resend.dev>";
+}
 
 export function getAppUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -28,6 +38,7 @@ export interface SendInvoiceEmailParams {
   pdfBuffer: Buffer | Uint8Array;
   notes?: string | null;
   sellerName?: string;
+  sellerEmail?: string;
 }
 
 export interface SendPaymentReceiptEmailParams {
@@ -61,6 +72,7 @@ export async function sendInvoiceEmail({
   pdfBuffer,
   notes,
   sellerName = "Auto-Entrepreneur",
+  sellerEmail,
 }: SendInvoiceEmailParams) {
   if (!resend) {
     console.info(
@@ -123,9 +135,10 @@ export async function sendInvoiceEmail({
   `;
 
   try {
-    const data = await resend.emails.send({
-      from: resendFromEmail,
+    const { data, error } = await resend.emails.send({
+      from: resolveSenderEmail(),
       to,
+      replyTo: sellerEmail || undefined,
       subject: `Facture N° ${invoiceNumber} - ${sellerName}`,
       html: htmlContent,
       attachments: [
@@ -136,11 +149,17 @@ export async function sendInvoiceEmail({
       ],
     });
 
+    if (error) {
+      captureException(error, { action: "sendInvoiceEmail", invoiceNumber, to });
+      console.error("[Resend Error] API returned error:", error);
+      return { success: false, error: error.message };
+    }
+
     return { success: true, data };
-  } catch (err) {
+  } catch (err: any) {
     captureException(err, { action: "sendInvoiceEmail", invoiceNumber, to });
     console.error("[Resend Error] Failed to send invoice email:", err);
-    return { success: false, error: err };
+    return { success: false, error: err.message || "Erreur de connexion Resend" };
   }
 }
 
@@ -182,16 +201,22 @@ export async function sendPaymentReceiptEmail({
   `;
 
   try {
-    const data = await resend.emails.send({
-      from: resendFromEmail,
+    const { data, error } = await resend.emails.send({
+      from: resolveSenderEmail(),
       to,
       subject: `Confirmation de paiement - Facture N° ${invoiceNumber}`,
       html: htmlContent,
     });
+
+    if (error) {
+      captureException(error, { action: "sendPaymentReceiptEmail", invoiceNumber, to });
+      return { success: false, error: error.message };
+    }
+
     return { success: true, data };
-  } catch (err) {
+  } catch (err: any) {
     captureException(err, { action: "sendPaymentReceiptEmail", invoiceNumber, to });
-    return { success: false, error: err };
+    return { success: false, error: err.message || "Erreur de connexion Resend" };
   }
 }
 
@@ -227,15 +252,21 @@ export async function sendCeilingAlertEmail({
   `;
 
   try {
-    const data = await resend.emails.send({
-      from: resendFromEmail,
+    const { data, error } = await resend.emails.send({
+      from: resolveSenderEmail(),
       to,
       subject: `⚠️ Alerte Plafond IFU (${percentage.toFixed(0)}%) - Exercice ${fiscalYear}`,
       html: htmlContent,
     });
+
+    if (error) {
+      captureException(error, { action: "sendCeilingAlertEmail", to });
+      return { success: false, error: error.message };
+    }
+
     return { success: true, data };
-  } catch (err) {
+  } catch (err: any) {
     captureException(err, { action: "sendCeilingAlertEmail", to });
-    return { success: false, error: err };
+    return { success: false, error: err.message || "Erreur de connexion Resend" };
   }
 }

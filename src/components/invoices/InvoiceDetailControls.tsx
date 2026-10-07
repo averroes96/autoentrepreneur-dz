@@ -403,7 +403,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               </div>
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Transmettre la facture</h2>
-                <p className="text-xs text-slate-500">Service d'envoi transactional Resend</p>
+                <p className="text-xs text-slate-500">Transmission par email direct avec PDF conforme</p>
               </div>
             </div>
             <button
@@ -464,7 +464,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{emailLoading ? "Envoi en cours..." : "Envoyer avec Resend"}</span>
+                <span>{emailLoading ? "Envoi en cours..." : "Envoyez"}</span>
               </button>
             </div>
           </form>
