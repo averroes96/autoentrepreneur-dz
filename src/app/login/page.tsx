@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { loginAction } from "@/app/actions";
-import { ShieldCheck, ArrowRight, Lock, Mail, AlertCircle } from "lucide-react";
+import { ShieldCheck, ArrowRight, Lock, Mail, AlertCircle, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -21,7 +24,17 @@ export default function LoginPage() {
         setError(res.error);
         setLoading(false);
       } else if (res?.success) {
-        window.location.href = "/dashboard";
+        setIsRedirecting(true);
+        router.push("/dashboard");
+        router.refresh();
+        setTimeout(() => {
+          if (typeof window !== "undefined") {
+            window.location.replace("/dashboard");
+          }
+        }, 150);
+      } else {
+        setError("Une réponse inattendue est survenue.");
+        setLoading(false);
       }
     } catch (err: any) {
       setError(err?.message || "Erreur lors de la connexion.");
@@ -91,11 +104,25 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isRedirecting}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition cursor-pointer"
             >
-              <span>{loading ? "Connexion..." : "Se connecter"}</span>
-              <ArrowRight className="w-4 h-4" />
+              {isRedirecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Connexion réussie ! Redirection...</span>
+                </>
+              ) : loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Connexion en cours...</span>
+                </>
+              ) : (
+                <>
+                  <span>Se connecter</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 

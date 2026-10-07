@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signupAction } from "@/app/actions";
-import { ShieldCheck, ArrowRight, Lock, Mail, User, Building, AlertCircle, FileText } from "lucide-react";
+import { ShieldCheck, ArrowRight, Lock, Mail, User, Building, AlertCircle, FileText, Loader2 } from "lucide-react";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -20,12 +23,29 @@ export default function SignupPage() {
       if (res?.error) {
         setError(res.error);
         setLoading(false);
+        if (typeof window !== "undefined") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       } else if (res?.success) {
-        window.location.href = "/dashboard";
+        setIsRedirecting(true);
+        router.push("/dashboard");
+        router.refresh();
+        // Guaranteed fallback full reload navigation
+        setTimeout(() => {
+          if (typeof window !== "undefined") {
+            window.location.replace("/dashboard");
+          }
+        }, 150);
+      } else {
+        setError("Une réponse inattendue est survenue.");
+        setLoading(false);
       }
     } catch (err: any) {
       setError(err?.message || "Erreur lors de la création du compte.");
       setLoading(false);
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
   }
 
@@ -164,11 +184,25 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isRedirecting}
               className="w-full mt-2 flex items-center justify-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition cursor-pointer"
             >
-              <span>{loading ? "Création du compte..." : "Créer mon espace Auto-Entrepreneur"}</span>
-              <ArrowRight className="w-4 h-4" />
+              {isRedirecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Compte créé ! Redirection vers le tableau de bord...</span>
+                </>
+              ) : loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Création de votre espace en cours...</span>
+                </>
+              ) : (
+                <>
+                  <span>Créer mon espace Auto-Entrepreneur</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
