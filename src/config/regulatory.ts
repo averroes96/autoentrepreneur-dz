@@ -57,8 +57,12 @@ export interface RegulatoryConfig {
    * Non-salaried workers' social security fund
    */
   casnos: {
-    /** Default flat annual contribution scheme (in DZD) */
+    /** Default flat annual contribution scheme (in DZD) for Auto-Entrepreneurs */
     defaultAnnualContributionDzd: number;
+    /** Standard non-salaried rate (15% of declared income) */
+    standardRate: number;
+    /** Statutory minimum contribution under standard scheme (15% of 3x SNMG = 36,000 DZD) */
+    standardMinimumAnnualDzd: number;
     /** Affiliation deadline: 10 days after activity start */
     affiliationDeadlineDays: number;
     /** Annual contribution payment deadline description */
@@ -118,6 +122,8 @@ export const REGULATORY_CONFIG: RegulatoryConfig = {
   },
   casnos: {
     defaultAnnualContributionDzd: 24_000,
+    standardRate: 0.15,
+    standardMinimumAnnualDzd: 36_000,
     affiliationDeadlineDays: 10,
     annualPaymentDeadlineDescription: "Selon le calendrier fixé par la CASNOS (habituellement fin juin)",
   },

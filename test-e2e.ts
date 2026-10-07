@@ -25,6 +25,14 @@ import {
   createCreditNoteFromInvoice,
   toggleCreditNoteRefundStatus,
 } from "./src/lib/creditNotes";
+import { validateAlgerianNif, formatNif } from "./src/lib/nifValidator";
+import {
+  ANAE_BRANCHES,
+  ANAE_ACTIVITIES,
+  searchAnaeActivities,
+  getActivityByCode,
+} from "./src/data/anaeActivities";
+import { REGULATORY_CONFIG } from "./src/config/regulatory";
 
 async function runTests() {
   console.log("=== STARTING PHASE 1 COMPLIANCE & INTEGRATION TEST ===");
@@ -277,6 +285,81 @@ async function runTests() {
   }
 
   console.log("=== ALL PHASE 2 QUOTE & CREDIT NOTE TESTS PASSED PERFECTLY ===");
+
+  console.log("\n=== STARTING SECTION 3: ANAE NOMENCLATURE & NIF VALIDATION TEST ===");
+
+  // 20. Official ANAE Nomenclature (Décret 23-197)
+  console.log("Verifying 7 Official ANAE Branches & Nomenclature...");
+  if (ANAE_BRANCHES.length !== 7) {
+    throw new Error(`Expected exactly 7 ANAE branches, found ${ANAE_BRANCHES.length}`);
+  }
+  console.log(`✓ 7 Official ANAE branches loaded:`, ANAE_BRANCHES.map((b) => `${b.code} - ${b.label}`).join(" | "));
+
+  // Test search in ANAE activities
+  const devActivities = searchAnaeActivities("next.js");
+  if (devActivities.length === 0 || !devActivities[0].code.startsWith("02")) {
+    throw new Error("ANAE search by keyword 'next.js' failed");
+  }
+  console.log(`✓ Keyword search successful: found "${devActivities[0].label}" (Code ${devActivities[0].code})`);
+
+  const activityByCode = getActivityByCode("020101");
+  if (!activityByCode || activityByCode.branchId !== "02") {
+    throw new Error("Activity lookup by code 020101 failed");
+  }
+  console.log(`✓ Exact code lookup successful: ${activityByCode.code} - ${activityByCode.label}`);
+
+  // 21. Algerian 15-Digit NIF Validation Algorithm
+  console.log("Testing Algerian 15-Digit NIF validation algorithm...");
+
+  // Valid NIF (Wilaya 16 - Alger)
+  const validNifResult = validateAlgerianNif("168016010023456");
+  if (!validNifResult.isValid || validNifResult.wilaya?.code !== "16" || validNifResult.wilaya?.name !== "Alger") {
+    throw new Error(`Valid NIF failed validation: ${validNifResult.error}`);
+  }
+  console.log(`✓ Valid NIF verified: ${validNifResult.cleanNif} -> Wilaya: ${validNifResult.wilaya.name} | Formatted: ${formatNif("168016010023456")}`);
+
+  // Valid birth-year format NIF (e.g. 199016010023456)
+  const altValidNif = validateAlgerianNif("199016010023456");
+  if (!altValidNif.isValid || altValidNif.wilaya?.code !== "16") {
+    throw new Error(`Alt valid NIF failed: ${altValidNif.error}`);
+  }
+  console.log(`✓ Alternate birth-year NIF verified: ${altValidNif.cleanNif} -> Wilaya: ${altValidNif.wilaya?.name}`);
+
+  // Invalid NIF: too short (14 digits)
+  const tooShortResult = validateAlgerianNif("16801601002345");
+  if (tooShortResult.isValid) {
+    throw new Error("NIF with 14 digits should have been rejected");
+  }
+  console.log(`✓ Too short NIF correctly rejected: "${tooShortResult.error}"`);
+
+  // Invalid NIF: repeated sequence
+  const fakeNifResult = validateAlgerianNif("000000000000000");
+  if (fakeNifResult.isValid) {
+    throw new Error("Repeated fake NIF should have been rejected");
+  }
+  console.log(`✓ Fake repetitive NIF correctly rejected: "${fakeNifResult.error}"`);
+
+  // Invalid NIF: invalid wilaya code (99)
+  const invalidWilayaResult = validateAlgerianNif("999999999999998");
+  if (invalidWilayaResult.isValid) {
+    throw new Error("NIF with invalid wilaya 99 should have been rejected");
+  }
+  console.log(`✓ Invalid wilaya code NIF correctly rejected: "${invalidWilayaResult.error}"`);
+
+  // 22. CASNOS Dual Scheme Regulatory Configuration
+  console.log("Verifying CASNOS Dual Scheme parameters...");
+  if (
+    REGULATORY_CONFIG.casnos.defaultAnnualContributionDzd !== 24_000 ||
+    REGULATORY_CONFIG.casnos.standardRate !== 0.15 ||
+    REGULATORY_CONFIG.casnos.standardMinimumAnnualDzd !== 36_000
+  ) {
+    throw new Error("CASNOS dual scheme regulatory parameters incorrect");
+  }
+  console.log(
+    `✓ CASNOS parameters verified: Flat Rate = ${REGULATORY_CONFIG.casnos.defaultAnnualContributionDzd} DZD/an | Standard Rate = ${REGULATORY_CONFIG.casnos.standardRate * 100}% | Standard Floor = ${REGULATORY_CONFIG.casnos.standardMinimumAnnualDzd} DZD/an`
+  );
+
+  console.log("=== ALL SECTION 3 ANAE NOMENCLATURE & NIF VALIDATION TESTS PASSED PERFECTLY ===");
 }
 
 runTests()

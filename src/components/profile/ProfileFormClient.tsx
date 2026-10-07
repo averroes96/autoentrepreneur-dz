@@ -19,6 +19,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { calculateProfileCompletion } from "@/lib/profile";
+import { NifInputWithValidation } from "./NifInputWithValidation";
+import { AnaeActivitySelector } from "./AnaeActivitySelector";
+import { CasnosSchemeSelector } from "./CasnosSchemeSelector";
 
 interface ProfileData {
   fullName: string;
@@ -37,6 +40,8 @@ interface ProfileData {
   casnosScheme: string;
   vatExemptionNote: string;
   invoicePrefix: string;
+  quotePrefix?: string | null;
+  creditNotePrefix?: string | null;
 }
 
 interface PastTurnoverData {
@@ -299,48 +304,18 @@ export function ProfileFormClient({
               </span>
             </div>
 
+            {/* NIF avec Validation Automatique 15 Chiffres & Détection Wilaya */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                NIF (Numéro d'Identification Fiscale) *
-              </label>
-              <input
-                type="text"
-                name="nif"
-                required
-                defaultValue={profile.nif}
-                placeholder="Ex: 198016010023456"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                Obtenu après la déclaration d'existence auprès de la recette des impôts.
-              </span>
+              <NifInputWithValidation defaultValue={profile.nif} name="nif" />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Code Activité ANAE
-              </label>
-              <input
-                type="text"
-                name="activityCode"
-                defaultValue={profile.activityCode}
-                placeholder="Ex: 601101"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Libellé de l'Activité Éligible
-              </label>
-              <input
-                type="text"
-                name="activityLabel"
-                defaultValue={profile.activityLabel}
-                placeholder="Ex: Développement informatique et logiciels"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+          {/* 7 Domaines Officiels ANAE : Menu Déroulant Recherchable (Décret exécutif n° 23-197) */}
+          <div className="pt-2 border-t border-slate-100">
+            <AnaeActivitySelector
+              initialCode={profile.activityCode}
+              initialLabel={profile.activityLabel}
+            />
           </div>
         </div>
 
@@ -384,7 +359,7 @@ export function ProfileFormClient({
               </span>
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                 Statut d'affiliation CASNOS
               </label>
@@ -393,25 +368,16 @@ export function ProfileFormClient({
                 defaultValue={profile.casnosStatus}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="AFFILIATED">Affilié (En règle)</option>
-                <option value="PENDING">En cours d'affiliation</option>
-                <option value="EXEMPT">Dispensé / Autre régime</option>
+                <option value="AFFILIATED">Affilié (En règle avec sa carte Chifa)</option>
+                <option value="PENDING">En cours d'affiliation (Délai légal de 10 jours)</option>
+                <option value="EXEMPT">Dispensé / Salarié par ailleurs (Double statut)</option>
               </select>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Régime de cotisation CASNOS
-              </label>
-              <select
-                name="casnosScheme"
-                defaultValue={profile.casnosScheme}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="FLAT_24000">Forfait préférentiel (24 000 DZD/an)</option>
-                <option value="STANDARD">Régime général au pourcentage</option>
-              </select>
-            </div>
+          {/* Sélecteur Double Régime CASNOS & Simulateur d'Économie */}
+          <div className="pt-2 border-t border-slate-100">
+            <CasnosSchemeSelector defaultScheme={profile.casnosScheme} />
           </div>
         </div>
 
@@ -424,33 +390,53 @@ export function ProfileFormClient({
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Préfixe de numérotation des factures
+                Préfixe des Factures
               </label>
               <input
                 type="text"
                 name="invoicePrefix"
                 defaultValue={profile.invoicePrefix || "FAC"}
-                placeholder="Ex: FAC ou INV"
+                placeholder="Ex: FAC"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Format généré : <code>{profile.invoicePrefix || "FAC"}-{new Date().getFullYear()}-0001</code>
+                Ex: <code>{profile.invoicePrefix || "FAC"}-{new Date().getFullYear()}-0001</code>
               </span>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Devise par défaut
+                Préfixe des Devis
               </label>
               <input
                 type="text"
-                disabled
-                value="Dinar Algérien (DZD)"
-                className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-500 cursor-not-allowed"
+                name="quotePrefix"
+                defaultValue={profile.quotePrefix || "DEV"}
+                placeholder="Ex: DEV"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Ex: <code>{profile.quotePrefix || "DEV"}-{new Date().getFullYear()}-0001</code>
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Préfixe des Avoirs
+              </label>
+              <input
+                type="text"
+                name="creditNotePrefix"
+                defaultValue={profile.creditNotePrefix || "AVR"}
+                placeholder="Ex: AVR"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Ex: <code>{profile.creditNotePrefix || "AVR"}-{new Date().getFullYear()}-0001</code>
+              </span>
             </div>
           </div>
 

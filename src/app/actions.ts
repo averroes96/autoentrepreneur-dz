@@ -44,6 +44,7 @@ import {
 } from "@/lib/email";
 import { persistInvoicePdf } from "@/lib/storage";
 import { captureException } from "@/lib/sentry";
+import { validateAlgerianNif } from "@/lib/nifValidator";
 
 /* =========================================================================
    AUTHENTICATION ACTIONS
@@ -60,6 +61,13 @@ export async function signupAction(formData: FormData) {
 
     if (!businessName || !fullName || !email || !password) {
       return { error: "Veuillez remplir tous les champs obligatoires." };
+    }
+
+    if (nif) {
+      const nifCheck = validateAlgerianNif(nif);
+      if (!nifCheck.isValid) {
+        return { error: `Numéro d'Identification Fiscale (NIF) invalide : ${nifCheck.error}` };
+      }
     }
 
     if (password.length < 6) {
@@ -186,6 +194,12 @@ export async function updateProfileAction(formData: FormData) {
   const fullName = (formData.get("fullName") as string)?.trim();
   const rnaeNumber = (formData.get("rnaeNumber") as string)?.trim();
   const nif = (formData.get("nif") as string)?.trim();
+  if (nif) {
+    const nifCheck = validateAlgerianNif(nif);
+    if (!nifCheck.isValid) {
+      return { error: `Numéro d'Identification Fiscale (NIF) invalide : ${nifCheck.error}` };
+    }
+  }
   const address = (formData.get("address") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim() || "";
   const email = (formData.get("email") as string)?.trim() || session.email;
