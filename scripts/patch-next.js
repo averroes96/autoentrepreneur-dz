@@ -141,7 +141,11 @@ for (const f of files) {
   }
 
   // 14. Prevent fatal Error("Connection closed.") when RSC stream closes
-  if (content.includes(": reportGlobalError(weakResponse, Error(\"Connection closed.\"));")) {
+  if (content.includes("Error(\"Connection closed.\")")) {
+    content = content.replace(
+      /reportGlobalError\((?:weakResponse|response),\s*Error\("Connection closed\."\)\)/g,
+      "void 0"
+    );
     content = content.replaceAll(
       "response._allowPartialStream\n          ? ((response._closed = !0),",
       "(response._allowPartialStream || true)\n          ? ((response._closed = !0),"
