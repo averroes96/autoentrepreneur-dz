@@ -149,6 +149,15 @@ for (const f of files) {
     modified = true;
   }
 
+  // 15. Guard against non-object or invalid ioInfo in initializeIOInfo
+  if (content.includes("function initializeIOInfo(response, ioInfo) {\n      void 0 !== ioInfo.stack")) {
+    content = content.replaceAll(
+      "function initializeIOInfo(response, ioInfo) {\n      void 0 !== ioInfo.stack",
+      "function initializeIOInfo(response, ioInfo) {\n      if (!ioInfo || typeof ioInfo !== \"object\" || typeof ioInfo.start !== \"number\") return;\n      void 0 !== ioInfo.stack"
+    );
+    modified = true;
+  }
+
   if (modified) {
     fs.writeFileSync(f, content, "utf8");
     count++;

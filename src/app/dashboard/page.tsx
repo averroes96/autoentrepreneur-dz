@@ -28,7 +28,11 @@ import {
 } from "lucide-react";
 import { calculateProfileCompletion } from "@/lib/profile";
 
-export default async function DashboardPage() {
+interface DashboardProps {
+  searchParams?: Promise<{ year?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardProps) {
   const session = await requireAuth();
   const tenant = await getCurrentTenantWithProfile(session.tenantId);
 
@@ -37,17 +41,44 @@ export default async function DashboardPage() {
   }
 
   const currentYear = new Date().getFullYear();
+  const resolvedParams = searchParams ? await searchParams : undefined;
 
-  // Fetch current year invoices
+  // Discover all distinct fiscal years for this tenant from invoices
+  const distinctYears = await db.invoice.findMany({
+    where: { tenantId: session.tenantId },
+    select: { fiscalYear: true },
+    distinct: ["fiscalYear"],
+  });
+
+  const availableYears = Array.from(
+    new Set([currentYear, ...distinctYears.map((i) => i.fiscalYear)])
+  ).sort((a, b) => b - a);
+
+  const requestedYear = resolvedParams?.year ? parseInt(resolvedParams.year, 10) : undefined;
+  const activeYear = requestedYear && !isNaN(requestedYear) ? requestedYear : currentYear;
+
+  // Fetch invoices for the active fiscal year (used for ceiling, IFU tax, and annual billing totals)
   const invoices = await db.invoice.findMany({
     where: {
       tenantId: session.tenantId,
-      fiscalYear: currentYear,
+      fiscalYear: activeYear,
     },
     include: {
       client: true,
     },
     orderBy: { createdAt: "desc" },
+  });
+
+  // Fetch recent invoices (latest across ALL fiscal years so new invoices appear immediately)
+  const recentInvoices = await db.invoice.findMany({
+    where: {
+      tenantId: session.tenantId,
+    },
+    include: {
+      client: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
   });
 
   // Fetch past recorded turnovers for 3-year rule
@@ -56,7 +87,7 @@ export default async function DashboardPage() {
     orderBy: { fiscalYear: "desc" },
   });
 
-  // Calculate metrics
+  // Calculate metrics for the active fiscal year
   const issuedInvoices = invoices.filter((i) => i.status === "ISSUED");
   const paidInvoices = issuedInvoices.filter((i) => i.paymentStatus === "PAID");
   const draftInvoices = invoices.filter((i) => i.status === "DRAFT");
@@ -68,10 +99,7 @@ export default async function DashboardPage() {
   // Legal turnover & tax calculations (based on paid turnover as confirmed in decision #4)
   const ceiling = calculateCeilingStatus(totalPaidDzd);
   const ifu = calculateIfu(totalPaidDzd);
-  const threeYearRule = evaluateThreeYearRule(currentYear, totalPaidDzd, pastTurnovers);
-
-  // Recent 5 invoices
-  const recentInvoices = invoices.slice(0, 5);
+  const threeYearRule = evaluateThreeYearRule(activeYear, totalPaidDzd, pastTurnovers);
 
   // Profile completion status
   const profileCompletion = calculateProfileCompletion(tenant.profile);
@@ -139,10 +167,27 @@ export default async function DashboardPage() {
         {/* Welcome & Quick Actions Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                Exercice Fiscal {currentYear}
+                Exercice Fiscal {activeYear}
               </span>
+              {availableYears.length > 1 && (
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  {availableYears.map((yr) => (
+                    <Link
+                      key={yr}
+                      href={`/dashboard?year=${yr}`}
+                      className={`px-2 py-0.5 rounded-md text-xs font-semibold transition ${
+                        yr === activeYear
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200"
+                      }`}
+                    >
+                      {yr}
+                    </Link>
+                  ))}
+                </div>
+              )}
               <span className="text-xs text-slate-500">
                 N° RNAE : {tenant.profile.rnaeNumber || "À renseigner"}
               </span>
@@ -262,7 +307,7 @@ export default async function DashboardPage() {
               <span>
                 Déclaration annuelle due avant le{" "}
                 <strong className="text-slate-600">
-                  {REGULATORY_CONFIG.ifu.annualDeclarationDeadline.day} Janvier N+1
+                  {REGULATORY_CONFIG.ifu.annualDeclarationDeadline.day} Janvier {activeYear + 1}
                 </strong>
               </span>
             </div>
@@ -272,7 +317,7 @@ export default async function DashboardPage() {
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
             <div>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-3">
-                Activité de Facturation {currentYear}
+                Activité de Facturation {activeYear}
               </span>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
