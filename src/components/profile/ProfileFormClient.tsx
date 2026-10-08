@@ -22,6 +22,7 @@ import { calculateProfileCompletion } from "@/lib/profile";
 import { NifInputWithValidation } from "./NifInputWithValidation";
 import { AnaeActivitySelector } from "./AnaeActivitySelector";
 import { CasnosSchemeSelector } from "./CasnosSchemeSelector";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface ProfileData {
   fullName: string;
@@ -58,6 +59,7 @@ export function ProfileFormClient({
   pastTurnovers: PastTurnoverData[];
 }) {
   const router = useRouter();
+  const { t, locale, dir } = useI18n();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +128,18 @@ export function ProfileFormClient({
 
   return (
     <div className="space-y-8">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          {locale === "ar" ? "الملف الشخصي والإعدادات القانونية" : "Profil & Paramètres Réglementaires"}
+        </h1>
+        <p className="text-sm text-slate-500">
+          {locale === "ar"
+            ? "ضبط البيانات القانونية الإلزامية، أرقام التعريف المعتمدة ANAE/DGI، وسجل نشاطك التجاري."
+            : "Configurez vos mentions légales obligatoires, vos identifiants ANAE/DGI et l'historique de votre statut."}
+        </p>
+      </div>
+
       {/* Profile Completion Progress Card */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -23,6 +23,7 @@ import {
   X,
   CheckCircle2,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface ClientData {
   id: string;
@@ -45,6 +46,7 @@ export function ClientListClient({
   initialClients: ClientData[];
 }) {
   const router = useRouter();
+  const { t, locale, dir } = useI18n();
   const [clients, setClients] = useState<ClientData[]>(initialClients);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"ALL" | "PROFESSIONAL" | "INDIVIDUAL" | "ARCHIVED">("ALL");
@@ -149,9 +151,13 @@ export function ClientListClient({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gestion des Clients</h1>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {locale === "ar" ? "إدارة الزبائن" : "Gestion des Clients"}
+          </h1>
           <p className="text-sm text-slate-500">
-            Créez et gérez vos clients professionnels (entreprises/agences) et particuliers.
+            {locale === "ar"
+              ? "إنشاء وإدارة حسابات الزبائن المهنيين (الشركات والوكالات) والأفراد."
+              : "Créez et gérez vos clients professionnels (entreprises/agences) et particuliers."}
           </p>
         </div>
 
@@ -161,29 +167,29 @@ export function ClientListClient({
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm shadow-sm transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Ajouter un client</span>
+          <span>{locale === "ar" ? "إضافة زبون جديد" : "Ajouter un client"}</span>
         </button>
       </div>
 
       {/* Filters and Search Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className={`w-4 h-4 absolute ${dir === "rtl" ? "right-3.5" : "left-3.5"} top-1/2 -translate-y-1/2 text-slate-400`} />
           <input
             type="text"
-            placeholder="Rechercher par nom, email, NIF..."
+            placeholder={locale === "ar" ? "بحث بالاسم، البريد، أو NIF..." : "Rechercher par nom, email, NIF..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+            className={`w-full ${dir === "rtl" ? "pr-10 pl-4 text-right" : "pl-10 pr-4 text-left"} py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition`}
           />
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
           {[
-            { id: "ALL", label: "Tous les clients" },
-            { id: "PROFESSIONAL", label: "Professionnels (Agences/Entreprises)" },
-            { id: "INDIVIDUAL", label: "Particuliers" },
-            { id: "ARCHIVED", label: "Archivés" },
+            { id: "ALL", label: locale === "ar" ? "كافة الزبائن" : "Tous les clients" },
+            { id: "PROFESSIONAL", label: locale === "ar" ? "مهنيون (شركات)" : "Professionnels (Agences/Entreprises)" },
+            { id: "INDIVIDUAL", label: locale === "ar" ? "أفراد" : "Particuliers" },
+            { id: "ARCHIVED", label: locale === "ar" ? "المؤرشفون" : "Archivés" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -204,10 +210,16 @@ export function ClientListClient({
       {filteredClients.length === 0 ? (
         <div className="bg-white p-12 text-center rounded-2xl border border-slate-200">
           <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-base font-semibold text-slate-700">Aucun client trouvé</p>
+          <p className="text-base font-semibold text-slate-700">
+            {locale === "ar" ? "لم يتم العثور على أي زبون" : "Aucun client trouvé"}
+          </p>
           <p className="text-xs text-slate-400 mt-1 mb-4">
             {searchTerm
-              ? "Aucun résultat ne correspond à votre recherche."
+              ? locale === "ar"
+                ? "لا توجد نتائج تطابق معايير البحث."
+                : "Aucun résultat ne correspond à votre recherche."
+              : locale === "ar"
+              ? "ابدأ بإضافة أول زبون لتتمكن من فوترة خدماتك."
               : "Commencez par ajouter votre premier client pour pouvoir lui facturer vos prestations."}
           </p>
           {!searchTerm && (
@@ -217,7 +229,7 @@ export function ClientListClient({
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Nouveau client</span>
+              <span>{locale === "ar" ? "زبون جديد" : "Nouveau client"}</span>
             </button>
           )}
         </div>
@@ -249,7 +261,13 @@ export function ClientListClient({
                           {client.name}
                         </h2>
                         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                          {isPro ? "Professionnel" : "Particulier"}
+                          {isPro
+                            ? locale === "ar"
+                              ? "مهني / شركة"
+                              : "Professionnel"
+                            : locale === "ar"
+                            ? "شخص طبيعي"
+                            : "Particulier"}
                         </span>
                       </div>
                     </div>
@@ -258,7 +276,7 @@ export function ClientListClient({
                       <button
                         type="button"
                         onClick={() => openEditModal(client)}
-                        title="Modifier"
+                        title={locale === "ar" ? "تعديل" : "Modifier"}
                         className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
@@ -266,7 +284,7 @@ export function ClientListClient({
                       <button
                         type="button"
                         onClick={() => handleToggleArchive(client)}
-                        title={client.isArchived ? "Désarchiver" : "Archiver"}
+                        title={client.isArchived ? (locale === "ar" ? "استعادة" : "Désarchiver") : (locale === "ar" ? "أرشفة" : "Archiver")}
                         className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
                       >
                         {client.isArchived ? (
@@ -340,7 +358,13 @@ export function ClientListClient({
         <div className="bg-white p-6 sm:p-7">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
             <h2 className="text-lg font-bold text-slate-900">
-              {editingClient ? "Modifier le client" : "Nouveau client"}
+              {editingClient
+                ? locale === "ar"
+                  ? "تعديل بيانات الزبون"
+                  : "Modifier le client"
+                : locale === "ar"
+                ? "إضافة زبون جديد"
+                : "Nouveau client"}
             </h2>
             <button
               type="button"
@@ -472,14 +496,24 @@ export function ClientListClient({
                 onClick={closeModal}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                Annuler
+                {locale === "ar" ? "إلغاء" : "Annuler"}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
-                {isSubmitting ? "Enregistrement..." : editingClient ? "Mettre à jour" : "Créer le client"}
+                {isSubmitting
+                  ? locale === "ar"
+                    ? "جار الحفظ..."
+                    : "Enregistrement..."
+                  : editingClient
+                  ? locale === "ar"
+                    ? "تحديث البيانات"
+                    : "Mettre à jour"
+                  : locale === "ar"
+                  ? "إنشاء الزبون"
+                  : "Créer le client"}
               </button>
             </div>
           </form>

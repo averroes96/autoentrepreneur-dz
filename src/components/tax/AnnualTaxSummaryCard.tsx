@@ -1,28 +1,22 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
-import { formatDZD } from "@/lib/tax";
 import { AnnualTaxSummary } from "@/lib/taxSummary";
 import {
-  FileText,
   Download,
-  FileSpreadsheet,
-  ExternalLink,
   ShieldCheck,
-  CheckCircle2,
-  TrendingDown,
   Info,
-  Clock,
   Printer,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface AnnualTaxSummaryCardProps {
   summary: AnnualTaxSummary;
 }
 
 export function AnnualTaxSummaryCard({ summary }: AnnualTaxSummaryCardProps) {
-  const { metrics, fiscalYear, seller } = summary;
+  const { metrics, fiscalYear } = summary;
+  const { t, locale, formatAmount } = useI18n();
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
@@ -31,17 +25,21 @@ export function AnnualTaxSummaryCard({ summary }: AnnualTaxSummaryCardProps) {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              Série G n° 12 bis • Loi 22-23
+              {locale === "ar" ? "سلسلة ج رقم 12 مكرر • القانون 22-23" : "Série G n° 12 bis • Loi 22-23"}
             </span>
             <span className="text-xs text-slate-400">
-              Exercice Fiscal {fiscalYear}
+              {t("fiscalYear", { year: fiscalYear })}
             </span>
           </div>
           <h2 className="text-lg font-bold tracking-tight text-white">
-            Bordereau Récapitulatif Fiscal & Déclaration IFU
+            {locale === "ar"
+              ? "الجدول التلخيصي الجبائي والتصريح السنوي IFU"
+              : "Bordereau Récapitulatif Fiscal & Déclaration IFU"}
           </h2>
           <p className="text-xs text-slate-300">
-            Document officiel certifié pour soumission physique à l'Inspection des Impôts ou télédéclaration sur Jibayatic.
+            {locale === "ar"
+              ? "وثيقة رسمية معتمدة للإيداع المادي لدى مفتشية الضرائب أو التلخيص الرقمي عبر بوابة جبايتك."
+              : "Document officiel certifié pour soumission physique à l'Inspection des Impôts ou télédéclaration sur Jibayatic."}
           </p>
         </div>
 
@@ -54,7 +52,7 @@ export function AnnualTaxSummaryCard({ summary }: AnnualTaxSummaryCardProps) {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs transition"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Bordereau PDF Officiel</span>
+            <span>{locale === "ar" ? "الكشف الرسمي PDF" : "Bordereau PDF Officiel"}</span>
           </a>
 
           <a
@@ -63,7 +61,7 @@ export function AnnualTaxSummaryCard({ summary }: AnnualTaxSummaryCardProps) {
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Livre Recettes (CSV)</span>
+            <span>{locale === "ar" ? "سجل المقبوضات (CSV)" : "Livre Recettes (CSV)"}</span>
           </a>
 
           <a
@@ -72,7 +70,7 @@ export function AnnualTaxSummaryCard({ summary }: AnnualTaxSummaryCardProps) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition"
           >
-            <span>Jibayatic ↗</span>
+            <span>{locale === "ar" ? "بوابة جبايتك ↗" : "Jibayatic ↗"}</span>
           </a>
         </div>
       </div>
@@ -83,49 +81,53 @@ export function AnnualTaxSummaryCard({ summary }: AnnualTaxSummaryCardProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-              1. Total Facturé Émis
+              {locale === "ar" ? "1. إجمالي المفوتر الصادر" : "1. Total Facturé Émis"}
             </span>
             <div className="text-lg font-extrabold text-slate-900 mt-1">
-              {formatDZD(metrics.grossBilledDzd)}
+              {formatAmount(metrics.grossBilledDzd)}
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Toutes factures de l'exercice
+              {locale === "ar" ? "كافة فواتير السنة المالية" : "Toutes factures de l'exercice"}
             </p>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-              2. Encaissements Effectifs
+              {locale === "ar" ? "2. المداخيل المحصلة فعلياً" : "2. Encaissements Effectifs"}
             </span>
             <div className="text-lg font-extrabold text-slate-900 mt-1">
-              {formatDZD(metrics.rawCollectedDzd)}
+              {formatAmount(metrics.rawCollectedDzd)}
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              {metrics.totalPaidInvoicesCount} factures payées
+              {locale === "ar"
+                ? `${metrics.totalPaidInvoicesCount} فاتورة مدفوعة ومحصلة`
+                : `${metrics.totalPaidInvoicesCount} factures payées`}
             </p>
           </div>
 
           <div className="p-4 rounded-xl bg-rose-50/60 border border-rose-200/80">
             <span className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider block">
-              3. Avoirs Déduits
+              {locale === "ar" ? "3. الفواتير الدائنة المخصومة" : "3. Avoirs Déduits"}
             </span>
             <div className="text-lg font-extrabold text-rose-700 mt-1">
-              - {formatDZD(metrics.totalRefundedCreditDzd)}
+              - {formatAmount(metrics.totalRefundedCreditDzd)}
             </div>
             <p className="text-[11px] text-rose-600/80 mt-0.5">
-              {metrics.totalRefundedNotesCount} avoirs remboursés
+              {locale === "ar"
+                ? `${metrics.totalRefundedNotesCount} سند إنقاص معوض`
+                : `${metrics.totalRefundedNotesCount} avoirs remboursés`}
             </p>
           </div>
 
           <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
             <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
-              4. CA Net Imposable
+              {locale === "ar" ? "4. رقم الأعمال الصافي الخاضع للضريبة" : "4. CA Net Imposable"}
             </span>
             <div className="text-xl font-black text-emerald-700 mt-1">
-              {formatDZD(metrics.netTaxableTurnoverDzd)}
+              {formatAmount(metrics.netTaxableTurnoverDzd)}
             </div>
             <p className="text-[11px] text-emerald-600 mt-0.5">
-              Base officielle de calcul IFU
+              {locale === "ar" ? "القاعدة القانونية الرسمية لحساب IFU" : "Base officielle de calcul IFU"}
             </p>
           </div>
         </div>
@@ -136,34 +138,37 @@ export function AnnualTaxSummaryCard({ summary }: AnnualTaxSummaryCardProps) {
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-emerald-600" />
               <h3 className="text-sm font-bold text-slate-900">
-                Liquidation Fiscale : Impôt Forfaitaire Unique (IFU) à 0,5%
+                {locale === "ar"
+                  ? "التصفية الجبائية: الضريبة الجزافية الوحيدة (IFU) بنسبة 0.5%"
+                  : "Liquidation Fiscale : Impôt Forfaitaire Unique (IFU) à 0,5%"}
               </h3>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              En vertu de l'article 13 de la loi n° 22-23 et de la Loi de Finances 2024, le taux unifié
-              de 0,5% remplace l'IRG, la TVA et la TAP. L'impôt est exigible auprès du Trésor Public
-              au plus tard le <strong>31 Janvier {fiscalYear + 1}</strong>.
+              {locale === "ar"
+                ? `بموجب المادة 13 من القانون رقم 22-23 وقانون المالية، يحل المعدل الموحد 0.5% محل الرسم على القيمة المضافة والرسم على النشاط المهني والضريبة على الدخل. يستحق الأداء لدى الخزينة العمومية في أجل أقصاه 31 جانفي ${fiscalYear + 1}.`
+                : `En vertu de l'article 13 de la loi n° 22-23 et de la Loi de Finances, le taux unifié de 0,5% remplace l'IRG, la TVA et la TAP. L'impôt est exigible auprès du Trésor Public au plus tard le 31 Janvier ${fiscalYear + 1}.`}
             </p>
             {metrics.isMinimumApplied && (
               <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
                 <Info className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>
-                  Le montant brut calculé ({formatDZD(metrics.rawIfuTaxDzd)}) étant inférieur au seuil
-                  légal, le <strong>plancher forfaitaire minimum de {formatDZD(metrics.minimumTaxDzd)}</strong> s'applique.
+                  {locale === "ar"
+                    ? `بما أن المبلغ المحسوب (${formatAmount(metrics.rawIfuTaxDzd)}) أقل من الحد الأدنى القانوني، يطبق الحد الجزافي الإلزامي البالغ ${formatAmount(metrics.minimumTaxDzd)}.`
+                    : `Le montant brut calculé (${formatAmount(metrics.rawIfuTaxDzd)}) étant inférieur au seuil légal, le plancher forfaitaire minimum de ${formatAmount(metrics.minimumTaxDzd)} s'applique.`}
                 </span>
               </div>
             )}
           </div>
 
-          <div className="text-right shrink-0 p-4 rounded-xl bg-white border border-emerald-300/80 shadow-2xs">
+          <div className="text-right rtl:text-left shrink-0 p-4 rounded-xl bg-white border border-emerald-300/80 shadow-2xs">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-              Montant Total Dû au Trésor
+              {locale === "ar" ? "إجمالي المبلغ المستحق للخزينة" : "Montant Total Dû au Trésor"}
             </span>
             <div className="text-2xl font-black text-emerald-700 mt-0.5">
-              {formatDZD(metrics.finalTaxOwedDzd)}
+              {formatAmount(metrics.finalTaxOwedDzd)}
             </div>
             <span className="text-[10px] text-slate-400 block mt-0.5">
-              Quittance libératoire
+              {locale === "ar" ? "وصل إبراءي شامل" : "Quittance libératoire"}
             </span>
           </div>
         </div>

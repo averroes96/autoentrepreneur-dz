@@ -27,6 +27,8 @@ export const metadata: Metadata = {
     "Application de gestion d'activité, facturation conforme sans TVA et suivi du plafond IFU pour auto-entrepreneurs en Algérie (Loi 22-23).",
 };
 
+import { I18nProvider } from "@/lib/i18n/I18nContext";
+
 export default function RootLayout({
   children,
 }: {
@@ -38,7 +40,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
-        {children}
+        <I18nProvider>
+          {children}
+        </I18nProvider>
         <Analytics />
         <SpeedInsights />
       </body>

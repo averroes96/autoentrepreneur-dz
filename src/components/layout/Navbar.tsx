@@ -18,6 +18,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface NavbarProps {
   user: {
@@ -29,6 +30,7 @@ interface NavbarProps {
 
 export function Navbar({ user, tenantName }: NavbarProps) {
   const pathname = usePathname();
+  const { t, locale, dir } = useI18n();
   const [invoicingDropdownOpen, setInvoicingDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -57,32 +59,32 @@ export function Navbar({ user, tenantName }: NavbarProps) {
   const invoicingSubItems = [
     {
       href: "/invoices",
-      label: "Factures",
-      desc: "Factures de vente & encaissements",
+      label: t("invoices"),
+      desc: t("invoicesDesc"),
       icon: FileText,
       isActive: pathname.startsWith("/invoices"),
       color: "text-emerald-600 bg-emerald-50",
     },
     {
       href: "/quotes",
-      label: "Devis & Proformas",
-      desc: "Propositions & devis clients",
+      label: t("quotes"),
+      desc: t("quotesDesc"),
       icon: FileSpreadsheet,
       isActive: pathname.startsWith("/quotes"),
       color: "text-sky-600 bg-sky-50",
     },
     {
       href: "/credit-notes",
-      label: "Factures d'Avoir",
-      desc: "Notes de crédit & rectifications",
+      label: t("creditNotes"),
+      desc: t("creditNotesDesc"),
       icon: RotateCcw,
       isActive: pathname.startsWith("/credit-notes"),
       color: "text-rose-600 bg-rose-50",
     },
     {
       href: "/tax-summary",
-      label: "Bordereau Fiscal (IFU)",
-      desc: "Déclaration G12 bis & Échéances",
+      label: t("taxSummary"),
+      desc: t("taxSummaryDesc"),
       icon: Calendar,
       isActive: pathname.startsWith("/tax-summary"),
       color: "text-amber-600 bg-amber-50",
@@ -93,7 +95,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand */}
+          {/* Brand & Nav */}
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-500/20">
@@ -104,7 +106,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                   Moukawil<span className="text-emerald-600">.dz</span>
                 </span>
                 <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500">
-                  Auto-Entrepreneur
+                  {t("brandSub")}
                 </span>
               </div>
             </Link>
@@ -125,7 +127,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                     pathname === "/dashboard" ? "text-emerald-600" : "text-slate-400"
                   }`}
                 />
-                <span>Tableau de bord</span>
+                <span>{t("dashboard")}</span>
               </Link>
 
               {/* Invoicing Menu with Dropdown (Factures, Devis, Avoirs) */}
@@ -138,7 +140,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                 <div className="flex items-center">
                   <Link
                     href="/invoices"
-                    className={`flex items-center gap-1.5 pl-3.5 pr-1.5 py-2 rounded-l-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-l-lg rtl:rounded-l-none rtl:rounded-r-lg text-sm font-medium transition-all ${
                       isInvoicingActive
                         ? "bg-emerald-50 text-emerald-700 shadow-xs"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -149,14 +151,14 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                         isInvoicingActive ? "text-emerald-600" : "text-slate-400"
                       }`}
                     />
-                    <span>Facturation</span>
+                    <span>{t("invoicing")}</span>
                   </Link>
 
                   <button
                     type="button"
                     onClick={() => setInvoicingDropdownOpen(!invoicingDropdownOpen)}
-                    aria-label="Ouvrir le menu facturation"
-                    className={`px-1.5 py-2 rounded-r-lg text-sm font-medium transition-all cursor-pointer ${
+                    aria-label={t("invoicing")}
+                    className={`px-1.5 py-2 rounded-r-lg rtl:rounded-r-none rtl:rounded-l-lg text-sm font-medium transition-all cursor-pointer ${
                       isInvoicingActive
                         ? "bg-emerald-50 text-emerald-700"
                         : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -172,9 +174,13 @@ export function Navbar({ user, tenantName }: NavbarProps) {
 
                 {/* Dropdown Menu */}
                 {invoicingDropdownOpen && (
-                  <div className="absolute left-0 mt-1 w-72 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div
+                    className={`absolute ${
+                      dir === "rtl" ? "right-0" : "left-0"
+                    } mt-1 w-72 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150`}
+                  >
                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 py-1.5">
-                      Cycle de facturation (Loi 22-23)
+                      {t("billingCycleTitle")}
                     </div>
                     <div className="space-y-1">
                       {invoicingSubItems.map((sub) => {
@@ -234,7 +240,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                     pathname.startsWith("/clients") ? "text-emerald-600" : "text-slate-400"
                   }`}
                 />
-                <span>Clients</span>
+                <span>{t("clients")}</span>
               </Link>
 
               {/* Profil & Conformité */}
@@ -251,12 +257,12 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                     pathname.startsWith("/profile") ? "text-emerald-600" : "text-slate-400"
                   }`}
                 />
-                <span>Profil & Conformité</span>
+                <span>{t("profile")}</span>
               </Link>
             </nav>
           </div>
 
-          {/* User info & Logout */}
+          {/* User info & Language & Logout */}
           <div className="flex items-center gap-3">
             {/* Language Switcher (FR / عربي) */}
             <LanguageToggle />
@@ -268,7 +274,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
               </span>
             </div>
 
-            <div className="text-right hidden lg:block">
+            <div className="text-right rtl:text-left hidden lg:block">
               <p className="text-xs font-semibold text-slate-800 leading-tight">
                 {user.fullName}
               </p>
@@ -280,7 +286,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
             <form action={logoutAction}>
               <button
                 type="submit"
-                title="Déconnexion"
+                title={t("logout")}
                 className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
@@ -289,7 +295,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
           </div>
         </div>
 
-        {/* Mobile Navigation (Clean 4 items) */}
+        {/* Mobile Navigation */}
         <div className="md:hidden flex items-center justify-around border-t border-slate-100 py-2">
           <Link
             href="/dashboard"
@@ -298,7 +304,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
-            <span>Accueil</span>
+            <span>{t("home")}</span>
           </Link>
 
           <Link
@@ -308,7 +314,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Facturation</span>
+            <span>{t("invoicing")}</span>
           </Link>
 
           <Link
@@ -318,7 +324,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Clients</span>
+            <span>{t("clients")}</span>
           </Link>
 
           <Link
@@ -328,7 +334,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Profil</span>
+            <span>{t("profile")}</span>
           </Link>
         </div>
       </div>

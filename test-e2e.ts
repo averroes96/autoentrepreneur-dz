@@ -43,6 +43,7 @@ import {
   tafqeetNumberToArabicWords,
   getArabicAmountInWords,
 } from "./src/lib/arabicNomenclature";
+import { translations } from "./src/lib/i18n/translations";
 
 async function runTests() {
   console.log("=== STARTING PHASE 1 COMPLIANCE & INTEGRATION TEST ===");
@@ -504,6 +505,27 @@ async function runTests() {
     throw new Error(`Tafqeet failed for 24,000: got "${words24k}"`);
   }
   console.log(`✓ Tafqeet 24,000 DZD (CASNOS): "${words24k}"`);
+
+  // 30. Full Application I18n UI Dictionary Verification
+  console.log("Verifying Full Application UI I18n Translations Dictionary...");
+  const frKeys = Object.keys(translations.fr);
+  const arKeys = Object.keys(translations.ar);
+  if (frKeys.length !== arKeys.length) {
+    throw new Error(`Key mismatch: FR has ${frKeys.length} keys, AR has ${arKeys.length} keys`);
+  }
+  for (const k of frKeys) {
+    if (!(k in translations.ar)) {
+      throw new Error(`Missing Arabic translation for key: ${k}`);
+    }
+    const arVal = (translations.ar as any)[k];
+    if (!arVal || typeof arVal !== "string" || arVal.trim() === "") {
+      throw new Error(`Empty Arabic translation for key: ${k}`);
+    }
+  }
+  console.log(`✓ All ${frKeys.length} application UI translation keys validated in French and Arabic!`);
+  console.log(`  - FR Dashboard: "${translations.fr.dashboard}" | AR: "${translations.ar.dashboard}"`);
+  console.log(`  - FR Invoicing: "${translations.fr.invoicing}" | AR: "${translations.ar.invoicing}"`);
+  console.log(`  - FR Statutory: "${translations.fr.statutoryCalendarTitle}" | AR: "${translations.ar.statutoryCalendarTitle}"`);
 
   console.log("=== ALL SECTION 5 ARABIC LANGUAGE & RTL TESTS PASSED PERFECTLY ===");
 }

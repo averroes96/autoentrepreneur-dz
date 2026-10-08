@@ -53,23 +53,6 @@ export default async function InvoicesPage() {
           }}
         />
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Factures</h1>
-            <p className="text-sm text-slate-500">
-              Gestion de votre facturation séquentielle et conforme au régime auto-entrepreneur.
-            </p>
-          </div>
-
-          <Link
-            href="/invoices/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm shadow-sm transition"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Créer une facture</span>
-          </Link>
-        </div>
-
         <InvoicesListClient initialInvoices={invoices} />
       </main>
     </div>

@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FileText, FileSpreadsheet, RotateCcw, Calendar } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface InvoicingTabsProps {
   counts?: {
@@ -15,32 +16,35 @@ interface InvoicingTabsProps {
 
 export function InvoicingTabs({ counts }: InvoicingTabsProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   const tabs = [
     {
       href: "/invoices",
-      label: "Factures",
+      label: t("tabInvoices"),
       icon: FileText,
       count: counts?.invoices,
-      isActive: pathname === "/invoices" || (pathname.startsWith("/invoices/") && !pathname.includes("tax-summary")),
+      isActive:
+        pathname === "/invoices" ||
+        (pathname.startsWith("/invoices/") && !pathname.includes("tax-summary")),
     },
     {
       href: "/quotes",
-      label: "Devis & Proformas",
+      label: t("tabQuotes"),
       icon: FileSpreadsheet,
       count: counts?.quotes,
       isActive: pathname === "/quotes" || pathname.startsWith("/quotes/"),
     },
     {
       href: "/credit-notes",
-      label: "Factures d'Avoir",
+      label: t("tabCreditNotes"),
       icon: RotateCcw,
       count: counts?.creditNotes,
       isActive: pathname === "/credit-notes" || pathname.startsWith("/credit-notes/"),
     },
     {
       href: "/tax-summary",
-      label: "Bordereau Fiscal (IFU)",
+      label: t("tabTaxSummary"),
       icon: Calendar,
       isActive: pathname.startsWith("/tax-summary"),
     },

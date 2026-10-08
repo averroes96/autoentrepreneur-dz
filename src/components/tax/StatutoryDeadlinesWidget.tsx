@@ -13,9 +13,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   ExternalLink,
-  FileSpreadsheet,
   Building,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface StatutoryDeadlinesWidgetProps {
   fiscalYear: number;
@@ -30,7 +30,65 @@ export function StatutoryDeadlinesWidget({
   deadlines: propDeadlines,
   showTitle = true,
 }: StatutoryDeadlinesWidgetProps) {
-  const deadlines = propDeadlines || getStatutoryDeadlines(fiscalYear, profile);
+  const { t, locale, formatDate } = useI18n();
+  const rawDeadlines = propDeadlines || getStatutoryDeadlines(fiscalYear, profile);
+
+  // In Arabic mode, provide authentic Algerian administrative translations for each statutory deadline
+  const deadlines = rawDeadlines.map((dl) => {
+    if (locale === "ar") {
+      let title = dl.title;
+      let description = dl.description;
+      let recipient = dl.recipient;
+      let badgeLabel = dl.badgeLabel;
+
+      if (dl.id === "ifu-declaration") {
+        title = `التصريح السنوي ودفع الضريبة الجزافية الوحيدة (IFU ${fiscalYear})`;
+        description = `التصريح برقم الأعمال السنوي المحصل لـ ${fiscalYear} ودفع نسبة 0.5% (أو الحد الأدنى 10 000 دج) قبل 31 جانفي لدى قباضة الضرائب.`;
+        recipient = "قباضة الضرائب التابع لها (DGI)";
+      } else if (dl.id === "casnos-annual") {
+        title = `دفع الاشتراك السنوي للضمان الاجتماعي (CASNOS ${fiscalYear})`;
+        description = `آخر أجل لتسوية الاشتراك السنوي للمقاول الذاتي (24 000 دج) قبل 30 جوان لتفادي غرامات التأخير والحفاظ على بطاقة الشفاء.`;
+        recipient = "الصندوق الوطني للضمان الاجتماعي لغير الأجراء (CASNOS)";
+      } else if (dl.id === "casnos-affiliation") {
+        title = "الانتساب الأولي لصندوق الضمان الاجتماعي (CASNOS)";
+        description = "إيداع ملف الانتساب الإلزامي خلال 10 أيام من الحصول على بطاقة المقاول الذاتي للاستفادة من التغطية الصحية والتأمين.";
+        recipient = "وكالة CASNOS المختصة إقليميًا";
+      } else if (dl.id === "dgi-existence") {
+        title = "التصريح بالوجود الجبائي واستخراج رقم NIF (DGI)";
+        description = "إيداع التصريح بالوجود (الاستمارة G n° 8) لدى مفتشية الضرائب خلال 30 يومًا من بدء النشاط.";
+        recipient = "مفتشية الضرائب (DGI)";
+      } else if (dl.id === "anae-renewal") {
+        title = "تجديد بطاقة المقاول الذاتي كل 5 سنوات (ANAE)";
+        description = "تجديد بطاقة المقاول الذاتي سارية المفعول لمدة 5 سنوات قابلة للتجديد وفقًا للمرسوم التنفيذي 23-197.";
+        recipient = "الوكالة الوطنية للمقاول الذاتي (ANAE)";
+      }
+
+      // Translate countdown badge
+      if (dl.daysRemaining !== undefined) {
+        if (dl.daysRemaining < 0) {
+          badgeLabel = `فات الأجل بـ ${Math.abs(dl.daysRemaining)} يوم`;
+        } else if (dl.daysRemaining === 0) {
+          badgeLabel = "اليوم الأخير !";
+        } else {
+          badgeLabel = `${dl.daysRemaining} يوم متبقي`;
+        }
+      } else if (dl.urgency === "COMPLETED") {
+        if (dl.id === "casnos-affiliation") badgeLabel = "مؤمّن (بطاقة الشفاء نشطة) ✓";
+        else if (dl.id === "dgi-existence") badgeLabel = "تم منح رقم NIF بنجاح ✓";
+        else badgeLabel = "تمت التسوية بنجاح ✓";
+      }
+
+      return {
+        ...dl,
+        title,
+        description,
+        recipient,
+        badgeLabel,
+      };
+    }
+
+    return dl;
+  });
 
   return (
     <div className="space-y-4">
@@ -42,10 +100,10 @@ export function StatutoryDeadlinesWidget({
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">
-                Calendrier des Obligations Statutaires & Échéances Légales
+                {t("statutoryCalendarTitle")}
               </h2>
               <p className="text-xs text-slate-500">
-                Comptes à rebours officiels pour l'administration fiscale (DGI / IFU) et la sécurité sociale (CASNOS)
+                {t("statutoryCalendarSubtitle")}
               </p>
             </div>
           </div>
@@ -55,7 +113,7 @@ export function StatutoryDeadlinesWidget({
             rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition"
           >
-            <span>Portail Jibayatic</span>
+            <span>{t("jibayaticPortal")}</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
@@ -88,7 +146,7 @@ export function StatutoryDeadlinesWidget({
                         : "bg-slate-100 text-slate-700"
                     }`}
                   >
-                    {isFiscal ? "Fiscalité (DGI)" : isSocial ? "Sécurité Sociale" : "Statut ANAE"}
+                    {isFiscal ? t("catFiscal") : isSocial ? t("catSocial") : t("catAnae")}
                   </span>
 
                   <span
@@ -111,18 +169,14 @@ export function StatutoryDeadlinesWidget({
 
               <div className="pt-3 border-t border-slate-100 mt-3 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">Date limite légale :</span>
+                  <span className="text-slate-400">{t("legalDeadlineLimit")}</span>
                   <span className="font-bold text-slate-800">
-                    {dl.targetDate.toLocaleDateString("fr-DZ", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
+                    {formatDate(dl.targetDate)}
                   </span>
                 </div>
 
                 <div className="text-[10px] text-slate-400 truncate" title={dl.recipient}>
-                  Organisme : {dl.recipient}
+                  {t("organismLabel")} {dl.recipient}
                 </div>
               </div>
             </div>
