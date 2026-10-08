@@ -130,10 +130,18 @@ export const ARABIC_NOMENCLATURE: ArabicInvoiceLabels = {
 
 /**
  * Formatage d'un montant monétaire en dinars algériens en langue arabe.
+ * Utilise les marques d'isolation bidirectionnelle (LRI \u2066 et PDI \u2069)
+ * ainsi qu'un espace insécable (\u00A0 de classe CS) afin d'empêcher
+ * l'algorithme BiDi d'inverser les groupes de milliers (ex: 670 000 et non 000 670).
  */
 export function formatDZD_AR(amount: number): string {
-  const parts = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return `${parts} د.ج`;
+  const isNegative = (amount || 0) < 0;
+  const absAmount = Math.abs(amount || 0);
+  const parts = Math.round(absAmount)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, "\u00A0");
+  const prefix = isNegative ? "-" : "";
+  return `\u2066${prefix}${parts}\u2069\u00A0د.ج`;
 }
 
 /**

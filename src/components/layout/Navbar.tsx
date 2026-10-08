@@ -33,6 +33,32 @@ export function Navbar({ user, tenantName }: NavbarProps) {
   const { t, locale, dir } = useI18n();
   const [invoicingDropdownOpen, setInvoicingDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    setInvoicingDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+    }
+    closeTimeoutRef.current = setTimeout(() => {
+      setInvoicingDropdownOpen(false);
+    }, 250);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const isInvoicingActive =
     pathname.startsWith("/invoices") ||
@@ -134,8 +160,8 @@ export function Navbar({ user, tenantName }: NavbarProps) {
               <div
                 ref={dropdownRef}
                 className="relative"
-                onMouseEnter={() => setInvoicingDropdownOpen(true)}
-                onMouseLeave={() => setInvoicingDropdownOpen(false)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
               >
                 <div className="flex items-center">
                   <Link
@@ -156,7 +182,13 @@ export function Navbar({ user, tenantName }: NavbarProps) {
 
                   <button
                     type="button"
-                    onClick={() => setInvoicingDropdownOpen(!invoicingDropdownOpen)}
+                    onClick={() => {
+                      if (closeTimeoutRef.current) {
+                        clearTimeout(closeTimeoutRef.current);
+                        closeTimeoutRef.current = null;
+                      }
+                      setInvoicingDropdownOpen(!invoicingDropdownOpen);
+                    }}
                     aria-label={t("invoicing")}
                     className={`px-1.5 py-2 rounded-r-lg rtl:rounded-r-none rtl:rounded-l-lg text-sm font-medium transition-all cursor-pointer ${
                       isInvoicingActive
@@ -177,50 +209,60 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                   <div
                     className={`absolute ${
                       dir === "rtl" ? "right-0" : "left-0"
-                    } mt-1 w-72 rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150`}
+                    } top-full pt-1.5 w-72 z-50`}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
                   >
-                    <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 py-1.5">
-                      {t("billingCycleTitle")}
-                    </div>
-                    <div className="space-y-1">
-                      {invoicingSubItems.map((sub) => {
-                        const Icon = sub.icon;
-                        return (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            onClick={() => setInvoicingDropdownOpen(false)}
-                            className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
-                              sub.isActive
-                                ? "bg-slate-50 border border-slate-200/80"
-                                : "hover:bg-slate-50"
-                            }`}
-                          >
-                            <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${sub.color}`}
+                    <div className="relative rounded-2xl bg-white shadow-xl border border-slate-200/80 p-2 animate-in fade-in slide-in-from-top-1 duration-150 before:absolute before:-top-3 before:left-0 before:right-0 before:h-3 before:content-['']">
+                      <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-3 py-1.5">
+                        {t("billingCycleTitle")}
+                      </div>
+                      <div className="space-y-1">
+                        {invoicingSubItems.map((sub) => {
+                          const Icon = sub.icon;
+                          return (
+                            <Link
+                              key={sub.href}
+                              href={sub.href}
+                              onClick={() => {
+                                if (closeTimeoutRef.current) {
+                                  clearTimeout(closeTimeoutRef.current);
+                                  closeTimeoutRef.current = null;
+                                }
+                                setInvoicingDropdownOpen(false);
+                              }}
+                              className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
+                                sub.isActive
+                                  ? "bg-slate-50 border border-slate-200/80"
+                                  : "hover:bg-slate-50"
+                              }`}
                             >
-                              <Icon className="w-4 h-4" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span
-                                  className={`text-xs font-semibold ${
-                                    sub.isActive ? "text-slate-900" : "text-slate-800"
-                                  }`}
-                                >
-                                  {sub.label}
-                                </span>
-                                {sub.isActive && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                                )}
+                              <div
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${sub.color}`}
+                              >
+                                <Icon className="w-4 h-4" />
                               </div>
-                              <p className="text-[11px] text-slate-500 leading-snug">
-                                {sub.desc}
-                              </p>
-                            </div>
-                          </Link>
-                        );
-                      })}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span
+                                    className={`text-xs font-semibold ${
+                                      sub.isActive ? "text-slate-900" : "text-slate-800"
+                                    }`}
+                                  >
+                                    {sub.label}
+                                  </span>
+                                  {sub.isActive && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-slate-500 leading-snug">
+                                  {sub.desc}
+                                </p>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}

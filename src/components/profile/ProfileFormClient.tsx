@@ -59,7 +59,7 @@ export function ProfileFormClient({
   pastTurnovers: PastTurnoverData[];
 }) {
   const router = useRouter();
-  const { t, locale, dir } = useI18n();
+  const { t, locale, dir, formatAmount } = useI18n();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -532,7 +532,7 @@ export function ProfileFormClient({
                     <tr key={pt.id}>
                       <td className="py-3 px-4 font-bold text-slate-900">{pt.fiscalYear}</td>
                       <td className="py-3 px-4 text-right font-semibold text-slate-900">
-                        {formatDZD(pt.turnoverDzd)}
+                        {formatAmount(pt.turnoverDzd)}
                       </td>
                       <td className="py-3 px-4">
                         {isExceeded ? (

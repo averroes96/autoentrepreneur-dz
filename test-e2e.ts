@@ -474,7 +474,7 @@ async function runTests() {
   // 28. Arabic Currency & Date Formatting
   console.log("Testing Arabic currency and date formatting...");
   const formattedDzdAr = formatDZD_AR(250_000);
-  if (formattedDzdAr !== "250 000 د.ج") {
+  if (formattedDzdAr !== "\u2066250\u00A0000\u2069\u00A0د.ج") {
     throw new Error(`Unexpected Arabic currency format: ${formattedDzdAr}`);
   }
   console.log(`✓ Arabic DZD Currency formatted: 250,000 -> "${formattedDzdAr}"`);

@@ -51,7 +51,7 @@ export function ClientListClient({
   initialClients: ClientData[];
 }) {
   const router = useRouter();
-  const { t, locale, dir } = useI18n();
+  const { t, locale, dir, formatAmount } = useI18n();
   const [clients, setClients] = useState<ClientData[]>(initialClients);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"ALL" | "PROFESSIONAL" | "INDIVIDUAL" | "ARCHIVED">("ALL");
@@ -365,7 +365,7 @@ export function ClientListClient({
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200 font-mono">
-                        <span>{locale === "ar" ? "مستحق : " : "Dû : "}{formatDZD(pendingBalance)}</span>
+                        <span>{locale === "ar" ? "مستحق : " : "Dû : "}{formatAmount(pendingBalance)}</span>
                       </span>
                     )
                   ) : (
