@@ -3,19 +3,16 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createInvoiceAction, updateInvoiceAction } from "@/app/actions";
-import { formatDZD } from "@/lib/tax";
 import {
   Plus,
   Trash2,
-  Calendar,
   Building,
   AlertCircle,
   FileCheck,
   ShieldAlert,
-  ArrowRight,
-  Layers,
 } from "lucide-react";
 import Link from "next/link";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface ClientOption {
   id: string;
@@ -56,6 +53,7 @@ export function InvoiceForm({
   existingInvoice,
 }: InvoiceFormProps) {
   const router = useRouter();
+  const { t, locale, formatAmount } = useI18n();
 
   const [clientId, setClientId] = useState(existingInvoice?.clientId || (clients[0]?.id ?? ""));
   const [issueDate, setIssueDate] = useState(
@@ -142,7 +140,7 @@ export function InvoiceForm({
     setError(null);
 
     if (!clientId) {
-      setError("Veuillez sélectionner un client.");
+      setError(t("selectClientPrompt"));
       setLoading(false);
       return;
     }
@@ -151,7 +149,11 @@ export function InvoiceForm({
       (item) => !item.description.trim() || item.amount <= 0
     );
     if (invalidItem) {
-      setError("Veuillez renseigner une description et un montant valide (> 0 DZD) pour chaque prestation.");
+      setError(
+        locale === "ar"
+          ? "يرجى إدخال بيان ومبلغ صحيح (> 0 د.ج) لكل خدمة."
+          : "Veuillez renseigner une description et un montant valide (> 0 DZD) pour chaque prestation."
+      );
       setLoading(false);
       return;
     }
@@ -205,16 +207,16 @@ export function InvoiceForm({
     return (
       <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center space-y-4">
         <Building className="w-12 h-12 text-slate-300 mx-auto" />
-        <h3 className="text-base font-bold text-slate-800">Aucun client disponible</h3>
+        <h3 className="text-base font-bold text-slate-800">{t("noClientsAvailableTitle")}</h3>
         <p className="text-sm text-slate-500 max-w-md mx-auto">
-          Pour créer une facture, vous devez d'abord enregistrer les coordonnées de votre client (nom, adresse, type).
+          {t("noClientsAvailableDesc")}
         </p>
         <Link
           href="/clients"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition"
         >
           <Plus className="w-4 h-4" />
-          <span>Créer un client d'abord</span>
+          <span>{t("btnCreateClientFirst")}</span>
         </Link>
       </div>
     );
@@ -233,7 +235,7 @@ export function InvoiceForm({
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs grid grid-cols-1 md:grid-cols-3 gap-5">
         <div>
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-            Client destinataire *
+            {t("clientDestinataireLabel")}
           </label>
           <select
             value={clientId}
@@ -243,7 +245,7 @@ export function InvoiceForm({
           >
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name} ({c.clientType === "PROFESSIONAL" ? "Pro" : "Particulier"})
+                {c.name} ({c.clientType === "PROFESSIONAL" ? t("societyClient") : t("individualClient")})
               </option>
             ))}
           </select>
@@ -251,7 +253,7 @@ export function InvoiceForm({
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-            Date d'émission *
+            {t("invoiceDateLabel")}
           </label>
           <input
             type="date"
@@ -264,16 +266,16 @@ export function InvoiceForm({
 
         <div>
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-            Devise de facturation
+            {t("billingCurrencyLabel")}
           </label>
           <input
             type="text"
             disabled
-            value="Dinar Algérien (DZD)"
+            value={t("algerianDinar")}
             className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-500 cursor-not-allowed"
           />
           <span className="text-[10px] text-slate-400 mt-1 block">
-            Devise réglementaire active (DZD)
+            {t("activeRegulatoryCurrency")}
           </span>
         </div>
       </div>
@@ -282,11 +284,11 @@ export function InvoiceForm({
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
-            <h3 className="text-base font-bold text-slate-900">Prestations de services</h3>
+            <h3 className="text-base font-bold text-slate-900">{t("servicesHeaderTitle")}</h3>
             <p className="text-xs text-slate-500">
               {isDetailed
-                ? "Mode détaillé actif : vous pouvez renseigner des quantités et prix unitaires (ex: jours, heures)."
-                : "Par défaut : définissez directement le montant total pour chaque tâche sans calcul de quantité."}
+                ? t("detailedModeActiveDesc")
+                : t("flatModeActiveDesc")}
             </p>
           </div>
 
@@ -300,7 +302,7 @@ export function InvoiceForm({
                 className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
               />
               <span className="text-xs font-semibold text-slate-700 select-none">
-                Détailler quantité & prix unitaire
+                {t("detailQuantityPriceToggle")}
               </span>
             </label>
 
@@ -310,7 +312,7 @@ export function InvoiceForm({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Ajouter une prestation</span>
+              <span>{t("btnAddPrestation")}</span>
             </button>
           </div>
         </div>
@@ -327,12 +329,12 @@ export function InvoiceForm({
                 <div className="grid grid-cols-12 gap-3 items-center">
                   <div className="col-span-12 sm:col-span-6">
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                      Désignation de la prestation *
+                      {t("itemDesignation")} *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ex: Prestation de développement logiciel, maintenance..."
+                      placeholder={t("itemDescriptionDetailedPlaceholder")}
                       value={item.description}
                       onChange={(e) => handleDescriptionChange(index, e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -341,7 +343,7 @@ export function InvoiceForm({
 
                   <div className="col-span-4 sm:col-span-2">
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                      Quantité *
+                      {t("itemQuantity")} *
                     </label>
                     <input
                       type="number"
@@ -356,7 +358,7 @@ export function InvoiceForm({
 
                   <div className="col-span-5 sm:col-span-2">
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                      Prix Unitaire (DZD) *
+                      {t("itemUnitPrice")} *
                     </label>
                     <input
                       type="number"
@@ -369,10 +371,10 @@ export function InvoiceForm({
                     />
                   </div>
 
-                  <div className="col-span-3 sm:col-span-2 flex items-center justify-between pl-2">
-                    <div className="text-right">
-                      <span className="block text-[10px] text-slate-400 font-semibold uppercase">Total</span>
-                      <span className="text-xs font-bold text-slate-900">{formatDZD(item.amount)}</span>
+                  <div className="col-span-3 sm:col-span-2 flex items-center justify-between pl-2 rtl:pr-2 rtl:pl-0">
+                    <div className="text-right rtl:text-left">
+                      <span className="block text-[10px] text-slate-400 font-semibold uppercase">{t("itemTotalPrice")}</span>
+                      <span className="text-xs font-bold text-slate-900">{formatAmount(item.amount)}</span>
                     </div>
                     {lineItems.length > 1 && (
                       <button
@@ -390,12 +392,12 @@ export function InvoiceForm({
                 <div className="grid grid-cols-12 gap-3 items-center">
                   <div className="col-span-12 sm:col-span-8">
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                      Désignation de la tâche / prestation *
+                      {t("itemDescriptionFlatLabel")}
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ex: Développement du module d'authentification, mission de conseil..."
+                      placeholder={t("itemDescriptionFlatPlaceholder")}
                       value={item.description}
                       onChange={(e) => handleDescriptionChange(index, e.target.value)}
                       className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -404,7 +406,7 @@ export function InvoiceForm({
 
                   <div className="col-span-10 sm:col-span-3">
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                      Montant de la prestation (DZD) *
+                      {t("itemAmountLabel")}
                     </label>
                     <input
                       type="number"
@@ -414,7 +416,7 @@ export function InvoiceForm({
                       placeholder="Ex: 150000"
                       value={item.amount || ""}
                       onChange={(e) => handleSimpleAmountChange(index, Number(e.target.value) || 0)}
-                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-900 text-right rtl:text-left focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -424,7 +426,6 @@ export function InvoiceForm({
                         type="button"
                         onClick={() => removeLineItem(index)}
                         className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
-                        title="Supprimer la prestation"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -439,19 +440,19 @@ export function InvoiceForm({
         </div>
 
         {/* Totals Summary Card (STRICTLY NO VAT, NO HT/TTC SPLIT) */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col items-end">
+        <div className="pt-4 border-t border-slate-100 flex flex-col items-end rtl:items-start">
           <div className="w-full sm:w-80 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
             <div className="flex justify-between items-center text-xs text-slate-500">
-              <span>Total des prestations :</span>
-              <span className="font-semibold text-slate-700">{formatDZD(total)}</span>
+              <span>{t("totalPrestationsLabel")}</span>
+              <span className="font-semibold text-slate-700">{formatAmount(total)}</span>
             </div>
             <div className="flex justify-between items-center text-xs text-slate-500">
-              <span>Taux TVA :</span>
-              <span className="font-semibold text-emerald-700">0% (Non applicable)</span>
+              <span>{t("vatRateLabel")}</span>
+              <span className="font-semibold text-emerald-700">{t("vatNotApplicable")}</span>
             </div>
             <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-900 uppercase">Total Net à Payer :</span>
-              <span className="text-base font-extrabold text-emerald-700">{formatDZD(total)}</span>
+              <span className="text-xs font-bold text-slate-900 uppercase">{t("totalNetToPay")}</span>
+              <span className="text-base font-extrabold text-emerald-700">{formatAmount(total)}</span>
             </div>
           </div>
         </div>
@@ -461,26 +462,26 @@ export function InvoiceForm({
       <div className="bg-emerald-50/70 p-5 rounded-2xl border border-emerald-200 text-xs text-emerald-950 space-y-1.5">
         <div className="flex items-center gap-2 font-bold text-emerald-900">
           <ShieldAlert className="w-4 h-4 text-emerald-700 shrink-0" />
-          <span>Mention légale obligatoire sur la facture (Régime IFU) :</span>
+          <span>{t("mandatoryVatNoticeHeader")}</span>
         </div>
         <p className="italic text-emerald-800 bg-white/70 p-3 rounded-xl border border-emerald-200/60">
           « {vatExemptionNote} »
         </p>
         <span className="text-[11px] text-emerald-700 block">
-          * Vous pouvez personnaliser ce modèle de mention légale à tout moment dans les paramètres de votre Profil.
+          {t("vatNoticeFootnote")}
         </span>
       </div>
 
       {/* Notes / Modalités de paiement */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-          Notes & Modalités de règlement (Optionnel)
+          {t("notesTermsOptional")}
         </label>
         <textarea
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Ex: Règlement attendu par virement bancaire sur le compte CCP / RIB N° 00799999... dans un délai de 30 jours."
+          placeholder={t("notesTermsPlaceholder")}
           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
@@ -491,7 +492,7 @@ export function InvoiceForm({
           href="/invoices"
           className="px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
         >
-          Annuler
+          {t("btnCancel")}
         </Link>
         <button
           type="submit"
@@ -501,10 +502,10 @@ export function InvoiceForm({
           <FileCheck className="w-4 h-4" />
           <span>
             {loading
-              ? "Enregistrement..."
+              ? (locale === "ar" ? "جاري الحفظ..." : "Enregistrement...")
               : existingInvoice
-              ? "Mettre à jour le brouillon"
-              : "Enregistrer comme Brouillon"}
+              ? t("btnUpdateDraft")
+              : t("btnSaveAsDraft")}
           </span>
         </button>
       </div>

@@ -19,23 +19,27 @@ const I18nContext = createContext<I18nContextType | null>(null);
 
 const STORAGE_KEY = "moukawil_locale";
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("fr");
+export function I18nProvider({
+  children,
+  initialLocale = "fr",
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     // Initial sync from localStorage or html attribute
     const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    const initialLocale: Locale =
+    const activeLocale: Locale =
       stored === "ar" || stored === "fr"
         ? stored
-        : document.documentElement.dir === "rtl"
-        ? "ar"
-        : "fr";
+        : initialLocale || (document.documentElement.dir === "rtl" ? "ar" : "fr");
 
-    setLocaleState(initialLocale);
-    document.documentElement.dir = initialLocale === "ar" ? "rtl" : "ltr";
-    document.documentElement.lang = initialLocale;
+    setLocaleState(activeLocale);
+    document.documentElement.dir = activeLocale === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = activeLocale;
     setMounted(true);
 
     const handleStorageChange = (e: StorageEvent) => {

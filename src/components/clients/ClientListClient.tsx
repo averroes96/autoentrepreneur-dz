@@ -313,7 +313,7 @@ export function ClientListClient({
                   <div className="space-y-1.5 text-xs text-slate-600 mt-2">
                     <div className="flex items-start gap-2">
                       <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                      <span className="truncate">{client.address || "Adresse non renseignée"}</span>
+                      <span className="truncate">{client.address || (locale === "ar" ? "العنوان غير محدد" : "Adresse non renseignée")}</span>
                     </div>
                     {client.email && (
                       <div className="flex items-center gap-2">
@@ -351,22 +351,27 @@ export function ClientListClient({
                 <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 text-slate-500">
                     <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{validInvoices.length} factures</span>
+                    <span>
+                      {validInvoices.length}{" "}
+                      {locale === "ar" ? "فواتير" : validInvoices.length > 1 ? "factures" : "facture"}
+                    </span>
                   </div>
 
                   {validInvoices.length > 0 ? (
                     isSettled ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span>Soldé (0 DZD)</span>
+                        <span>{locale === "ar" ? "مسدد بالكامل (0 دج)" : "Soldé (0 DZD)"}</span>
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200 font-mono">
-                        <span>Dû : {formatDZD(pendingBalance)}</span>
+                        <span>{locale === "ar" ? "مستحق : " : "Dû : "}{formatDZD(pendingBalance)}</span>
                       </span>
                     )
                   ) : (
-                    <span className="text-[10px] text-slate-400">Aucune facture</span>
+                    <span className="text-[10px] text-slate-400">
+                      {locale === "ar" ? "لا توجد فواتير" : "Aucune facture"}
+                    </span>
                   )}
                 </div>
 
@@ -382,7 +387,7 @@ export function ClientListClient({
 
                   {client.isArchived && (
                     <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
-                      Archivé
+                      {locale === "ar" ? "مؤرشف" : "Archivé"}
                     </span>
                   )}
                 </div>
@@ -426,42 +431,42 @@ export function ClientListClient({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Nom ou Raison sociale *
+                {t("clientNameLabel")}
               </label>
               <input
                 type="text"
                 name="name"
                 required
                 defaultValue={editingClient?.name || ""}
-                placeholder="Ex: Agence Digitale Algiers ou SARL Media"
+                placeholder={locale === "ar" ? "مثال: وكالة رقمية الجزائر أو ش.ذ.م.م ميديا" : "Ex: Agence Digitale Algiers ou SARL Media"}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Type de client *
+                {t("clientTypeLabel")}
               </label>
               <select
                 name="clientType"
                 defaultValue={editingClient?.clientType || "PROFESSIONAL"}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="PROFESSIONAL">Professionnel / Entreprise / Agence</option>
-                <option value="INDIVIDUAL">Particulier</option>
+                <option value="PROFESSIONAL">{t("typeProfessional")}</option>
+                <option value="INDIVIDUAL">{t("typeIndividual")}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Adresse complète *
+                {t("clientAddressLabel")} *
               </label>
               <textarea
                 name="address"
                 required
                 rows={2}
                 defaultValue={editingClient?.address || ""}
-                placeholder="Ex: 12 Rue Didouche Mourad, Alger"
+                placeholder={locale === "ar" ? "مثال: 12 شارع ديدوش مراد، الجزائر" : "Ex: 12 Rue Didouche Mourad, Alger"}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -469,37 +474,37 @@ export function ClientListClient({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  NIF (Fiscal)
+                  {t("clientNifLabel")}
                 </label>
                 <input
                   type="text"
                   name="nif"
                   defaultValue={editingClient?.nif || ""}
-                  placeholder="Optionnel"
+                  placeholder={locale === "ar" ? "اختياري" : "Optionnel"}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  RC (Commerce)
+                  {t("clientRcLabel")}
                 </label>
                 <input
                   type="text"
                   name="rc"
                   defaultValue={editingClient?.rc || ""}
-                  placeholder="Optionnel"
+                  placeholder={locale === "ar" ? "اختياري" : "Optionnel"}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  NIS (Statistique)
+                  {t("clientNisLabel")}
                 </label>
                 <input
                   type="text"
                   name="nis"
                   defaultValue={editingClient?.nis || ""}
-                  placeholder="Optionnel"
+                  placeholder={locale === "ar" ? "اختياري" : "Optionnel"}
                   className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -508,7 +513,7 @@ export function ClientListClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Email
+                  {t("clientEmailLabel")}
                 </label>
                 <input
                   type="email"
@@ -520,7 +525,7 @@ export function ClientListClient({
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Téléphone
+                  {t("clientPhoneLabel")}
                 </label>
                 <input
                   type="text"
@@ -538,7 +543,7 @@ export function ClientListClient({
                 onClick={closeModal}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                {locale === "ar" ? "إلغاء" : "Annuler"}
+                {t("btnCancel")}
               </button>
               <button
                 type="submit"
@@ -546,16 +551,10 @@ export function ClientListClient({
                 className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
                 {isSubmitting
-                  ? locale === "ar"
-                    ? "جار الحفظ..."
-                    : "Enregistrement..."
+                  ? (locale === "ar" ? "جار الحفظ..." : "Enregistrement...")
                   : editingClient
-                  ? locale === "ar"
-                    ? "تحديث البيانات"
-                    : "Mettre à jour"
-                  : locale === "ar"
-                  ? "إنشاء الزبون"
-                  : "Créer le client"}
+                  ? (locale === "ar" ? "تحديث البيانات" : "Mettre à jour")
+                  : (locale === "ar" ? "إنشاء الزبون" : "Créer le client")}
               </button>
             </div>
           </form>

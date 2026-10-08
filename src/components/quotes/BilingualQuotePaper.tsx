@@ -82,7 +82,9 @@ export function BilingualQuotePaper({
       <div className="no-print flex items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-emerald-600" />
-          <span className="text-xs font-bold text-slate-700">Langue du document :</span>
+          <span className="text-xs font-bold text-slate-700">
+            {isArabic ? "لغة الوثيقة :" : "Langue du document :"}
+          </span>
           <div className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
             <button
               type="button"

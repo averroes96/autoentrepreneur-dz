@@ -99,8 +99,8 @@ export function BilingualPaymentReceiptPaper({
             href={`/invoices/${receipt.invoiceId}`}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Retour facture</span>
+            <ArrowLeft className="w-3.5 h-3.5 rtl:rotate-180" />
+            <span>{isArabic ? "العودة إلى الفاتورة" : "Retour facture"}</span>
           </Link>
 
           <div className="h-4 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
@@ -139,7 +139,7 @@ export function BilingualPaymentReceiptPaper({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-slate-500" />
-            <span>Imprimer le reçu</span>
+            <span>{isArabic ? "طباعة الوصل (A4)" : "Imprimer le reçu"}</span>
           </button>
 
           <a
@@ -149,7 +149,7 @@ export function BilingualPaymentReceiptPaper({
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Télécharger PDF</span>
+            <span>{isArabic ? "تحميل PDF" : "Télécharger PDF"}</span>
           </a>
         </div>
       </div>

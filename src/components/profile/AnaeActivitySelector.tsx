@@ -25,6 +25,8 @@ import {
   Edit3,
 } from "lucide-react";
 
+import { useI18n } from "@/lib/i18n/I18nContext";
+
 interface AnaeActivitySelectorProps {
   initialCode?: string;
   initialLabel?: string;
@@ -34,6 +36,7 @@ export function AnaeActivitySelector({
   initialCode = "",
   initialLabel = "",
 }: AnaeActivitySelectorProps) {
+  const { t, locale, dir } = useI18n();
   const [selectedCode, setSelectedCode] = useState(initialCode);
   const [selectedLabel, setSelectedLabel] = useState(initialLabel);
   const [selectedBranch, setSelectedBranch] = useState<string>("ALL");
@@ -103,11 +106,11 @@ export function AnaeActivitySelector({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-              Activité Nationale ANAE (Décret 23-197)
+              {t("anaeDomainNational")}
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
               <Sparkles className="w-3 h-3" />
-              Nomenclature Officielle
+              {t("anaeOfficialNomenclature")}
             </span>
           </div>
 
@@ -117,7 +120,7 @@ export function AnaeActivitySelector({
             className="text-[11px] font-medium text-slate-500 hover:text-emerald-700 flex items-center gap-1 cursor-pointer transition"
           >
             <Edit3 className="w-3 h-3" />
-            <span>{isCustomMode ? "Choisir dans la liste" : "Saisie manuelle"}</span>
+            <span>{isCustomMode ? t("btnChooseFromList") : t("btnManualEntry")}</span>
           </button>
         </div>
 
@@ -126,7 +129,7 @@ export function AnaeActivitySelector({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
             <div>
               <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                Code ANAE (6 chiffres)
+                {t("lblAnaeCode6")}
               </label>
               <input
                 type="text"
@@ -138,7 +141,7 @@ export function AnaeActivitySelector({
             </div>
             <div className="sm:col-span-2">
               <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                Libellé exact de la prestation
+                {t("lblExactServiceLabel")}
               </label>
               <input
                 type="text"
@@ -170,16 +173,16 @@ export function AnaeActivitySelector({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                      {selectedCode || "Code non défini"}
+                      {selectedCode || (locale === "ar" ? "رمز غير محدد" : "Code non défini")}
                     </span>
                     {currentBranch && (
                       <span className="text-[11px] text-slate-400 truncate max-w-[200px]">
-                        {currentBranch.label}
+                        {locale === "ar" ? currentBranch.labelAr : currentBranch.label}
                       </span>
                     )}
                   </div>
                   <p className="text-xs font-semibold text-slate-900 truncate mt-0.5">
-                    {selectedLabel || "Cliquez pour sélectionner votre métier officiel..."}
+                    {selectedLabel || (locale === "ar" ? "انقر لاختيار نشاطك الرسمي من القائمة..." : "Cliquez pour sélectionner votre métier officiel...")}
                   </p>
                 </div>
               </div>
@@ -204,7 +207,7 @@ export function AnaeActivitySelector({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher par mot-clé (ex: dev, ui/ux, seo, conseil, traduction...)"
+              placeholder={t("searchAnaePlaceholder")}
               className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
@@ -212,7 +215,7 @@ export function AnaeActivitySelector({
           {/* 7 Official Branches Filter Pills */}
           <div className="space-y-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Filtrer par Domaine ANAE (Décret 23-197) :
+              {locale === "ar" ? "تصفية حسب فروع الوكالة (المرسوم 23-197) :" : "Filtrer par Domaine ANAE (Décret 23-197) :"}
             </span>
             <div className="flex flex-wrap gap-1.5">
               <button
@@ -224,7 +227,7 @@ export function AnaeActivitySelector({
                     : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                 }`}
               >
-                Tous ({ANAE_ACTIVITIES.length})
+                {t("allBranches")} ({ANAE_ACTIVITIES.length})
               </button>
 
               {ANAE_BRANCHES.map((b) => {
@@ -243,7 +246,7 @@ export function AnaeActivitySelector({
                   >
                     <Icon className="w-3 h-3" />
                     <span>
-                      {b.code} - {b.label}
+                      {b.code} - {locale === "ar" ? b.labelAr : b.label}
                     </span>
                   </button>
                 );
@@ -255,7 +258,9 @@ export function AnaeActivitySelector({
           <div className="max-h-64 overflow-y-auto space-y-1 pr-1 divide-y divide-slate-100">
             {filteredActivities.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-500">
-                Aucune activité trouvée pour cette recherche. Vous pouvez utiliser la saisie manuelle ci-dessus.
+                {locale === "ar"
+                  ? "لم يتم العثور على أي نشاط يطابق هذا البحث. يمكنك استخدام الإدخال اليدوي أعلاه."
+                  : "Aucune activité trouvée pour cette recherche. Vous pouvez utiliser la saisie manuelle ci-dessus."}
               </div>
             ) : (
               filteredActivities.map((act) => {
@@ -283,7 +288,7 @@ export function AnaeActivitySelector({
                             {act.code}
                           </span>
                           <span className="text-[10px] text-slate-400">
-                            {branch?.label}
+                            {locale === "ar" ? branch?.labelAr : branch?.label}
                           </span>
                         </div>
                         <p className="text-xs font-medium text-slate-900 mt-0.5 leading-snug">
@@ -306,14 +311,18 @@ export function AnaeActivitySelector({
 
           {/* Footer with official link */}
           <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-400">
-            <span>Réf : Décret exécutif n° 23-197 du 25 mai 2023</span>
+            <span>
+              {locale === "ar"
+                ? "المرجع: المرسوم التنفيذي رقم 23-197 المؤرخ في 25 مايو 2023"
+                : "Réf : Décret exécutif n° 23-197 du 25 mai 2023"}
+            </span>
             <a
               href="https://anae.dz"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium hover:underline"
             >
-              <span>Portail officiel anae.dz</span>
+              <span>{locale === "ar" ? "البوابة الرسمية anae.dz" : "Portail officiel anae.dz"}</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>

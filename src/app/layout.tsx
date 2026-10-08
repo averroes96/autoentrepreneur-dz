@@ -27,20 +27,27 @@ export const metadata: Metadata = {
     "Application de gestion d'activité, facturation conforme sans TVA et suivi du plafond IFU pour auto-entrepreneurs en Algérie (Loi 22-23).",
 };
 
+import { cookies } from "next/headers";
 import { I18nProvider } from "@/lib/i18n/I18nContext";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const rawLocale = cookieStore.get("moukawil_locale")?.value;
+  const initialLocale: "ar" | "fr" = rawLocale === "ar" ? "ar" : "fr";
+  const dir = initialLocale === "ar" ? "rtl" : "ltr";
+
   return (
     <html
-      lang="fr"
+      lang={initialLocale}
+      dir={dir}
       className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
-        <I18nProvider>
+        <I18nProvider initialLocale={initialLocale}>
           {children}
         </I18nProvider>
         <Analytics />

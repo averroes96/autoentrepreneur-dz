@@ -5,9 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { loginAction } from "@/app/actions";
 import { ShieldCheck, ArrowRight, Lock, Mail, AlertCircle, Loader2 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t, locale, dir } = useI18n();
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -33,17 +37,22 @@ export default function LoginPage() {
           }
         }, 150);
       } else {
-        setError("Une réponse inattendue est survenue.");
+        setError(locale === "ar" ? "حدث خطأ غير متوقع." : "Une réponse inattendue est survenue.");
         setLoading(false);
       }
     } catch (err: any) {
-      setError(err?.message || "Erreur lors de la connexion.");
+      setError(err?.message || (locale === "ar" ? "خطأ في تسجيل الدخول." : "Erreur lors de la connexion."));
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
+      {/* Language Switcher in Top Corner */}
+      <div className="absolute top-4 right-4 rtl:right-auto rtl:left-4 z-10">
+        <LanguageToggle />
+      </div>
+
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="inline-flex w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 items-center justify-center text-emerald-400 shadow-xl mb-4">
           <ShieldCheck className="w-8 h-8" />
@@ -52,7 +61,7 @@ export default function LoginPage() {
           Moukawil<span className="text-emerald-400">.dz</span>
         </h1>
         <p className="mt-2 text-sm text-slate-300">
-          Gestion & Facturation Auto-Entrepreneur (Loi 22-23)
+          {t("loginSubtitle")}
         </p>
       </div>
 
@@ -68,10 +77,10 @@ export default function LoginPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Adresse Email
+                {t("emailInputLabel")}
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                   <Mail className="h-4 w-4" />
                 </div>
                 <input
@@ -79,17 +88,17 @@ export default function LoginPage() {
                   name="email"
                   required
                   placeholder="votre.email@exemple.dz"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Mot de passe
+                {t("passwordInputLabel")}
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
@@ -97,7 +106,7 @@ export default function LoginPage() {
                   name="password"
                   required
                   placeholder="••••••••"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                 />
               </div>
             </div>
@@ -110,17 +119,17 @@ export default function LoginPage() {
               {isRedirecting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Connexion réussie ! Redirection...</span>
+                  <span>{t("loginSuccessRedirect")}</span>
                 </>
               ) : loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Connexion en cours...</span>
+                  <span>{t("btnSigningIn")}</span>
                 </>
               ) : (
                 <>
-                  <span>Se connecter</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>{t("btnSignIn")}</span>
+                  <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                 </>
               )}
             </button>
@@ -128,12 +137,12 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-600">
-              Pas encore de compte ?{" "}
+              {t("noAccountYet")}{" "}
               <Link
                 href="/signup"
                 className="font-semibold text-emerald-600 hover:text-emerald-500 transition"
               >
-                Créer un compte Auto-Entrepreneur
+                {t("createAccountLink")}
               </Link>
             </p>
           </div>

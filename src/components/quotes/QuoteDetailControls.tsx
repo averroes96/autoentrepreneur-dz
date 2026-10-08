@@ -21,10 +21,10 @@ import {
   Sparkles,
   ArrowRight,
   FileCheck2,
-  FileText,
   AlertTriangle,
   X,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface QuoteData {
   id: string;
@@ -42,10 +42,9 @@ interface QuoteData {
 
 export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
   const router = useRouter();
+  const { t, locale, dir } = useI18n();
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const deleteModalRef = useRef<HTMLDialogElement>(null);
   const sendModalRef = useRef<HTMLDialogElement>(null);
   const convertModalRef = useRef<HTMLDialogElement>(null);
@@ -65,14 +64,16 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
       if (res?.error) {
         setEmailFeedback({ success: false, message: res.error });
       } else {
-        const note = res.mocked ? " (Mode Dev : simulation Resend sans clé API)" : "";
+        const note = res.mocked ? " (Mode Dev)" : "";
         setEmailFeedback({
           success: true,
-          message: `Devis transmis avec succès à ${res.recipient}${note} !`,
+          message: locale === "ar"
+            ? `تم إرسال عرض السعر بنجاح إلى ${res.recipient}${note} !`
+            : `Devis transmis avec succès à ${res.recipient}${note} !`,
         });
       }
     } catch (err: any) {
-      setEmailFeedback({ success: false, message: err.message || "Erreur lors de l'envoi" });
+      setEmailFeedback({ success: false, message: err.message || "Erreur" });
     } finally {
       setEmailLoading(false);
     }
@@ -90,7 +91,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
       sendModalRef.current?.close();
       window.location.reload();
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la validation du devis");
+      alert(err.message || "Erreur");
       setLoading(false);
     }
   };
@@ -106,7 +107,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
       }
       window.location.reload();
     } catch (err: any) {
-      alert(err.message || "Erreur lors du changement de statut");
+      alert(err.message || "Erreur");
       setLoading(false);
     }
   };
@@ -124,7 +125,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
       router.push(`/invoices/${res.invoiceId}`);
       router.refresh();
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la conversion en facture");
+      alert(err.message || "Erreur");
       setLoading(false);
     }
   };
@@ -142,7 +143,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
       router.push("/quotes");
       router.refresh();
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la suppression");
+      alert(err.message || "Erreur");
       setLoading(false);
     }
   };
@@ -159,7 +160,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition"
           >
             <Edit className="w-3.5 h-3.5 text-slate-500" />
-            <span>Modifier</span>
+            <span>{t("btnEdit")}</span>
           </Link>
 
           <button
@@ -169,17 +170,17 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium shadow-2xs transition cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Valider & Émettre</span>
+            <span>{t("btnValidateAndIssueQuote")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => deleteModalRef.current?.showModal()}
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
-            title="Supprimer le devis"
+            title={t("btnDeleteDraft")}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Supprimer</span>
+            <span>{t("btnDeleteDraft")}</span>
           </button>
         </>
       )}
@@ -194,7 +195,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-medium transition shadow-2xs cursor-pointer"
           >
             <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Marquer Accepté</span>
+            <span>{t("btnMarkAccepted")}</span>
           </button>
 
           <button
@@ -204,7 +205,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
           >
             <XCircle className="w-3.5 h-3.5 text-slate-400" />
-            <span>Refusé</span>
+            <span>{t("btnRejected")}</span>
           </button>
 
           <button
@@ -216,7 +217,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200 shadow-2xs transition cursor-pointer"
           >
             <Mail className="w-3.5 h-3.5 text-slate-500" />
-            <span>Envoyer email</span>
+            <span>{t("btnSendEmail")}</span>
           </button>
 
           <a
@@ -226,7 +227,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Télécharger PDF</span>
+            <span>{t("downloadPdf")}</span>
           </a>
         </>
       )}
@@ -241,7 +242,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs transition cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-            <span>Convertir en Facture</span>
+            <span>{t("btnConvertToInvoice")}</span>
           </button>
 
           <button
@@ -253,7 +254,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200 shadow-2xs transition cursor-pointer"
           >
             <Mail className="w-3.5 h-3.5 text-slate-500" />
-            <span>Envoyer email</span>
+            <span>{t("btnSendEmail")}</span>
           </button>
 
           <a
@@ -263,7 +264,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Télécharger PDF</span>
+            <span>{t("downloadPdf")}</span>
           </a>
         </>
       )}
@@ -277,8 +278,12 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 text-xs font-semibold shadow-2xs transition"
             >
               <FileCheck2 className="w-3.5 h-3.5 text-purple-600" />
-              <span>Voir Facture ({generatedInvoice.invoiceNumber || "Brouillon"})</span>
-              <ArrowRight className="w-3 h-3 text-purple-500" />
+              <span>
+                {t("btnViewInvoice", {
+                  number: generatedInvoice.invoiceNumber || (locale === "ar" ? "مسودة" : "Brouillon"),
+                })}
+              </span>
+              <ArrowRight className="w-3 h-3 text-purple-500 rtl:rotate-180" />
             </Link>
           )}
 
@@ -289,7 +294,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Télécharger PDF</span>
+            <span>{t("downloadPdf")}</span>
           </a>
         </>
       )}
@@ -304,7 +309,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-medium transition cursor-pointer"
           >
             <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Réactiver & Accepter</span>
+            <span>{t("btnReactivateAndAccept")}</span>
           </button>
 
           <a
@@ -314,7 +319,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Télécharger PDF</span>
+            <span>{t("downloadPdf")}</span>
           </a>
         </>
       )}
@@ -330,13 +335,13 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               <Send className="w-5 h-5 text-sky-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Validation officielle du devis</h2>
-              <p className="text-xs text-slate-500">Attribution du numéro séquentiel DEV-YYYY-XXXX</p>
+              <h2 className="text-base font-bold text-slate-900">{t("finalizeQuoteTitle")}</h2>
+              <p className="text-xs text-slate-500">{t("finalizeQuoteSubtitle")}</p>
             </div>
           </div>
 
           <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-            Cette action va attribuer le prochain numéro officiel séquentiel et figer les données du devis pour transmission au client.
+            {t("finalizeQuoteNotice")}
           </p>
 
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -345,15 +350,15 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               onClick={() => sendModalRef.current?.close()}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
-              Annuler
+              {t("btnCancel")}
             </button>
             <button
               type="button"
               disabled={loading}
               onClick={handleFinalize}
-              className="px-5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
-              {loading ? "Validation..." : "Valider & Émettre"}
+              {loading ? t("btnValidating") : t("btnValidateAndIssueQuote")}
             </button>
           </div>
         </div>
@@ -370,13 +375,13 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               <Sparkles className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Conversion en Facture</h2>
-              <p className="text-xs text-slate-500">Génération automatique du projet de facture</p>
+              <h2 className="text-base font-bold text-slate-900">{t("convertQuoteModalTitle")}</h2>
+              <p className="text-xs text-slate-500">{t("convertQuoteModalSubtitle")}</p>
             </div>
           </div>
 
           <p className="text-xs text-slate-600 mb-6 leading-relaxed">
-            Un nouveau projet de facture sera créé avec l'ensemble des prestations, du montant et des informations de ce devis. Le devis sera marqué comme <strong>Facturé</strong>.
+            {t("convertQuoteNotice")}
           </p>
 
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -385,15 +390,15 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               onClick={() => convertModalRef.current?.close()}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
-              Annuler
+              {t("btnCancel")}
             </button>
             <button
               type="button"
               disabled={loading}
               onClick={handleConvertConfirm}
-              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
-              {loading ? "Création..." : "Confirmer la conversion"}
+              {loading ? t("btnConverting") : t("btnConfirmConversion")}
             </button>
           </div>
         </div>
@@ -410,8 +415,8 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               <Trash2 className="w-5 h-5 text-rose-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Supprimer ce projet de devis ?</h2>
-              <p className="text-xs text-slate-500">Cette action est irréversible.</p>
+              <h2 className="text-base font-bold text-slate-900">{t("deleteQuoteModalTitle")}</h2>
+              <p className="text-xs text-slate-500">{t("deleteQuoteSubtitle")}</p>
             </div>
           </div>
 
@@ -421,7 +426,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               onClick={() => deleteModalRef.current?.close()}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
-              Annuler
+              {t("btnCancel")}
             </button>
             <button
               type="button"
@@ -429,7 +434,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
               onClick={handleDeleteConfirm}
               className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
-              {loading ? "Suppression..." : "Supprimer"}
+              {loading ? t("btnDeleting") : t("btnDeleteDraft")}
             </button>
           </div>
         </div>
@@ -447,8 +452,8 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
                 <Mail className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-slate-900">Transmettre le devis par email</h2>
-                <p className="text-xs text-slate-500">Transmission directe avec PDF conforme en pièce jointe</p>
+                <h2 className="text-sm font-bold text-slate-900">{t("sendQuoteEmailTitle")}</h2>
+                <p className="text-xs text-slate-500">{t("sendQuoteEmailSubtitle")}</p>
               </div>
             </div>
             <button
@@ -463,7 +468,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
           <form onSubmit={handleSendEmail} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Adresse email du destinataire
+                {t("recipientEmailLabel")}
               </label>
               <input
                 type="email"
@@ -474,7 +479,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                Le devis au format officiel PDF sera joint au message.
+                {t("sendQuotePdfHint")}
               </p>
             </div>
 
@@ -501,7 +506,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
                 onClick={() => emailModalRef.current?.close()}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                Fermer
+                {t("btnClose")}
               </button>
               <button
                 type="submit"
@@ -509,7 +514,7 @@ export function QuoteDetailControls({ quote }: { quote: QuoteData }) {
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{emailLoading ? "Envoi en cours..." : "Envoyez"}</span>
+                <span>{emailLoading ? t("btnSending") : t("btnSend")}</span>
               </button>
             </div>
           </form>

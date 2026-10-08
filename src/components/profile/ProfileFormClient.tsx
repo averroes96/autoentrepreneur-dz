@@ -153,18 +153,21 @@ export function ProfileFormClient({
                 }`}
               >
                 {completion.isFullyComplete
-                  ? "Profil 100% Conforme"
-                  : `Profil à ${completion.percentage}% de conformité`}
+                  ? t("profile100Compliant")
+                  : t("profilePercentCompliant", { percent: completion.percentage })}
               </span>
               <span className="text-xs text-slate-500 font-medium">
-                {completion.completedCount} sur {completion.totalCount} champs obligatoires validés
+                {t("profileValidatedFields", {
+                  completed: completion.completedCount,
+                  total: completion.totalCount,
+                })}
               </span>
             </div>
             <h2 className="text-base font-bold text-slate-900">
-              Conformité du profil réglementaire (Loi 22-23)
+              {t("regulatoryProfileCompliance")}
             </h2>
             <p className="text-xs text-slate-500">
-              Ces informations alimentent directement les mentions légales obligatoires de vos factures.
+              {t("regulatoryProfileComplianceDesc")}
             </p>
           </div>
 
@@ -205,7 +208,19 @@ export function ProfileFormClient({
               >
                 {item.isComplete ? "✓" : "•"}
               </div>
-              <span className="font-medium truncate text-[11px]">{item.label}</span>
+              <span className="font-medium truncate text-[11px]">
+                {item.key === "fullName"
+                  ? t("chkFullName")
+                  : item.key === "rnaeNumber"
+                  ? t("chkRnae")
+                  : item.key === "nif"
+                  ? t("chkNif")
+                  : item.key === "activityCode"
+                  ? t("chkActivity")
+                  : item.key === "address"
+                  ? t("chkAddress")
+                  : t("chkStartDate")}
+              </span>
             </div>
           ))}
         </div>
@@ -216,7 +231,7 @@ export function ProfileFormClient({
         {success && (
           <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Profil et paramètres mis à jour avec succès.</span>
+            <span>{t("profileUpdatedSuccess")}</span>
           </div>
         )}
 
@@ -232,14 +247,14 @@ export function ProfileFormClient({
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <User className="w-5 h-5 text-emerald-600" />
             <h2 className="text-base font-bold text-slate-900">
-              Identité Légale & Contact
+              {t("secIdentityContact")}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Nom & Prénom légal *
+                {t("lblFullName")}
               </label>
               <input
                 type="text"
@@ -252,7 +267,7 @@ export function ProfileFormClient({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Email de contact professionnel
+                {t("lblEmail")}
               </label>
               <input
                 type="email"
@@ -264,7 +279,7 @@ export function ProfileFormClient({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Numéro de téléphone
+                {t("lblPhone")}
               </label>
               <input
                 type="text"
@@ -277,14 +292,14 @@ export function ProfileFormClient({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Adresse de domiciliation de l'activité *
+                {t("lblAddress")}
               </label>
               <input
                 type="text"
                 name="address"
                 required
                 defaultValue={profile.address}
-                placeholder="Adresse complète en Algérie"
+                placeholder={t("lblAddressPlaceholder")}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -296,14 +311,14 @@ export function ProfileFormClient({
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <ShieldCheck className="w-5 h-5 text-emerald-600" />
             <h2 className="text-base font-bold text-slate-900">
-              Identifiants Réglementaires (ANAE & Fiscalité)
+              {t("secAdminIdentifiers")}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                N° RNAE (Registre National de l'Auto-Entrepreneur) *
+                {t("lblRnae")}
               </label>
               <input
                 type="text"
@@ -314,7 +329,7 @@ export function ProfileFormClient({
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Figure sur la carte physique délivrée par l'ANAE (validité 5 ans).
+                {t("hintRnae")}
               </span>
             </div>
 
@@ -338,14 +353,14 @@ export function ProfileFormClient({
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Calendar className="w-5 h-5 text-emerald-600" />
             <h2 className="text-base font-bold text-slate-900">
-              Dates Clés & Sécurité Sociale (CASNOS)
+              {t("secDatesCasnos")}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Date de délivrance de la carte ANAE
+                {t("lblCardIssueDate")}
               </label>
               <input
                 type="date"
@@ -354,13 +369,13 @@ export function ProfileFormClient({
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Sert au suivi du renouvellement quinquennal (5 ans) et du délai NIF de 30 jours.
+                {t("hintCardIssueDate")}
               </span>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Date de début d'activité
+                {t("lblActivityStartDate")}
               </label>
               <input
                 type="date"
@@ -369,22 +384,22 @@ export function ProfileFormClient({
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Sert au suivi du délai d'affiliation CASNOS de 10 jours.
+                {t("hintActivityStartDate")}
               </span>
             </div>
 
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Statut d'affiliation CASNOS
+                {t("lblCasnosStatus")}
               </label>
               <select
                 name="casnosStatus"
                 defaultValue={profile.casnosStatus}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="AFFILIATED">Affilié (En règle avec sa carte Chifa)</option>
-                <option value="PENDING">En cours d'affiliation (Délai légal de 10 jours)</option>
-                <option value="EXEMPT">Dispensé / Salarié par ailleurs (Double statut)</option>
+                <option value="AFFILIATED">{t("optAffiliated")}</option>
+                <option value="PENDING">{t("optPendingAffiliation")}</option>
+                <option value="EXEMPT">{t("optExemptAffiliation")}</option>
               </select>
             </div>
           </div>
@@ -400,14 +415,14 @@ export function ProfileFormClient({
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <FileText className="w-5 h-5 text-emerald-600" />
             <h2 className="text-base font-bold text-slate-900">
-              Paramètres de Facturation & Mention d'Exonération TVA
+              {t("secInvoicingSettings")}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Préfixe des Factures
+                {t("lblInvoicePrefix")}
               </label>
               <input
                 type="text"
@@ -423,7 +438,7 @@ export function ProfileFormClient({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Préfixe des Devis
+                {t("lblQuotePrefix")}
               </label>
               <input
                 type="text"
@@ -439,7 +454,7 @@ export function ProfileFormClient({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Préfixe des Avoirs
+                {t("lblCreditNotePrefix")}
               </label>
               <input
                 type="text"
@@ -456,7 +471,7 @@ export function ProfileFormClient({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              Modèle de texte pour la mention légale d'exonération de TVA (Obligatoire) *
+              {t("lblVatExemptionNote")}
             </label>
             <textarea
               name="vatExemptionNote"
@@ -466,7 +481,7 @@ export function ProfileFormClient({
               className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             <span className="text-[11px] text-slate-400 mt-1 block">
-              Conformément à la section 2.5 du BRD, cette mention doit être présente sur chaque facture pour justifier l'absence de TVA auprès des services fiscaux et du client.
+              {t("hintVatExemptionNote")}
             </span>
           </div>
         </div>
@@ -478,7 +493,7 @@ export function ProfileFormClient({
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>{loading ? "Enregistrement..." : "Enregistrer les modifications"}</span>
+            <span>{loading ? t("btnSaving") : t("btnSaveProfile")}</span>
           </button>
         </div>
       </form>
@@ -489,10 +504,10 @@ export function ProfileFormClient({
           <History className="w-5 h-5 text-emerald-600" />
           <div>
             <h2 className="text-base font-bold text-slate-900">
-              Historique des Chiffres d'Affaires Antérieurs
+              {t("secPastTurnover")}
             </h2>
             <p className="text-xs text-slate-500">
-              Renseignez les exercices clos précédents (ex: 2024, 2025) pour alimenter le suivi automatique de la règle réglementaire des 3 années consécutives (Section 2.1).
+              {t("secPastTurnoverDesc")}
             </p>
           </div>
         </div>
@@ -503,9 +518,9 @@ export function ProfileFormClient({
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
                 <tr>
-                  <th className="py-2.5 px-4">Année Fiscale</th>
-                  <th className="py-2.5 px-4 text-right">Chiffre d'Affaires Déclaré</th>
-                  <th className="py-2.5 px-4">Statut Réglementaire</th>
+                  <th className="py-2.5 px-4">{t("colFiscalYear")}</th>
+                  <th className="py-2.5 px-4 text-right">{t("colDeclaredTurnover")}</th>
+                  <th className="py-2.5 px-4">{t("colRegulatoryStatus")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -522,15 +537,15 @@ export function ProfileFormClient({
                       <td className="py-3 px-4">
                         {isExceeded ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800">
-                            Plafond Dépassé ({">"} 5M DZD)
+                            {t("statusCeilingExceeded")}
                           </span>
                         ) : isNearZero ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">
-                            Activité quasi-nulle (≤ 50k DZD)
+                            {t("statusNearZeroActivity")}
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
-                            Conforme au statut
+                            {t("statusStatusCompliant")}
                           </span>
                         )}
                       </td>
@@ -542,20 +557,20 @@ export function ProfileFormClient({
           </div>
         ) : (
           <p className="text-xs text-slate-400 italic">
-            Aucun chiffre d'affaires antérieur enregistré. Si vous avez commencé votre activité avant cette année, vous pouvez enregistrer vos années passées ci-dessous.
+            {t("noPastTurnover")}
           </p>
         )}
 
         {/* Add/Update Year Form */}
         <form onSubmit={handleSavePastTurnover} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
           <span className="text-xs font-bold text-slate-800 block">
-            Ajouter ou mettre à jour un exercice antérieur
+            {t("addOrUpdateYear")}
           </span>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
             <div>
               <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                Année (ex: 2024, 2025)
+                {t("lblYear")}
               </label>
               <input
                 type="number"
@@ -570,7 +585,7 @@ export function ProfileFormClient({
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                Chiffre d'Affaires Encaissé (DZD)
+                {t("lblCollectedTurnoverDzd")}
               </label>
               <input
                 type="number"
@@ -590,13 +605,13 @@ export function ProfileFormClient({
               className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition cursor-pointer disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{turnoverLoading ? "Enregistrement..." : "Enregistrer l'exercice"}</span>
+              <span>{turnoverLoading ? t("btnSaving") : t("btnSaveYear")}</span>
             </button>
           </div>
 
           {turnoverSuccess && (
             <p className="text-[11px] text-emerald-700 font-medium">
-              ✓ Exercice enregistré avec succès. Le tableau de bord a été recalculé.
+              {t("yearSavedSuccess")}
             </p>
           )}
         </form>

@@ -49,10 +49,20 @@ export default async function InvoiceReceiptPage({
               <AlertCircle className="w-6 h-6" />
             </div>
             <h1 className="text-xl font-bold text-slate-900">
-              Quittance de paiement non disponible
+              {defaultLanguage === "ar"
+                ? "وصل الدفع (المخالصة) غير متوفر"
+                : "Quittance de paiement non disponible"}
             </h1>
             <p className="text-sm text-slate-600 max-w-md mx-auto">
-              La facture <strong className="font-mono">{invoice.invoiceNumber || "en cours"}</strong> n&apos;a pas encore été marquée comme payée. La quittance officielle est générée dès l&apos;encaissement des fonds.
+              {defaultLanguage === "ar" ? (
+                <>
+                  الفاتورة <strong className="font-mono">{invoice.invoiceNumber || "قيد المعالجة"}</strong> لم تُسجل كمدفوعة بعد. يتم إنشاء وصل الدفع والمخالصة الرسمية فور تسجيل التحصيل المالي.
+                </>
+              ) : (
+                <>
+                  La facture <strong className="font-mono">{invoice.invoiceNumber || "en cours"}</strong> n&apos;a pas encore été marquée comme payée. La quittance officielle est générée dès l&apos;encaissement des fonds.
+                </>
+              )}
             </p>
             <div className="pt-2 flex justify-center gap-3">
               <Link
@@ -60,7 +70,11 @@ export default async function InvoiceReceiptPage({
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Retourner à la facture pour enregistrer le paiement</span>
+                <span>
+                  {defaultLanguage === "ar"
+                    ? "العودة إلى الفاتورة لتسجيل التحصيل المالي"
+                    : "Retourner à la facture pour enregistrer le paiement"}
+                </span>
               </Link>
             </div>
           </div>

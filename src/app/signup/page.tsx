@@ -5,9 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signupAction } from "@/app/actions";
 import { ShieldCheck, ArrowRight, Lock, Mail, User, Building, AlertCircle, FileText, Loader2 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { t, locale, dir } = useI18n();
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -30,18 +34,17 @@ export default function SignupPage() {
         setIsRedirecting(true);
         router.push("/dashboard");
         router.refresh();
-        // Guaranteed fallback full reload navigation
         setTimeout(() => {
           if (typeof window !== "undefined") {
             window.location.replace("/dashboard");
           }
         }, 150);
       } else {
-        setError("Une réponse inattendue est survenue.");
+        setError(locale === "ar" ? "حدث خطأ غير متوقع." : "Une réponse inattendue est survenue.");
         setLoading(false);
       }
     } catch (err: any) {
-      setError(err?.message || "Erreur lors de la création du compte.");
+      setError(err?.message || (locale === "ar" ? "خطأ في إنشاء الحساب." : "Erreur lors de la création du compte."));
       setLoading(false);
       if (typeof window !== "undefined") {
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -50,16 +53,21 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
+      {/* Language Switcher in Top Corner */}
+      <div className="absolute top-4 right-4 rtl:right-auto rtl:left-4 z-10">
+        <LanguageToggle />
+      </div>
+
       <div className="sm:mx-auto sm:w-full sm:max-w-lg text-center">
         <div className="inline-flex w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 items-center justify-center text-emerald-400 shadow-xl mb-4">
           <ShieldCheck className="w-8 h-8" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-white">
-          Inscription Auto-Entrepreneur
+          {t("signupTitleBadge")}
         </h1>
         <p className="mt-2 text-sm text-slate-300">
-          Création de votre espace sécurisé dédié (Régime IFU & Loi 22-23)
+          {t("signupSubtitleDetail")}
         </p>
       </div>
 
@@ -75,36 +83,36 @@ export default function SignupPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Nom commercial / Nom d'activité *
+                {t("businessNameLabel")} *
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                   <Building className="h-4 w-4" />
                 </div>
                 <input
                   type="text"
                   name="businessName"
                   required
-                  placeholder="Ex: DevConsult DZ ou Mon Activité"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  placeholder={t("businessNamePlaceholder")}
+                  className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Nom complet du titulaire (Nom & Prénom) *
+                {t("fullNameInputLabel")}
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                   <User className="h-4 w-4" />
                 </div>
                 <input
                   type="text"
                   name="fullName"
                   required
-                  placeholder="Ex: Mohamed Benali"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  placeholder={t("fullNamePlaceholder")}
+                  className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                 />
               </div>
             </div>
@@ -112,34 +120,34 @@ export default function SignupPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  N° RNAE (Carte ANAE)
+                  {t("rnaeCardLabel")}
                 </label>
                 <div className="relative rounded-xl shadow-xs">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                     <FileText className="h-4 w-4" />
                   </div>
                   <input
                     type="text"
                     name="rnaeNumber"
                     placeholder="Ex: 24-001234"
-                    className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                    className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  NIF (Fiscal)
+                  {t("nifFiscalLabel")}
                 </label>
                 <div className="relative rounded-xl shadow-xs">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                  <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                     <FileText className="h-4 w-4" />
                   </div>
                   <input
                     type="text"
                     name="nif"
                     placeholder="Ex: 198016010023456"
-                    className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                    className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                   />
                 </div>
               </div>
@@ -147,10 +155,10 @@ export default function SignupPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Adresse Email *
+                {t("emailInputLabel")} *
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                   <Mail className="h-4 w-4" />
                 </div>
                 <input
@@ -158,17 +166,17 @@ export default function SignupPage() {
                   name="email"
                   required
                   placeholder="votre.email@exemple.dz"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Mot de passe * (min. 6 caractères)
+                {t("passwordMinLengthLabel")}
               </label>
               <div className="relative rounded-xl shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className={`absolute inset-y-0 ${dir === "rtl" ? "right-0 pr-3.5" : "left-0 pl-3.5"} flex items-center pointer-events-none text-slate-400`}>
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
@@ -177,7 +185,7 @@ export default function SignupPage() {
                   required
                   minLength={6}
                   placeholder="••••••••"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  className={`block w-full ${dir === "rtl" ? "pr-10 pl-3 text-right" : "pl-10 pr-3 text-left"} py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition`}
                 />
               </div>
             </div>
@@ -190,17 +198,17 @@ export default function SignupPage() {
               {isRedirecting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Compte créé ! Redirection vers le tableau de bord...</span>
+                  <span>{t("accountCreatedRedirect")}</span>
                 </>
               ) : loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Création de votre espace en cours...</span>
+                  <span>{t("creatingSpace")}</span>
                 </>
               ) : (
                 <>
-                  <span>Créer mon espace Auto-Entrepreneur</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>{t("btnCreateMySpace")}</span>
+                  <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                 </>
               )}
             </button>
@@ -208,12 +216,12 @@ export default function SignupPage() {
 
           <div className="mt-6 pt-6 border-t border-slate-100 text-center">
             <p className="text-sm text-slate-600">
-              Vous avez déjà un compte ?{" "}
+              {t("alreadyHaveAccount")}{" "}
               <Link
                 href="/login"
                 className="font-semibold text-emerald-600 hover:text-emerald-500 transition"
               >
-                Se connecter
+                {t("btnSignIn")}
               </Link>
             </p>
           </div>

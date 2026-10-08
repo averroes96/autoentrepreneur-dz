@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { validateAlgerianNif, sanitizeNif, NifValidationResult } from "@/lib/nifValidator";
 import { CheckCircle2, AlertCircle, ExternalLink, ShieldCheck, MapPin } from "lucide-react";
 
+import { useI18n } from "@/lib/i18n/I18nContext";
+
 interface NifInputWithValidationProps {
   defaultValue?: string;
   name?: string;
@@ -13,6 +15,7 @@ export function NifInputWithValidation({
   defaultValue = "",
   name = "nif",
 }: NifInputWithValidationProps) {
+  const { t, locale, dir } = useI18n();
   const [value, setValue] = useState(defaultValue);
   const [result, setResult] = useState<NifValidationResult>(() =>
     validateAlgerianNif(defaultValue)
@@ -35,7 +38,7 @@ export function NifInputWithValidation({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-          NIF (Numéro d'Identification Fiscale) <span className="text-rose-500">*</span>
+          {t("lblNif")}
         </label>
         <span
           className={`text-[11px] font-mono px-2 py-0.5 rounded-md font-semibold transition-colors ${
@@ -46,7 +49,7 @@ export function NifInputWithValidation({
               : "bg-slate-100 text-slate-500"
           }`}
         >
-          {digitsCount}/15 chiffres
+          {t("lblNifDigitsCount", { count: digitsCount })}
         </span>
       </div>
 
@@ -86,12 +89,14 @@ export function NifInputWithValidation({
             <div className="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-900 text-xs flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span className="font-semibold">NIF Conforme DGI (15 chiffres)</span>
+                <span className="font-semibold">{t("nifCompliantDgi")}</span>
               </div>
               <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-[11px] font-medium text-emerald-800">
                 <MapPin className="w-3 h-3 text-emerald-600" />
                 <span>
-                  Wilaya {result.wilaya.code} : {result.wilaya.name} ({result.wilaya.arabicName})
+                  {locale === "ar"
+                    ? `ولاية ${result.wilaya.code} : ${result.wilaya.arabicName}`
+                    : `Wilaya ${result.wilaya.code} : ${result.wilaya.name} (${result.wilaya.arabicName})`}
                 </span>
               </div>
             </div>
@@ -106,7 +111,9 @@ export function NifInputWithValidation({
 
           {digitsCount > 0 && digitsCount < 15 && (
             <p className="text-[11px] text-slate-500">
-              Veuillez saisir les 15 chiffres du NIF délivré par la Direction Générale des Impôts.
+              {locale === "ar"
+                ? "يرجى إدخال 15 رقماً للرقم الجبائي الصادر عن المديرية العامة للضرائب (DGI)."
+                : "Veuillez saisir les 15 chiffres du NIF délivré par la Direction Générale des Impôts."}
             </p>
           )}
         </div>
@@ -114,14 +121,18 @@ export function NifInputWithValidation({
 
       {/* Helper text with official DGI link */}
       <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
-        <span>Attribué lors de la déclaration d'existence fiscale.</span>
+        <span>
+          {locale === "ar"
+            ? "يُمنح عند التصريح بالوجود الجبائي لدى مصالح الضرائب."
+            : "Attribué lors de la déclaration d'existence fiscale."}
+        </span>
         <a
           href="https://nifenligne.mf.gov.dz"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium hover:underline transition"
         >
-          <span>Portail DGI NIF en ligne</span>
+          <span>{locale === "ar" ? "بوابة الضرائب NIF الإلكترونية" : "Portail DGI NIF en ligne"}</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>

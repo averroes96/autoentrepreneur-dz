@@ -16,7 +16,6 @@ import {
   Edit,
   Trash2,
   CheckCircle,
-  XCircle,
   Ban,
   FileCheck,
   AlertTriangle,
@@ -27,6 +26,7 @@ import {
   RotateCcw,
   Receipt,
 } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface InvoiceData {
   id: string;
@@ -42,6 +42,7 @@ interface InvoiceData {
 
 export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
   const router = useRouter();
+  const { t, locale, dir } = useI18n();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
   const [paymentLoading, setPaymentLoading] = useState(false);
 
   const [cancelReason, setCancelReason] = useState("");
-  const [creditNoteReason, setCreditNoteReason] = useState("Annulation de mission / prestation");
+  const [creditNoteReason, setCreditNoteReason] = useState(t("creditNoteReasonPreset1"));
   const [creditNoteNotes, setCreditNoteNotes] = useState("");
   const [creditNoteLoading, setCreditNoteLoading] = useState(false);
 
@@ -77,14 +78,16 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       if (res?.error) {
         setEmailFeedback({ success: false, message: res.error });
       } else {
-        const note = res.mocked ? " (Mode Dev : simulation Resend sans clé API)" : "";
+        const note = res.mocked ? " (Mode Dev)" : "";
         setEmailFeedback({
           success: true,
-          message: `Facture transmise avec succès à ${res.recipient}${note} !`,
+          message: locale === "ar"
+            ? `تم إرسال الفاتورة بنجاح إلى ${res.recipient}${note} !`
+            : `Facture transmise avec succès à ${res.recipient}${note} !`,
         });
       }
     } catch (err: any) {
-      setEmailFeedback({ success: false, message: err.message || "Erreur lors de l'envoi" });
+      setEmailFeedback({ success: false, message: err.message || "Erreur" });
     } finally {
       setEmailLoading(false);
     }
@@ -103,7 +106,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       issueModalRef.current?.close();
       window.location.reload();
     } catch (err: any) {
-      setError(err.message || "Erreur lors de l'émission");
+      setError(err.message || "Erreur");
     } finally {
       setLoading(false);
     }
@@ -111,12 +114,15 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
 
   const handleTogglePayment = async () => {
     if (invoice.paymentStatus !== "PAID") {
-      // Open detailed payment recording modal
       paymentModalRef.current?.showModal();
       return;
     }
 
-    if (!confirm("Voulez-vous marquer cette facture comme impayée ? Le reçu associé sera désactivé.")) {
+    const confirmMsg = locale === "ar"
+      ? "هل تريد تعيين هذه الفاتورة كغير مدفوعة؟ سيتم تعطيل وصل الدفع المرتبط بها."
+      : "Voulez-vous marquer cette facture comme impayée ? Le reçu associé sera désactivé.";
+
+    if (!confirm(confirmMsg)) {
       return;
     }
 
@@ -125,7 +131,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       await toggleInvoicePaymentAction(invoice.id, false);
       window.location.reload();
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la mise à jour du statut de paiement");
+      alert(err.message || "Erreur");
     } finally {
       setLoading(false);
     }
@@ -150,7 +156,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       paymentModalRef.current?.close();
       window.location.reload();
     } catch (err: any) {
-      alert(err.message || "Erreur lors de l'enregistrement du paiement");
+      alert(err.message || "Erreur");
       setPaymentLoading(false);
     }
   };
@@ -169,7 +175,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       cancelModalRef.current?.close();
       window.location.reload();
     } catch (err: any) {
-      setError(err.message || "Erreur lors de l'annulation");
+      setError(err.message || "Erreur");
     } finally {
       setLoading(false);
     }
@@ -188,7 +194,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       router.push("/invoices");
       router.refresh();
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la suppression");
+      alert(err.message || "Erreur");
       setLoading(false);
     }
   };
@@ -196,7 +202,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
   const handleCreateCreditNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!creditNoteReason.trim()) {
-      alert("Le motif de l'avoir est obligatoire.");
+      alert(locale === "ar" ? "سبب الإشعار الدائن إلزامي." : "Le motif de l'avoir est obligatoire.");
       return;
     }
     setCreditNoteLoading(true);
@@ -217,7 +223,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
       router.push(`/credit-notes/${res.creditNoteId}`);
       router.refresh();
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la création de l'avoir");
+      alert(err.message || "Erreur");
       setCreditNoteLoading(false);
     }
   };
@@ -232,7 +238,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition"
           >
             <Edit className="w-3.5 h-3.5 text-slate-500" />
-            <span>Modifier</span>
+            <span>{t("btnEdit")}</span>
           </Link>
 
           <button
@@ -241,17 +247,17 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium shadow-2xs transition cursor-pointer"
           >
             <FileCheck className="w-3.5 h-3.5" />
-            <span>Émettre la facture</span>
+            <span>{t("btnIssueInvoice")}</span>
           </button>
 
           <button
             type="button"
             onClick={() => deleteModalRef.current?.showModal()}
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
-            title="Supprimer le brouillon"
+            title={t("btnDeleteDraft")}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Supprimer</span>
+            <span>{t("btnDeleteDraft")}</span>
           </button>
         </>
       )}
@@ -273,8 +279,8 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             <CreditCard className="w-3.5 h-3.5" />
             <span>
               {invoice.paymentStatus === "PAID"
-                ? "Marquer impayée"
-                : "Marquer payée"}
+                ? t("btnMarkUnpaid")
+                : t("btnMarkPaid")}
             </span>
           </button>
 
@@ -283,10 +289,10 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             <Link
               href={`/invoices/${invoice.id}/receipt`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-2xs transition"
-              title="Consulter et imprimer la quittance de paiement officielle"
+              title={locale === "ar" ? "معاينة وطباعة وصل الدفع الرسمي" : "Consulter et imprimer la quittance de paiement officielle"}
             >
               <Receipt className="w-3.5 h-3.5" />
-              <span>Quittance / Reçu</span>
+              <span>{t("btnReceipt")}</span>
             </Link>
           )}
 
@@ -300,7 +306,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium border border-slate-200 shadow-2xs transition cursor-pointer"
           >
             <Mail className="w-3.5 h-3.5 text-slate-500" />
-            <span>Envoyer email</span>
+            <span>{t("btnSendEmail")}</span>
           </button>
 
           {/* Download PDF Action */}
@@ -311,7 +317,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Télécharger PDF</span>
+            <span>{t("downloadPdf")}</span>
           </a>
 
           {/* Create Credit Note Action */}
@@ -319,10 +325,10 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             type="button"
             onClick={() => creditNoteModalRef.current?.showModal()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50/70 hover:bg-rose-100/80 text-rose-700 text-xs font-medium border border-rose-200/80 shadow-2xs transition cursor-pointer"
-            title="Émettre une facture d'avoir pour rectifier ou rembourser cette facture"
+            title={locale === "ar" ? "إصدار فاتورة دائنة لتصحيح أو تعويض هذه الفاتورة" : "Émettre une facture d'avoir pour rectifier ou rembourser cette facture"}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Créer un Avoir</span>
+            <span>{t("btnCreditNoteCreate")}</span>
           </button>
 
           {/* Cancel Action */}
@@ -330,10 +336,10 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             type="button"
             onClick={() => cancelModalRef.current?.showModal()}
             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
-            title="Annuler cette facture"
+            title={t("btnCancel")}
           >
             <Ban className="w-3.5 h-3.5" />
-            <span>Annuler</span>
+            <span>{t("btnCancel")}</span>
           </button>
         </>
       )}
@@ -347,7 +353,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
         >
           <Download className="w-3.5 h-3.5" />
-          <span>Télécharger archive PDF</span>
+          <span>{t("btnDownloadArchivePdf")}</span>
         </a>
       )}
 
@@ -361,19 +367,17 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
               <FileCheck className="w-5 h-5 text-emerald-600" />
             </div>
-            <h2 className="text-base font-bold text-slate-900">Émission définitive de la facture</h2>
+            <h2 className="text-base font-bold text-slate-900">{t("confirmIssueModalTitle")}</h2>
           </div>
 
           <div className="text-xs text-slate-600 space-y-2 mb-6">
-            <p>
-              Êtes-vous sûr de vouloir officialiser cette facture ?
-            </p>
+            <p>{t("confirmIssueQuestion")}</p>
             <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-              <p className="font-semibold text-slate-800">Conséquences légales :</p>
-              <ul className="list-disc pl-4 space-y-0.5 text-slate-600">
-                <li>Attribution du numéro séquentiel chronologique suivant sans rupture.</li>
-                <li>Verrouillage des données (le document devient permanent et immuable).</li>
-                <li>Génération de l'empreinte fiscale horodatée.</li>
+              <p className="font-semibold text-slate-800">{t("legalConsequencesTitle")}</p>
+              <ul className="list-disc pl-4 rtl:pr-4 rtl:pl-0 space-y-0.5 text-slate-600">
+                <li>{t("legalConsequence1")}</li>
+                <li>{t("legalConsequence2")}</li>
+                <li>{t("legalConsequence3")}</li>
               </ul>
             </div>
           </div>
@@ -390,7 +394,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               onClick={() => issueModalRef.current?.close()}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
-              Annuler
+              {t("btnCancel")}
             </button>
             <button
               type="button"
@@ -398,7 +402,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               onClick={handleIssueConfirm}
               className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
-              {loading ? "Émission en cours..." : "Confirmer et Émettre"}
+              {loading ? t("btnIssuing") : t("btnConfirmIssue")}
             </button>
           </div>
         </div>
@@ -414,24 +418,24 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
               <Ban className="w-5 h-5 text-rose-600" />
             </div>
-            <h2 className="text-base font-bold text-slate-900">Annuler la facture émise</h2>
+            <h2 className="text-base font-bold text-slate-900">{t("cancelInvoiceModalTitle")}</h2>
           </div>
 
           <form onSubmit={handleCancelConfirm} className="space-y-4">
-            <p className="text-xs text-slate-600">
-              Conformément à la réglementation fiscale, une facture émise ne peut pas être supprimée. Son annulation est enregistrée avec un motif justificatif obligatoire et son montant est déduit de votre chiffre d'affaires.
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {t("cancelInvoiceNotice")}
             </p>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Motif d'annulation obligatoire *
+                {t("cancelReasonLabel")}
               </label>
               <textarea
                 required
                 rows={3}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="Ex: Erreur sur le montant de la prestation convenu avec le client, accord amiable pour réémission..."
+                placeholder={t("cancelReasonPlaceholder")}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500"
               />
             </div>
@@ -448,14 +452,14 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 onClick={() => cancelModalRef.current?.close()}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                Retour
+                {t("btnBack")}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
-                {loading ? "Annulation..." : "Confirmer l'annulation"}
+                {loading ? t("btnCancelling") : t("btnConfirmCancel")}
               </button>
             </div>
           </form>
@@ -470,10 +474,10 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
         <div className="bg-white p-6">
           <div className="flex items-center gap-3 text-rose-700 mb-3">
             <Trash2 className="w-5 h-5 text-rose-600 shrink-0" />
-            <h2 className="text-base font-bold text-slate-900">Supprimer le brouillon</h2>
+            <h2 className="text-base font-bold text-slate-900">{t("deleteDraftModalTitle")}</h2>
           </div>
           <p className="text-xs text-slate-600 mb-6">
-            Êtes-vous certain de vouloir supprimer définitivement ce projet de facture ? Cette action est irréversible.
+            {t("deleteDraftQuestion")}
           </p>
           <div className="flex items-center justify-end gap-3">
             <button
@@ -481,7 +485,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               onClick={() => deleteModalRef.current?.close()}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
             >
-              Annuler
+              {t("btnCancel")}
             </button>
             <button
               type="button"
@@ -489,7 +493,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               onClick={handleDeleteConfirm}
               className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
-              {loading ? "Suppression..." : "Supprimer"}
+              {loading ? t("btnDeleting") : t("btnDeleteDraft")}
             </button>
           </div>
         </div>
@@ -507,8 +511,8 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 <Mail className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-slate-900">Transmettre la facture</h2>
-                <p className="text-xs text-slate-500">Transmission par email direct avec PDF conforme</p>
+                <h2 className="text-sm font-bold text-slate-900">{t("sendEmailModalTitle")}</h2>
+                <p className="text-xs text-slate-500">{t("sendEmailModalSubtitle")}</p>
               </div>
             </div>
             <button
@@ -523,7 +527,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
           <form onSubmit={handleSendEmail} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Adresse email du destinataire
+                {t("recipientEmailLabel")}
               </label>
               <input
                 type="email"
@@ -534,7 +538,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                La facture sera jointe au format PDF officiel et archivée sur le Cloud.
+                {t("sendEmailPdfHint")}
               </p>
             </div>
 
@@ -561,7 +565,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 onClick={() => emailModalRef.current?.close()}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                Fermer
+                {t("btnClose")}
               </button>
               <button
                 type="submit"
@@ -569,7 +573,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>{emailLoading ? "Envoi en cours..." : "Envoyez"}</span>
+                <span>{emailLoading ? t("btnSending") : t("btnSend")}</span>
               </button>
             </div>
           </form>
@@ -588,8 +592,10 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 <RotateCcw className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-slate-900">Émettre une Facture d'Avoir</h2>
-                <p className="text-xs text-slate-500">Rattachée à la facture {invoice.invoiceNumber || "en cours"}</p>
+                <h2 className="text-sm font-bold text-slate-900">{t("createCreditNoteModalTitle")}</h2>
+                <p className="text-xs text-slate-500">
+                  {t("creditNoteLinkedInvoice", { number: invoice.invoiceNumber || "..." })}
+                </p>
               </div>
             </div>
             <button
@@ -603,19 +609,19 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
 
           <form onSubmit={handleCreateCreditNote} className="space-y-4">
             <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed">
-              <strong>Obligation réglementaire :</strong> L'émission d'un avoir génère un document comptable officiel avec numéro séquentiel unique (AVR-YYYY-XXXX). Il rectifie la facture d'origine et déduit le montant de votre chiffre d'affaires imposable au titre de l'IFU.
+              <strong>{locale === "ar" ? "الالتزام التنظيمي :" : "Obligation réglementaire :"}</strong> {t("creditNoteNotice")}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Motif légal de l'avoir <span className="text-rose-500">*</span>
+                {t("creditNoteReasonLabel")}
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {[
-                  "Annulation de mission / prestation",
-                  "Remise commerciale accordée",
-                  "Erreur de facturation sur montant",
-                  "Prestation partielle non exécutée",
+                  t("creditNoteReasonPreset1"),
+                  t("creditNoteReasonPreset2"),
+                  t("creditNoteReasonPreset3"),
+                  t("creditNoteReasonPreset4"),
                 ].map((preset) => (
                   <button
                     key={preset}
@@ -636,20 +642,20 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 required
                 value={creditNoteReason}
                 onChange={(e) => setCreditNoteReason(e.target.value)}
-                placeholder="Précisez le motif légal..."
+                placeholder={t("creditNoteReasonPlaceholder")}
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Modalités de remboursement ou remarques (facultatif)
+                {t("creditNoteRemarksLabel")}
               </label>
               <textarea
                 rows={2}
                 value={creditNoteNotes}
                 onChange={(e) => setCreditNoteNotes(e.target.value)}
-                placeholder="Ex : Virement de remboursement émis le..."
+                placeholder={t("creditNoteRemarksPlaceholder")}
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500 focus:outline-none"
               />
             </div>
@@ -660,7 +666,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 onClick={() => creditNoteModalRef.current?.close()}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                Annuler
+                {t("btnCancel")}
               </button>
               <button
                 type="submit"
@@ -668,12 +674,13 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>{creditNoteLoading ? "Génération..." : "Émettre l'Avoir officiel"}</span>
+                <span>{creditNoteLoading ? t("btnGenerating") : t("btnIssueOfficialCreditNote")}</span>
               </button>
             </div>
           </form>
         </div>
       </dialog>
+
       {/* Payment Recording Modal */}
       <dialog
         ref={paymentModalRef}
@@ -687,10 +694,10 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  Enregistrer l&apos;encaissement
+                  {t("recordPaymentModalTitle")}
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Génération de la quittance officielle de paiement
+                  {t("recordPaymentModalSubtitle")}
                 </p>
               </div>
             </div>
@@ -705,12 +712,12 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
 
           <form onSubmit={handleRecordPaymentConfirm} className="space-y-4">
             <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-950 text-xs leading-relaxed">
-              <strong>Quittance libératoire :</strong> Marquer cette facture comme payée générera un reçu officiel avec numéro séquentiel (REC-YYYY-XXXX) certifiant l&apos;encaissement des fonds.
+              {t("recordPaymentNotice")}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Date d&apos;encaissement / règlement <span className="text-emerald-600">*</span>
+                {t("paymentDateLabel")}
               </label>
               <input
                 type="date"
@@ -723,23 +730,23 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Mode de règlement <span className="text-emerald-600">*</span>
+                {t("paymentMethodLabel")}
               </label>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               >
-                <option value="BANK_TRANSFER">Virement bancaire</option>
-                <option value="CCP_BARIDIMOB">Virement CCP / BaridiMob</option>
-                <option value="CASH">Espèces (Cash)</option>
-                <option value="CHEQUE">Chèque bancaire</option>
+                <option value="BANK_TRANSFER">{t("methodBankTransfer")}</option>
+                <option value="CCP_BARIDIMOB">{t("methodCcpBaridiMob")}</option>
+                <option value="CASH">{t("methodCash")}</option>
+                <option value="CHEQUE">{t("methodCheque")}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Référence de transaction / N° chèque (facultatif)
+                {t("paymentRefLabel")}
               </label>
               <input
                 type="text"
@@ -756,7 +763,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 onClick={() => paymentModalRef.current?.close()}
                 className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
               >
-                Annuler
+                {t("btnCancel")}
               </button>
               <button
                 type="submit"
@@ -764,7 +771,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
               >
                 <FileCheck className="w-3.5 h-3.5" />
-                <span>{paymentLoading ? "Enregistrement..." : "Valider & Générer le reçu"}</span>
+                <span>{paymentLoading ? t("paymentRecordingLoading") : t("validateAndGenerateReceipt")}</span>
               </button>
             </div>
           </form>
