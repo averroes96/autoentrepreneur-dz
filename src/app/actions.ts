@@ -491,16 +491,33 @@ export async function issueInvoiceAction(invoiceId: string) {
   }
 }
 
-export async function toggleInvoicePaymentAction(invoiceId: string, paid: boolean) {
+export async function toggleInvoicePaymentAction(
+  invoiceId: string,
+  paid: boolean,
+  paymentDetails?: {
+    paidAt?: string | Date;
+    paymentMethod?: string;
+    paymentReference?: string;
+  }
+) {
   const session = await getSession();
   if (!session) return { error: "Non autorisé." };
 
   try {
-    await toggleInvoicePayment(session.tenantId, invoiceId, paid);
+    const details = paymentDetails
+      ? {
+          paidAt: paymentDetails.paidAt ? new Date(paymentDetails.paidAt) : new Date(),
+          paymentMethod: paymentDetails.paymentMethod,
+          paymentReference: paymentDetails.paymentReference,
+        }
+      : undefined;
+
+    await toggleInvoicePayment(session.tenantId, invoiceId, paid, details);
     revalidatePath("/", "layout");
     revalidatePath(`/invoices/${invoiceId}`);
     revalidatePath("/invoices");
     revalidatePath("/dashboard");
+    revalidatePath("/clients");
     return { success: true };
   } catch (err: any) {
     return { error: err.message };

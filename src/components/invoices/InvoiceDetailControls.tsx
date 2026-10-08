@@ -25,6 +25,7 @@ import {
   Mail,
   Send,
   RotateCcw,
+  Receipt,
 } from "lucide-react";
 
 interface InvoiceData {
@@ -49,6 +50,12 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
   const cancelModalRef = useRef<HTMLDialogElement>(null);
   const deleteModalRef = useRef<HTMLDialogElement>(null);
   const creditNoteModalRef = useRef<HTMLDialogElement>(null);
+  const paymentModalRef = useRef<HTMLDialogElement>(null);
+
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [paymentMethod, setPaymentMethod] = useState("BANK_TRANSFER");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const [cancelReason, setCancelReason] = useState("");
   const [creditNoteReason, setCreditNoteReason] = useState("Annulation de mission / prestation");
@@ -103,15 +110,48 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
   };
 
   const handleTogglePayment = async () => {
+    if (invoice.paymentStatus !== "PAID") {
+      // Open detailed payment recording modal
+      paymentModalRef.current?.showModal();
+      return;
+    }
+
+    if (!confirm("Voulez-vous marquer cette facture comme impayée ? Le reçu associé sera désactivé.")) {
+      return;
+    }
+
     setLoading(true);
     try {
-      const nextPaid = invoice.paymentStatus !== "PAID";
-      await toggleInvoicePaymentAction(invoice.id, nextPaid);
+      await toggleInvoicePaymentAction(invoice.id, false);
       window.location.reload();
     } catch (err: any) {
       alert(err.message || "Erreur lors de la mise à jour du statut de paiement");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRecordPaymentConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPaymentLoading(true);
+    try {
+      const res = await toggleInvoicePaymentAction(invoice.id, true, {
+        paidAt: paymentDate,
+        paymentMethod,
+        paymentReference: paymentReference.trim() || undefined,
+      });
+
+      if (res?.error) {
+        alert(res.error);
+        setPaymentLoading(false);
+        return;
+      }
+
+      paymentModalRef.current?.close();
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message || "Erreur lors de l'enregistrement du paiement");
+      setPaymentLoading(false);
     }
   };
 
@@ -237,6 +277,18 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
                 : "Marquer payée"}
             </span>
           </button>
+
+          {/* Receipt Link Button when Paid */}
+          {invoice.paymentStatus === "PAID" && (
+            <Link
+              href={`/invoices/${invoice.id}/receipt`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-2xs transition"
+              title="Consulter et imprimer la quittance de paiement officielle"
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              <span>Quittance / Reçu</span>
+            </Link>
+          )}
 
           {/* Send Email Action */}
           <button
@@ -617,6 +669,102 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>{creditNoteLoading ? "Génération..." : "Émettre l'Avoir officiel"}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </dialog>
+      {/* Payment Recording Modal */}
+      <dialog
+        ref={paymentModalRef}
+        className="backdrop:bg-slate-900/40 p-0 rounded-2xl shadow-xl border border-slate-200 w-full max-w-md m-auto"
+      >
+        <div className="p-6 space-y-4">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+                <Receipt className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Enregistrer l&apos;encaissement
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Génération de la quittance officielle de paiement
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => paymentModalRef.current?.close()}
+              className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <form onSubmit={handleRecordPaymentConfirm} className="space-y-4">
+            <div className="p-3 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-950 text-xs leading-relaxed">
+              <strong>Quittance libératoire :</strong> Marquer cette facture comme payée générera un reçu officiel avec numéro séquentiel (REC-YYYY-XXXX) certifiant l&apos;encaissement des fonds.
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Date d&apos;encaissement / règlement <span className="text-emerald-600">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Mode de règlement <span className="text-emerald-600">*</span>
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              >
+                <option value="BANK_TRANSFER">Virement bancaire</option>
+                <option value="CCP_BARIDIMOB">Virement CCP / BaridiMob</option>
+                <option value="CASH">Espèces (Cash)</option>
+                <option value="CHEQUE">Chèque bancaire</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Référence de transaction / N° chèque (facultatif)
+              </label>
+              <input
+                type="text"
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+                placeholder="Ex : VIR-948201 / TXN-BARIDIMOB-8392"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => paymentModalRef.current?.close()}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={paymentLoading}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
+              >
+                <FileCheck className="w-3.5 h-3.5" />
+                <span>{paymentLoading ? "Enregistrement..." : "Valider & Générer le reçu"}</span>
               </button>
             </div>
           </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   createClientAction,
@@ -22,8 +23,11 @@ import {
   FileText,
   X,
   CheckCircle2,
+  Receipt,
+  ArrowRight,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n/I18nContext";
+import { formatDZD } from "@/lib/tax";
 
 interface ClientData {
   id: string;
@@ -37,7 +41,8 @@ interface ClientData {
   phone: string | null;
   isArchived: boolean;
   createdAt: Date | string;
-  invoices: Array<{ id: string; total: number; status: string }>;
+  invoices: Array<{ id: string; total: number; status: string; paymentStatus?: string }>;
+  creditNotes?: Array<{ id: string; total: number; status: string; refundStatus?: string }>;
 }
 
 export function ClientListClient({
@@ -238,6 +243,15 @@ export function ClientListClient({
           {filteredClients.map((client) => {
             const isPro = client.clientType === "PROFESSIONAL";
             const validInvoices = client.invoices.filter((i) => i.status === "ISSUED");
+            const totalBilled = validInvoices.reduce((acc, i) => acc + i.total, 0);
+            const totalPaid = validInvoices
+              .filter((i) => i.paymentStatus === "PAID")
+              .reduce((acc, i) => acc + i.total, 0);
+            const refundedCreditNotes = (client.creditNotes || [])
+              .filter((cn) => cn.status === "ISSUED" && cn.refundStatus === "REFUNDED")
+              .reduce((acc, cn) => acc + cn.total, 0);
+            const pendingBalance = Math.max(0, totalBilled - totalPaid - refundedCreditNotes);
+            const isSettled = pendingBalance === 0;
 
             return (
               <div
@@ -333,11 +347,39 @@ export function ClientListClient({
                   )}
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center gap-1.5">
+                {/* Balance & Invoice Count */}
+                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-slate-500">
                     <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{validInvoices.length} factures émises</span>
+                    <span>{validInvoices.length} factures</span>
                   </div>
+
+                  {validInvoices.length > 0 ? (
+                    isSettled ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Soldé (0 DZD)</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[10px] font-bold border border-amber-200 font-mono">
+                        <span>Dû : {formatDZD(pendingBalance)}</span>
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-[10px] text-slate-400">Aucune facture</span>
+                  )}
+                </div>
+
+                {/* Card Action Footer */}
+                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <Link
+                    href={`/clients/${client.id}`}
+                    className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-bold text-[11px] hover:underline"
+                  >
+                    <span>{locale === "ar" ? "كشف الحساب ←" : "Relevé de compte"}</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+
                   {client.isArchived && (
                     <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
                       Archivé

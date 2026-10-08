@@ -279,14 +279,21 @@ export async function issueInvoice(tenantId: string, invoiceId: string) {
   });
 }
 
+export interface PaymentDetailsInput {
+  paidAt?: Date;
+  paymentMethod?: string; // CASH, BANK_TRANSFER, CCP_BARIDIMOB, CHEQUE
+  paymentReference?: string;
+}
+
 /**
  * Toggles payment status between PAID and UNPAID for an issued invoice.
+ * Generates official Payment Receipt reference (REC-YYYY-XXXX) and records payment details.
  */
 export async function toggleInvoicePayment(
   tenantId: string,
   invoiceId: string,
   paid: boolean,
-  paidAt?: Date
+  paymentDetails?: PaymentDetailsInput | Date
 ) {
   const invoice = await db.invoice.findFirst({
     where: { id: invoiceId, tenantId },
@@ -296,11 +303,39 @@ export async function toggleInvoicePayment(
   if (invoice.status === "DRAFT") throw new Error("Une facture brouillon ne peut pas être payée.");
   if (invoice.status === "CANCELLED") throw new Error("Une facture annulée ne peut pas être payée.");
 
+  if (!paid) {
+    return db.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        paymentStatus: "UNPAID",
+        paidAt: null,
+        paymentMethod: null,
+        paymentReference: null,
+        receiptNumber: null,
+      },
+    });
+  }
+
+  const isDate = paymentDetails instanceof Date;
+  const paidAt = isDate ? paymentDetails : paymentDetails?.paidAt || new Date();
+  const paymentMethod = isDate ? "BANK_TRANSFER" : paymentDetails?.paymentMethod || "BANK_TRANSFER";
+  const paymentReference = isDate ? undefined : paymentDetails?.paymentReference;
+
+  // Generate official receipt reference matching the sequential invoice (e.g. REC-2026-0042)
+  const receiptNumber =
+    invoice.receiptNumber ||
+    (invoice.invoiceNumber
+      ? invoice.invoiceNumber.replace(/^FAC-/, "REC-")
+      : `REC-${invoice.fiscalYear}-${String(invoice.sequenceNumber || 1).padStart(4, "0")}`);
+
   return db.invoice.update({
     where: { id: invoiceId },
     data: {
-      paymentStatus: paid ? "PAID" : "UNPAID",
-      paidAt: paid ? paidAt || new Date() : null,
+      paymentStatus: "PAID",
+      paidAt,
+      paymentMethod,
+      paymentReference: paymentReference?.trim() || null,
+      receiptNumber,
     },
   });
 }

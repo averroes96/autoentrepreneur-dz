@@ -16,7 +16,10 @@ export default async function ClientsPage() {
     where: { tenantId: session.tenantId },
     include: {
       invoices: {
-        select: { id: true, total: true, status: true },
+        select: { id: true, total: true, status: true, paymentStatus: true },
+      },
+      creditNotes: {
+        select: { id: true, total: true, status: true, refundStatus: true },
       },
     },
     orderBy: { createdAt: "desc" },

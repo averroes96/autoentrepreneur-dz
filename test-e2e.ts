@@ -15,9 +15,17 @@ import {
   generateQuotePdfBuffer,
   generateCreditNotePdfBuffer,
   generateTaxSummaryPdfBuffer,
+  generatePaymentReceiptPdfBuffer,
+  generateClientStatementPdfBuffer,
 } from "./src/lib/pdfGenerator";
 import { getStatutoryDeadlines } from "./src/lib/statutoryCalendar";
 import { getAnnualTaxSummary, generateTaxSummaryCsv } from "./src/lib/taxSummary";
+import {
+  getClientLedger,
+  generateClientStatementCsv,
+  formatPaymentMethodLabel,
+} from "./src/lib/clientLedger";
+import { numberToFrenchWords, getFrenchAmountInWords } from "./src/lib/numberToWordsFr";
 import {
   createDraftQuote,
   finalizeAndSendQuote,
@@ -528,6 +536,166 @@ async function runTests() {
   console.log(`  - FR Statutory: "${translations.fr.statutoryCalendarTitle}" | AR: "${translations.ar.statutoryCalendarTitle}"`);
 
   console.log("=== ALL SECTION 5 ARABIC LANGUAGE & RTL TESTS PASSED PERFECTLY ===");
+
+  // ==========================================
+  // SECTION 6: PAYMENT RECEIPTS & CLIENT STATEMENTS
+  // ==========================================
+  console.log("\n--- SECTION 6: PAYMENT RECEIPTS & CLIENT STATEMENTS (BORDEREAU CLIENT) ---");
+
+  // 31. Number to French Words Verification
+  console.log("Verifying French Number-to-Words Converter for Legal Receipts...");
+  const frWords150k = getFrenchAmountInWords(150_000);
+  if (!frWords150k.toLowerCase().includes("cent cinquante mille dinars algériens")) {
+    throw new Error(`French words failed for 150,000: got "${frWords150k}"`);
+  }
+  console.log(`✓ French 150,000 DZD: "${frWords150k}"`);
+
+  const frWords24k = getFrenchAmountInWords(24_000);
+  if (!frWords24k.toLowerCase().includes("vingt-quatre mille dinars algériens")) {
+    throw new Error(`French words failed for 24,000: got "${frWords24k}"`);
+  }
+  console.log(`✓ French 24,000 DZD: "${frWords24k}"`);
+
+  // 32. Issue Invoice and Record Payment with Receipt
+  console.log("Testing Official Payment Receipt (Quittance) generation...");
+  const clientForReceipt = await db.client.findFirst({
+    where: { tenantId },
+  });
+  if (!clientForReceipt) throw new Error("No client found for receipt test");
+
+  const receiptInvoiceDraft = await createDraftInvoice({
+    tenantId,
+    clientId: clientForReceipt.id,
+    issueDate: new Date(),
+    notes: "Mission de développement d'application web",
+    lineItems: [
+      {
+        description: "Développement d'application web",
+        quantity: 1,
+        unitPrice: 85_000,
+      },
+    ],
+  });
+
+  const issuedForReceipt = await issueInvoice(tenantId, receiptInvoiceDraft.id);
+  console.log(`✓ Issued invoice for receipt: ${issuedForReceipt.invoiceNumber} (${issuedForReceipt.total} DZD)`);
+
+  const paidDate = new Date("2026-06-20");
+  const paidReceiptInvoice = await toggleInvoicePayment(tenantId, issuedForReceipt.id, true, {
+    paidAt: paidDate,
+    paymentMethod: "CCP_BARIDIMOB",
+    paymentReference: "TXN-BARIDIMOB-849201",
+  });
+
+  if (paidReceiptInvoice.paymentStatus !== "PAID") {
+    throw new Error("Invoice should be marked as PAID");
+  }
+  if (!paidReceiptInvoice.receiptNumber || !paidReceiptInvoice.receiptNumber.startsWith("REC-")) {
+    throw new Error(`Invalid receipt number: got "${paidReceiptInvoice.receiptNumber}"`);
+  }
+  if (paidReceiptInvoice.paymentMethod !== "CCP_BARIDIMOB") {
+    throw new Error(`Invalid payment method: got "${paidReceiptInvoice.paymentMethod}"`);
+  }
+  if (paidReceiptInvoice.paymentReference !== "TXN-BARIDIMOB-849201") {
+    throw new Error(`Invalid payment reference: got "${paidReceiptInvoice.paymentReference}"`);
+  }
+  console.log(`✓ Payment recorded with receipt: ${paidReceiptInvoice.receiptNumber}`);
+  console.log(`  - Mode: ${formatPaymentMethodLabel(paidReceiptInvoice.paymentMethod, "fr")} (${formatPaymentMethodLabel(paidReceiptInvoice.paymentMethod, "ar")})`);
+  console.log(`  - Réf: ${paidReceiptInvoice.paymentReference}`);
+
+  // 33. Generate Payment Receipt PDF Buffer
+  console.log("Generating Payment Receipt (Quittance) PDF buffer...");
+  const receiptPdfBuffer = await generatePaymentReceiptPdfBuffer({
+    receiptNumber: paidReceiptInvoice.receiptNumber,
+    invoiceNumber: paidReceiptInvoice.invoiceNumber!,
+    paymentDate: paidReceiptInvoice.paidAt!,
+    paymentMethod: paidReceiptInvoice.paymentMethod,
+    paymentReference: paidReceiptInvoice.paymentReference,
+    total: paidReceiptInvoice.total,
+    currency: "DZD",
+    notes: "Règlement reçu avec remerciements.",
+    seller: {
+      fullName: user.tenant.profile.fullName,
+      rnaeNumber: user.tenant.profile.rnaeNumber,
+      nif: user.tenant.profile.nif,
+      address: user.tenant.profile.address,
+      phone: user.tenant.profile.phone,
+      email: user.tenant.profile.email,
+      activityCode: user.tenant.profile.activityCode,
+      activityLabel: user.tenant.profile.activityLabel,
+    },
+    client: {
+      name: clientForReceipt.name,
+      clientType: clientForReceipt.clientType,
+      address: clientForReceipt.address,
+      nif: clientForReceipt.nif,
+      nis: clientForReceipt.nis,
+      rc: clientForReceipt.rc,
+      email: clientForReceipt.email,
+      phone: clientForReceipt.phone,
+    },
+  });
+
+  if (!receiptPdfBuffer || receiptPdfBuffer.length === 0) {
+    throw new Error("Failed to generate receipt PDF buffer");
+  }
+  console.log(`✓ Receipt PDF generated successfully (${receiptPdfBuffer.length} bytes)`);
+
+  // 34. Client Financial Ledger & Statement Calculations
+  console.log("Testing Client Financial Ledger (Grand Livre Client)...");
+  const ledger = await getClientLedger(tenantId, clientForReceipt.id);
+
+  if (ledger.client.id !== clientForReceipt.id) {
+    throw new Error("Ledger returned incorrect client");
+  }
+  if (ledger.metrics.totalBilledDzd <= 0) {
+    throw new Error("Ledger totalBilledDzd should be greater than zero");
+  }
+  if (ledger.metrics.totalPaidDzd <= 0) {
+    throw new Error("Ledger totalPaidDzd should be greater than zero");
+  }
+  if (ledger.entries.length === 0) {
+    throw new Error("Ledger should have at least one chronological entry");
+  }
+
+  console.log(`✓ Client Ledger retrieved for: ${ledger.client.name}`);
+  console.log(`  - Total Facturé: ${ledger.metrics.totalBilledDzd} DZD`);
+  console.log(`  - Total Réglé: ${ledger.metrics.totalPaidDzd} DZD`);
+  console.log(`  - Solde Restant Dû: ${ledger.metrics.outstandingBalanceDzd} DZD`);
+  console.log(`  - Situation: ${ledger.metrics.isSettled ? "Soldé" : "Solde Débiteur"}`);
+  console.log(`  - Nombre d'écritures: ${ledger.entries.length}`);
+
+  // Verify running balance consistency
+  for (const entry of ledger.entries) {
+    if (typeof entry.runningBalance !== "number" || isNaN(entry.runningBalance)) {
+      throw new Error(`Invalid runningBalance on entry ${entry.reference}`);
+    }
+  }
+  console.log("✓ Progressive running balance computed correctly across all ledger entries!");
+
+  // 35. Export Client Statement to CSV
+  console.log("Testing Client Statement CSV Export...");
+  const csvStatement = generateClientStatementCsv(ledger);
+  if (!csvStatement.startsWith("\uFEFF")) {
+    throw new Error("CSV Statement missing UTF-8 BOM");
+  }
+  if (!csvStatement.includes("RELEVÉ DE COMPTE")) {
+    throw new Error("CSV Statement missing header title");
+  }
+  if (!csvStatement.includes(ledger.client.name)) {
+    throw new Error("CSV Statement missing client name");
+  }
+  console.log(`✓ Client Statement CSV generated (${csvStatement.length} characters with BOM)`);
+
+  // 36. Export Client Statement to PDF
+  console.log("Testing Client Statement PDF Export...");
+  const statementPdfBuffer = await generateClientStatementPdfBuffer(ledger);
+  if (!statementPdfBuffer || statementPdfBuffer.length === 0) {
+    throw new Error("Failed to generate client statement PDF buffer");
+  }
+  console.log(`✓ Client Statement PDF generated successfully (${statementPdfBuffer.length} bytes)`);
+
+  console.log("=== ALL SECTION 6 PAYMENT RECEIPTS & CLIENT STATEMENTS TESTS PASSED PERFECTLY ===");
 }
 
 runTests()

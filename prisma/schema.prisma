@@ -112,6 +112,9 @@ model Invoice {
   paymentStatus      String    @default("UNPAID") // UNPAID, PAID
   issueDate          DateTime
   paidAt             DateTime?
+  paymentMethod      String?   // CASH, BANK_TRANSFER, CCP_BARIDIMOB, CHEQUE
+  paymentReference   String?   // Transaction or check reference
+  receiptNumber      String?   // REC-YYYY-XXXX
   currency           String    @default("DZD")
   total              Float     @default(0)
   vatExemptionNote   String
