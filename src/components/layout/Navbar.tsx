@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Calendar,
 } from "lucide-react";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 
 interface NavbarProps {
   user: {
@@ -257,6 +258,9 @@ export function Navbar({ user, tenantName }: NavbarProps) {
 
           {/* User info & Logout */}
           <div className="flex items-center gap-3">
+            {/* Language Switcher (FR / عربي) */}
+            <LanguageToggle />
+
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
               <Building2 className="w-3.5 h-3.5 text-slate-400" />
               <span className="font-medium text-slate-700 max-w-[150px] truncate">

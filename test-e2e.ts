@@ -36,6 +36,13 @@ import {
   getActivityByCode,
 } from "./src/data/anaeActivities";
 import { REGULATORY_CONFIG } from "./src/config/regulatory";
+import {
+  ARABIC_NOMENCLATURE,
+  formatDZD_AR,
+  formatArabicDate,
+  tafqeetNumberToArabicWords,
+  getArabicAmountInWords,
+} from "./src/lib/arabicNomenclature";
 
 async function runTests() {
   console.log("=== STARTING PHASE 1 COMPLIANCE & INTEGRATION TEST ===");
@@ -433,6 +440,72 @@ async function runTests() {
   }
 
   console.log("=== ALL SECTION 4 STATUTORY CALENDAR & TAX SUMMARY TESTS PASSED PERFECTLY ===");
+
+  console.log("\n=== STARTING SECTION 5: ARABIC LANGUAGE & RTL (العربية / JORADP) ===");
+
+  // 27. Official JORADP Gazette Legal Terminology
+  console.log("Verifying Official JORADP Gazette Legal Terminology in Arabic...");
+  if (ARABIC_NOMENCLATURE.invoiceTitle !== "فـــاتـــورة") {
+    throw new Error("Arabic invoice title mismatch");
+  }
+  if (!ARABIC_NOMENCLATURE.vatExemptionClause.includes("معفى من الرسم على القيمة المضافة")) {
+    throw new Error("Arabic VAT exemption clause missing legal terminology");
+  }
+  if (!ARABIC_NOMENCLATURE.vatExemptionClause.includes("القانون رقم 22-23")) {
+    throw new Error("Arabic VAT exemption clause missing Law 22-23 statutory reference");
+  }
+  if (ARABIC_NOMENCLATURE.activityCodeLabel !== "رمز النشاط المعتمد") {
+    throw new Error("Arabic activity code label mismatch");
+  }
+  if (ARABIC_NOMENCLATURE.republicTitle !== "الجمهورية الجزائرية الديمقراطية الشعبية") {
+    throw new Error("Arabic republic title mismatch");
+  }
+  console.log("✓ Official JORADP terminology verified (فاتورة, رمز النشاط, الإعفاء من الرسم على القيمة المضافة)");
+
+  // 28. Arabic Currency & Date Formatting
+  console.log("Testing Arabic currency and date formatting...");
+  const formattedDzdAr = formatDZD_AR(250_000);
+  if (formattedDzdAr !== "250 000 د.ج") {
+    throw new Error(`Unexpected Arabic currency format: ${formattedDzdAr}`);
+  }
+  console.log(`✓ Arabic DZD Currency formatted: 250,000 -> "${formattedDzdAr}"`);
+
+  const testDate = new Date(2026, 9, 8); // 8 Octobre 2026
+  const formattedDateAr = formatArabicDate(testDate);
+  if (!formattedDateAr.includes("أكتوبر") || !formattedDateAr.includes("2026")) {
+    throw new Error(`Unexpected Arabic date format: ${formattedDateAr}`);
+  }
+  console.log(`✓ Arabic Date formatted: 2026-10-08 -> "${formattedDateAr}"`);
+
+  // 29. Algerian Administrative Tafqeet (Transcription en toutes lettres)
+  console.log("Testing Algerian Administrative Tafqeet (التفقيط)...");
+  const words250k = tafqeetNumberToArabicWords(250_000);
+  if (words250k !== "مائتان وخمسون ألف") {
+    throw new Error(`Tafqeet failed for 250,000: got "${words250k}"`);
+  }
+
+  const legalAmountText = getArabicAmountInWords(250_000);
+  if (
+    !legalAmountText.includes("مائتان وخمسون ألف") ||
+    !legalAmountText.includes("دينار جزائري لا غير")
+  ) {
+    throw new Error(`Full legal amount text failed: "${legalAmountText}"`);
+  }
+  console.log(`✓ Tafqeet 250,000 DZD: "${words250k}" -> Legal: "${legalAmountText}"`);
+
+  const words1_5M = tafqeetNumberToArabicWords(1_500_000);
+  if (words1_5M !== "مليون وخمسمائة ألف") {
+    throw new Error(`Tafqeet failed for 1,500,000: got "${words1_5M}"`);
+  }
+  console.log(`✓ Tafqeet 1,500,000 DZD: "${words1_5M}"`);
+
+  const words24k = tafqeetNumberToArabicWords(24_000);
+  if (words24k !== "أربعة وعشرون ألف") {
+    throw new Error(`Tafqeet failed for 24,000: got "${words24k}"`);
+  }
+  console.log(`✓ Tafqeet 24,000 DZD (CASNOS): "${words24k}"`);
+
+  console.log("=== ALL SECTION 5 ARABIC LANGUAGE & RTL TESTS PASSED PERFECTLY ===");
 }
 
 runTests()
