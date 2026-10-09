@@ -228,8 +228,8 @@ export function VaultBackupClient({
       {/* Page Header */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold mb-2">
-            <ShieldCheck className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold mb-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>LOI N° 22-23 • SOUVERAINETÉ & PORTABILITÉ DES DONNÉES</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -243,7 +243,7 @@ export function VaultBackupClient({
         {/* Database Live Stats Pills */}
         <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs text-slate-700">
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-xl shadow-2xs font-semibold">
-            <Users className="w-3.5 h-3.5 text-indigo-600" />
+            <Users className="w-3.5 h-3.5 text-emerald-600" />
             <span>{currentStats.clientsCount} clients</span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-xl shadow-2xs font-semibold">
@@ -268,9 +268,9 @@ export function VaultBackupClient({
         ========================================================= */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
           {/* Card Header */}
-          <div className="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+          <div className="p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
                 <HardDriveDownload className="w-5 h-5" />
               </div>
               <div>
@@ -308,12 +308,12 @@ export function VaultBackupClient({
                   onClick={() => setExportFormat("zip")}
                   className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
                     exportFormat === "zip"
-                      ? "border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 text-slate-900"
+                      ? "border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-500/20 text-slate-900"
                       : "border-slate-200 bg-slate-50/50 hover:bg-slate-50 text-slate-600"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <FileArchive className={`w-5 h-5 ${exportFormat === "zip" ? "text-indigo-600" : "text-slate-400"}`} />
+                    <FileArchive className={`w-5 h-5 ${exportFormat === "zip" ? "text-emerald-600" : "text-slate-400"}`} />
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                       Recommandé
                     </span>
@@ -329,12 +329,12 @@ export function VaultBackupClient({
                   onClick={() => setExportFormat("json")}
                   className={`p-3.5 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
                     exportFormat === "json"
-                      ? "border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 text-slate-900"
+                      ? "border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-500/20 text-slate-900"
                       : "border-slate-200 bg-slate-50/50 hover:bg-slate-50 text-slate-600"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <FileJson className={`w-5 h-5 ${exportFormat === "json" ? "text-indigo-600" : "text-slate-400"}`} />
+                    <FileJson className={`w-5 h-5 ${exportFormat === "json" ? "text-emerald-600" : "text-slate-400"}`} />
                   </div>
                   <div>
                     <div className="text-xs font-bold text-slate-900">Fichier JSON Unique</div>
@@ -352,11 +352,11 @@ export function VaultBackupClient({
                   id="enableEncryption"
                   checked={enableEncryption}
                   onChange={(e) => setEnableEncryption(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  className="mt-1 h-4 w-4 rounded-md border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                 />
                 <label htmlFor="enableEncryption" className="cursor-pointer">
                   <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                    <Lock className="w-3.5 h-3.5 text-emerald-600" />
                     {t("vaultEncryptionOption")}
                   </span>
                   <span className="text-[11px] text-slate-500 block mt-0.5">
@@ -376,7 +376,7 @@ export function VaultBackupClient({
                       value={exportPassphrase}
                       onChange={(e) => setExportPassphrase(e.target.value)}
                       placeholder={t("vaultPassphrasePlaceholder")}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs text-slate-900 bg-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-slate-900 bg-white"
                     />
                   </div>
 
@@ -389,7 +389,7 @@ export function VaultBackupClient({
                       value={exportPassphraseConfirm}
                       onChange={(e) => setExportPassphraseConfirm(e.target.value)}
                       placeholder={t("vaultPassphraseConfirmPlaceholder")}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs text-slate-900 bg-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-slate-900 bg-white"
                     />
                   </div>
 
@@ -405,7 +405,7 @@ export function VaultBackupClient({
               type="button"
               onClick={handleDownloadBackup}
               disabled={isExporting}
-              className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-sm shadow-md shadow-indigo-600/20 transition cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-sm shadow-md shadow-emerald-600/20 transition cursor-pointer"
             >
               {isExporting ? (
                 <>
@@ -427,9 +427,9 @@ export function VaultBackupClient({
         ========================================================= */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
           {/* Card Header */}
-          <div className="p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white flex items-center justify-between">
+          <div className="p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
                 <HardDriveUpload className="w-5 h-5" />
               </div>
               <div>
@@ -487,10 +487,10 @@ export function VaultBackupClient({
               onClick={() => fileInputRef.current?.click()}
               className={`p-6 sm:p-8 rounded-2xl border-2 border-dashed text-center transition cursor-pointer ${
                 isDragging
-                  ? "border-indigo-600 bg-indigo-50/70"
+                  ? "border-emerald-600 bg-emerald-50/70"
                   : selectedFile
                   ? "border-emerald-400 bg-emerald-50/30"
-                  : "border-slate-300 hover:border-indigo-400 bg-slate-50/50 hover:bg-slate-50"
+                  : "border-slate-300 hover:border-emerald-400 bg-slate-50/50 hover:bg-slate-50"
               }`}
             >
               <input
@@ -501,7 +501,7 @@ export function VaultBackupClient({
                 className="hidden"
               />
 
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
                 {selectedFile ? (
                   <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                 ) : (
@@ -599,7 +599,7 @@ export function VaultBackupClient({
               <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-5 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Database className="w-4 h-4 text-indigo-600" />
+                    <Database className="w-4 h-4 text-emerald-600" />
                     <span className="text-xs font-bold text-slate-900">
                       {t("previewTitle")}
                     </span>
@@ -680,7 +680,7 @@ export function VaultBackupClient({
                         value="merge"
                         checked={restoreMode === "merge"}
                         onChange={() => setRestoreMode("merge")}
-                        className="mt-0.5 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        className="mt-0.5 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                       />
                       <div className="text-xs">
                         <span className="font-bold text-slate-900 block">
@@ -739,7 +739,7 @@ export function VaultBackupClient({
                   className={`w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl text-white font-semibold text-xs transition cursor-pointer shadow-md ${
                     restoreMode === "overwrite"
                       ? "bg-rose-600 hover:bg-rose-700 disabled:opacity-50 shadow-rose-600/20"
-                      : "bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-indigo-600/20"
+                      : "bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 shadow-emerald-600/20"
                   }`}
                 >
                   {isRestoring ? (

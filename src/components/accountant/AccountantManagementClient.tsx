@@ -221,8 +221,8 @@ export function AccountantManagementClient({
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold mb-2">
-            <ShieldCheck className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold mb-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             <span>LOI N° 22-23 — CONTRÔLE & AUDIT FISCAL</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -237,7 +237,7 @@ export function AccountantManagementClient({
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>{t("btnNewAccountantInvite")}</span>
@@ -246,10 +246,10 @@ export function AccountantManagementClient({
       </div>
 
       {/* Direct Audit Archive Download Card for the Auto-Entrepreneur */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-indigo-800/50">
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-700/60">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold">
               <FileArchive className="w-3.5 h-3.5" />
               <span>PACK D&apos;AUDIT FISCAL COMPLET (ZIP)</span>
             </div>
@@ -272,13 +272,13 @@ export function AccountantManagementClient({
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/15">
             <div className="flex items-center gap-2 px-3 py-1 text-xs text-slate-200">
-              <Calendar className="w-4 h-4 text-indigo-300" />
+              <Calendar className="w-4 h-4 text-emerald-400" />
               <span>Exercice :</span>
             </div>
             <select
               value={downloadYear}
               onChange={(e) => setDownloadYear(parseInt(e.target.value, 10))}
-              className="bg-slate-800 text-white text-sm font-semibold rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="bg-slate-800 text-white text-sm font-semibold rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               {availableYears.map((yr) => (
                 <option key={yr} value={yr}>
@@ -394,7 +394,7 @@ export function AccountantManagementClient({
 
         {accesses.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <h3 className="text-sm font-semibold text-slate-900 mb-1">
@@ -406,7 +406,7 @@ export function AccountantManagementClient({
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-700 transition cursor-pointer shadow-sm shadow-emerald-600/20"
             >
               <Plus className="w-4 h-4" />
               <span>{t("btnNewAccountantInvite")}</span>
@@ -531,7 +531,7 @@ export function AccountantManagementClient({
                             type="button"
                             onClick={() => handleCopyLink(acc.token)}
                             title={t("copyAccessLink")}
-                            className="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition cursor-pointer"
                           >
                             {copiedToken === acc.token ? (
                               <Check className="w-4 h-4 text-emerald-600" />
@@ -546,7 +546,7 @@ export function AccountantManagementClient({
                             target="_blank"
                             rel="noreferrer"
                             title="Consulter le portail"
-                            className="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 transition"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
@@ -592,7 +592,7 @@ export function AccountantManagementClient({
             {/* Modal Header */}
             <div className="p-6 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shadow-emerald-600/30">
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
@@ -634,7 +634,7 @@ export function AccountantManagementClient({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t("accountantNamePlaceholder")}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-900"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900"
                 />
               </div>
 
@@ -648,7 +648,7 @@ export function AccountantManagementClient({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder={t("accountantEmailPlaceholder")}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-900"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900"
                 />
               </div>
 
@@ -661,7 +661,7 @@ export function AccountantManagementClient({
                   <button
                     type="button"
                     onClick={handleGenerateRandomPin}
-                    className="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium cursor-pointer"
+                    className="text-[11px] text-emerald-600 hover:text-emerald-800 font-medium cursor-pointer"
                   >
                     Générer un PIN à 6 chiffres
                   </button>
@@ -673,7 +673,7 @@ export function AccountantManagementClient({
                     value={pin}
                     onChange={(e) => setPin(e.target.value.replace(/\s+/g, ""))}
                     placeholder={t("accountantPinPlaceholder")}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono tracking-widest text-sm text-slate-900"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono tracking-widest text-sm text-slate-900"
                   />
                   <Lock className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
                 </div>
@@ -692,7 +692,7 @@ export function AccountantManagementClient({
                   <select
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-900"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900"
                   >
                     <option value="7">{t("duration7Days")}</option>
                     <option value="30">{t("duration30Days")}</option>
@@ -709,7 +709,7 @@ export function AccountantManagementClient({
                   <select
                     value={fiscalYear}
                     onChange={(e) => setFiscalYear(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-slate-900"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-slate-900"
                   >
                     <option value="all">{t("allFiscalYears")}</option>
                     {availableYears.map((yr) => (
@@ -731,7 +731,7 @@ export function AccountantManagementClient({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={t("accountantNotesPlaceholder")}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs text-slate-900 resize-none"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs text-slate-900 resize-none"
                 />
               </div>
 
@@ -747,7 +747,7 @@ export function AccountantManagementClient({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs transition cursor-pointer shadow-sm shadow-indigo-600/20"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs transition cursor-pointer shadow-sm shadow-emerald-600/20"
                 >
                   {isSubmitting ? (
                     <>

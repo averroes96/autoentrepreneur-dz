@@ -115,7 +115,7 @@ export function AccountantAuditPortal({
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-slate-400">
-              <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
+              <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
               <span>Auditeur :</span>
               <strong className="text-white">{access.name}</strong>
             </div>
@@ -143,7 +143,7 @@ export function AccountantAuditPortal({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* Identity & Status */}
             <div className="flex items-start sm:items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xl shrink-0 shadow-sm shadow-indigo-600/30">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xl shrink-0 shadow-sm shadow-emerald-600/30">
                 <ShieldCheck className="w-7 h-7" />
               </div>
 
@@ -222,7 +222,7 @@ export function AccountantAuditPortal({
               onClick={() => setActiveTab("ifu")}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
                 activeTab === "ifu"
-                  ? "bg-indigo-600 text-white shadow-xs"
+                  ? "bg-emerald-600 text-white shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
@@ -235,7 +235,7 @@ export function AccountantAuditPortal({
               onClick={() => setActiveTab("recettes")}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
                 activeTab === "recettes"
-                  ? "bg-indigo-600 text-white shadow-xs"
+                  ? "bg-emerald-600 text-white shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
@@ -248,7 +248,7 @@ export function AccountantAuditPortal({
               onClick={() => setActiveTab("depenses")}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
                 activeTab === "depenses"
-                  ? "bg-indigo-600 text-white shadow-xs"
+                  ? "bg-emerald-600 text-white shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
@@ -261,7 +261,7 @@ export function AccountantAuditPortal({
               onClick={() => setActiveTab("clients")}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition cursor-pointer whitespace-nowrap ${
                 activeTab === "clients"
-                  ? "bg-indigo-600 text-white shadow-xs"
+                  ? "bg-emerald-600 text-white shadow-xs"
                   : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
             >
@@ -275,9 +275,9 @@ export function AccountantAuditPortal({
       {/* Main Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Read-Only Notice */}
-        <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex items-start gap-3">
-          <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-indigo-950 flex-1">
+        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-start gap-3">
+          <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-emerald-950 flex-1">
             <span className="font-bold">Espace de consultation certifié conforme :</span>{" "}
             {t("portalReadOnlyNotice")} Cet export contient le registre chronologique immuable pour
             l&apos;exercice fiscal <strong>{selectedYear}</strong>.
@@ -307,7 +307,7 @@ export function AccountantAuditPortal({
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   Assiette IFU (CA Net Encaissé)
                 </span>
-                <div className="text-xl sm:text-2xl font-black text-indigo-600 mt-2 font-mono">
+                <div className="text-xl sm:text-2xl font-black text-slate-900 mt-2 font-mono">
                   {formatDZD(m.netTaxableTurnoverDzd)}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
@@ -360,7 +360,7 @@ export function AccountantAuditPortal({
                   href={`/api/accountant/${token}/export-pdf?year=${selectedYear}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-200 transition"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-200 transition"
                 >
                   <Download className="w-4 h-4" />
                   <span>Télécharger le Bilan G12 bis (PDF)</span>
@@ -389,7 +389,7 @@ export function AccountantAuditPortal({
                         <td className="py-3 px-4 font-mono text-rose-600">
                           {q.refundedCreditDzd > 0 ? `-${formatDZD(q.refundedCreditDzd)}` : "0,00 DZD"}
                         </td>
-                        <td className="py-3 px-4 font-mono font-bold text-indigo-700">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
                           {formatDZD(q.netTaxableDzd)}
                         </td>
                         <td className="py-3 px-4 font-mono text-emerald-700">
@@ -408,13 +408,13 @@ export function AccountantAuditPortal({
                       <td className="py-3 px-4 font-mono text-rose-600">
                         -{formatDZD(m.totalRefundedCreditDzd)}
                       </td>
-                      <td className="py-3 px-4 font-mono text-indigo-700">
+                      <td className="py-3 px-4 font-mono text-slate-900">
                         {formatDZD(m.netTaxableTurnoverDzd)}
                       </td>
                       <td className="py-3 px-4 font-mono text-emerald-700">
                         {formatDZD(m.finalTaxOwedDzd)}
                       </td>
-                      <td className="py-3 px-4 text-right text-xs text-indigo-600 font-semibold">
+                      <td className="py-3 px-4 text-right text-xs text-emerald-700 font-semibold">
                         G12 bis Récapitulatif
                       </td>
                     </tr>
@@ -481,7 +481,7 @@ export function AccountantAuditPortal({
                       </td>
                       <td className="py-3 px-4 text-slate-600">
                         {inv.currency !== "DZD" ? (
-                          <span className="font-mono text-[11px] font-semibold text-indigo-700">
+                          <span className="font-mono text-[11px] font-semibold text-emerald-700">
                             {formatCurrencyAmount(inv.total, inv.currency)}
                           </span>
                         ) : (
@@ -639,7 +639,7 @@ export function AccountantAuditPortal({
                         <td colSpan={5} className="py-3 px-4 uppercase text-[11px]">
                           Total des Charges d&apos;Exploitation
                         </td>
-                        <td className="py-3 px-4 font-mono text-indigo-700">
+                        <td className="py-3 px-4 font-mono text-slate-900">
                           {formatDZD(
                             auditData.expenses.reduce(
                               (acc: number, e: any) => acc + (e.amountDzd ?? e.amount ?? 0),
