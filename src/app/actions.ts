@@ -53,6 +53,10 @@ import {
   deleteAccountantAccess,
   verifyAccountantPin,
 } from "@/lib/accountantAccess";
+import {
+  inspectVaultBuffer,
+  restoreVaultData,
+} from "@/lib/vault";
 
 /* =========================================================================
    AUTHENTICATION ACTIONS
@@ -1330,5 +1334,104 @@ export async function logoutAccountantAction(token: string) {
     return { error: "Erreur lors de la déconnexion." };
   }
 }
+
+/* =========================================================================
+   VAULT BACKUP & RESTORE ACTIONS (MODULE 4)
+========================================================================= */
+
+export async function previewVaultRestoreAction(formData: FormData) {
+  try {
+    const session = await getSession();
+    if (!session || !session.tenantId) {
+      return { error: "Non authentifié" };
+    }
+
+    const file = formData.get("file") as File | null;
+    if (!file) {
+      return { error: "Veuillez sélectionner un fichier de sauvegarde." };
+    }
+
+    const passphrase = (formData.get("passphrase") as string) || undefined;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const inspection = await inspectVaultBuffer(buffer, passphrase);
+    if (!inspection.valid) {
+      return {
+        error: inspection.error || "Fichier de sauvegarde non valide.",
+        isEncrypted: inspection.isEncrypted,
+        requiresPassphrase: inspection.requiresPassphrase,
+      };
+    }
+
+    return {
+      success: true,
+      isEncrypted: inspection.isEncrypted,
+      requiresPassphrase: inspection.requiresPassphrase,
+      manifest: inspection.manifest,
+      stats: inspection.manifest?.stats || {
+        clientsCount: inspection.payload?.clients?.length || 0,
+        invoicesCount: inspection.payload?.invoices?.length || 0,
+        quotesCount: inspection.payload?.quotes?.length || 0,
+        creditNotesCount: inspection.payload?.creditNotes?.length || 0,
+        expensesCount: inspection.payload?.expenses?.length || 0,
+        pastTurnoversCount: inspection.payload?.pastTurnovers?.length || 0,
+        accountantAccessesCount: 0,
+      },
+    };
+  } catch (err: any) {
+    captureException(err, { action: "previewVaultRestoreAction" });
+    return { error: err.message || "Erreur lors de l'analyse du fichier de sauvegarde." };
+  }
+}
+
+export async function executeVaultRestoreAction(formData: FormData) {
+  try {
+    const session = await getSession();
+    if (!session || !session.tenantId) {
+      return { error: "Non authentifié" };
+    }
+
+    const file = formData.get("file") as File | null;
+    if (!file) {
+      return { error: "Fichier de sauvegarde manquant." };
+    }
+
+    const passphrase = (formData.get("passphrase") as string) || undefined;
+    const mode = (formData.get("mode") as "merge" | "overwrite") || "merge";
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const inspection = await inspectVaultBuffer(buffer, passphrase);
+    if (!inspection.valid || !inspection.payload) {
+      return {
+        error: inspection.error || "Impossible de déchiffrer ou lire la sauvegarde.",
+      };
+    }
+
+    const restoreResult = await restoreVaultData(session.tenantId, inspection.payload, mode);
+
+    revalidatePath("/dashboard");
+    revalidatePath("/invoices");
+    revalidatePath("/quotes");
+    revalidatePath("/credit-notes");
+    revalidatePath("/expenses");
+    revalidatePath("/clients");
+    revalidatePath("/tax-summary");
+    revalidatePath("/accountant");
+    revalidatePath("/profile");
+    revalidatePath("/backup");
+
+    return {
+      success: true,
+      restoredCounts: restoreResult.restoredCounts,
+    };
+  } catch (err: any) {
+    captureException(err, { action: "executeVaultRestoreAction" });
+    return { error: err.message || "Erreur lors de la restauration des données." };
+  }
+}
+
 
 

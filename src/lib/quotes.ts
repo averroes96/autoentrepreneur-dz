@@ -329,7 +329,8 @@ export async function updateQuoteStatus(
  * Copies client, line items, currency, notes, and sets quote relation.
  */
 export async function convertQuoteToInvoice(tenantId: string, quoteId: string) {
-  return db.$transaction(async (tx) => {
+  return db.$transaction(
+    async (tx) => {
     const quote = await tx.quote.findFirst({
       where: { id: quoteId, tenantId },
       include: { client: true, lineItems: { orderBy: { position: "asc" } } },
@@ -394,7 +395,9 @@ export async function convertQuoteToInvoice(tenantId: string, quoteId: string) {
     });
 
     return invoice;
-  });
+  },
+  { timeout: 20000, maxWait: 10000 }
+  );
 }
 
 /**

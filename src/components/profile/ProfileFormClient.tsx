@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateProfileAction, savePastTurnoverAction } from "@/app/actions";
 import { formatDZD } from "@/lib/tax";
 import { REGULATORY_CONFIG } from "@/config/regulatory";
+import Link from "next/link";
 import {
   ShieldCheck,
   Building,
@@ -17,6 +18,7 @@ import {
   Plus,
   History,
   AlertCircle,
+  Database,
 } from "lucide-react";
 import { calculateProfileCompletion } from "@/lib/profile";
 import { NifInputWithValidation } from "./NifInputWithValidation";
@@ -129,15 +131,25 @@ export function ProfileFormClient({
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          {locale === "ar" ? "الملف الشخصي والإعدادات القانونية" : "Profil & Paramètres Réglementaires"}
-        </h1>
-        <p className="text-sm text-slate-500">
-          {locale === "ar"
-            ? "ضبط البيانات القانونية الإلزامية، أرقام التعريف المعتمدة ANAE/DGI، وسجل نشاطك التجاري."
-            : "Configurez vos mentions légales obligatoires, vos identifiants ANAE/DGI et l'historique de votre statut."}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {locale === "ar" ? "الملف الشخصي والإعدادات القانونية" : "Profil & Paramètres Réglementaires"}
+          </h1>
+          <p className="text-sm text-slate-500">
+            {locale === "ar"
+              ? "ضبط البيانات القانونية الإلزامية، أرقام التعريف المعتمدة ANAE/DGI، وسجل نشاطك التجاري."
+              : "Configurez vos mentions légales obligatoires, vos identifiants ANAE/DGI et l'historique de votre statut."}
+          </p>
+        </div>
+
+        <Link
+          href="/backup"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold shadow-2xs transition self-start sm:self-auto"
+        >
+          <Database className="w-4 h-4 text-purple-600" />
+          <span>{locale === "ar" ? "الخزنة الرقمية والنسخ الاحتياطي" : "Coffre-fort & Sauvegardes"}</span>
+        </Link>
       </div>
 
       {/* Profile Completion Progress Card */}

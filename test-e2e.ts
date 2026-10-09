@@ -77,6 +77,15 @@ import {
   generateAccountantAuditZipBuffer,
   generateTenantAuditZipBuffer,
 } from "./src/lib/accountantAccess";
+import {
+  exportTenantVaultData,
+  encryptVaultPayload,
+  decryptVaultPayload,
+  generateVaultJsonBuffer,
+  generateVaultZipArchive,
+  inspectVaultBuffer,
+  restoreVaultData,
+} from "./src/lib/vault";
 import JSZip from "jszip";
 
 async function runTests() {
@@ -1239,6 +1248,142 @@ async function runTests() {
   console.log("✓ All accountant access test records cleaned up cleanly");
 
   console.log("=== ALL PHASE 3 MODULE 3 ACCOUNTANT ACCESS & AUDIT PACK TESTS PASSED WITH DISTINCTION ===");
+
+  // ==========================================
+  // SECTION 10: AUTOMATED VAULT BACKUP & RESTORE (MODULE 4)
+  // ==========================================
+  console.log("\n=== TESTING PHASE 3 - MODULE 4: AUTOMATED VAULT BACKUP & RESTORE ===");
+
+  // 1. Export Tenant Vault Data
+  console.log("Testing complete tenant vault export...");
+  const exportContainer = await exportTenantVaultData(tenantId);
+  if (!exportContainer.manifest || !exportContainer.payload) {
+    throw new Error("Vault export missing manifest or payload");
+  }
+  if (!exportContainer.payload.profile || !exportContainer.payload.invoices) {
+    throw new Error("Vault payload missing profile or invoices");
+  }
+  console.log(`✓ Vault exported: ${exportContainer.manifest.stats.invoicesCount} factures, ${exportContainer.manifest.stats.clientsCount} clients, ${exportContainer.manifest.stats.quotesCount} devis, ${exportContainer.manifest.stats.creditNotesCount} avoirs`);
+  console.log(`  - Empreinte d'intégrité SHA-256 : ${exportContainer.manifest.checksum}`);
+
+  // 2. AES-256-GCM Vault Encryption
+  console.log("Testing AES-256-GCM encryption with scrypt key derivation...");
+  const testPassphrase = "Moukawil_Strong_Vault_Password_2026!";
+  const rawPayloadJson = JSON.stringify(exportContainer.payload);
+  const encryptedEnvelope = encryptVaultPayload(rawPayloadJson, testPassphrase, exportContainer.manifest);
+
+  if (!encryptedEnvelope.isEncrypted || encryptedEnvelope.algorithm !== "aes-256-gcm") {
+    throw new Error("Encrypted envelope metadata invalid");
+  }
+  if (!encryptedEnvelope.salt || !encryptedEnvelope.iv || !encryptedEnvelope.authTag || !encryptedEnvelope.ciphertext) {
+    throw new Error("Encrypted envelope missing cryptographic components");
+  }
+  console.log(`✓ Vault payload encrypted successfully with AES-256-GCM (salt=${encryptedEnvelope.salt.slice(0, 8)}..., iv=${encryptedEnvelope.iv.slice(0, 8)}..., authTag=${encryptedEnvelope.authTag.slice(0, 8)}...)`);
+
+  // 3. AES-256-GCM Vault Decryption (Valid Passphrase)
+  console.log("Testing decryption with correct passphrase...");
+  const decryptedJson = decryptVaultPayload(encryptedEnvelope, testPassphrase);
+  if (decryptedJson !== rawPayloadJson) {
+    throw new Error("Decrypted JSON does not match original plaintext");
+  }
+  console.log("✓ Decryption succeeded and verified with SHA-256 integrity check");
+
+  // 4. AES-256-GCM Vault Decryption (Invalid Passphrase)
+  console.log("Testing decryption rejection with wrong passphrase...");
+  let failedAsExpected = false;
+  try {
+    decryptVaultPayload(encryptedEnvelope, "WrongPassword123!");
+  } catch (err: any) {
+    failedAsExpected = true;
+  }
+  if (!failedAsExpected) {
+    throw new Error("Decryption should have failed with incorrect passphrase");
+  }
+  console.log("✓ Wrong passphrase properly rejected with authentication tag error");
+
+  // 5. Generate Standalone Vault JSON Buffer (Plain & Encrypted)
+  console.log("Testing generation of JSON vault files...");
+  const plainJsonFile = await generateVaultJsonBuffer(tenantId);
+  if (!plainJsonFile.filename.endsWith(".json") || plainJsonFile.buffer.length < 500) {
+    throw new Error("Plain JSON vault buffer generation failed");
+  }
+  console.log(`✓ Plain JSON vault generated: ${plainJsonFile.filename} (${plainJsonFile.buffer.length} bytes)`);
+
+  const encJsonFile = await generateVaultJsonBuffer(tenantId, { passphrase: testPassphrase });
+  if (!encJsonFile.filename.includes("_Encrypted_") || encJsonFile.buffer.length < 500) {
+    throw new Error("Encrypted JSON vault buffer generation failed");
+  }
+  console.log(`✓ Encrypted JSON vault generated: ${encJsonFile.filename} (${encJsonFile.buffer.length} bytes)`);
+
+  // 6. Generate Full Vault ZIP Archive (Plain & Encrypted)
+  console.log("Testing generation of complete ZIP vault archive (JSZip)...");
+  const plainZip = await generateVaultZipArchive(tenantId);
+  const loadedPlainZip = await JSZip.loadAsync(plainZip.buffer);
+  const plainZipFiles = Object.keys(loadedPlainZip.files);
+  console.log("✓ Plain ZIP files:", plainZipFiles);
+
+  const expectedVaultZipFiles = [
+    "data_vault.json",
+    "vault_manifest.json",
+    "01_clients.csv",
+    "02_factures.csv",
+    "03_devis.csv",
+    "04_avoirs.csv",
+    "05_depenses.csv",
+    "06_instructions_restauration.txt",
+  ];
+  for (const f of expectedVaultZipFiles) {
+    if (!plainZipFiles.includes(f)) {
+      throw new Error(`Missing expected file in plain vault ZIP: ${f}`);
+    }
+  }
+  console.log("✓ All 8 files present in unencrypted vault ZIP");
+
+  const encZip = await generateVaultZipArchive(tenantId, { passphrase: testPassphrase });
+  const loadedEncZip = await JSZip.loadAsync(encZip.buffer);
+  const encZipFiles = Object.keys(loadedEncZip.files);
+  if (!encZipFiles.includes("data_vault.enc.json") || !encZipFiles.includes("vault_manifest.json")) {
+    throw new Error("Encrypted vault ZIP missing encrypted payload or manifest");
+  }
+  console.log("✓ Encrypted vault ZIP verified with data_vault.enc.json");
+
+  // 7. Test Inspect Buffer (Inspection Pre-Restoration)
+  console.log("Testing pre-restore inspection for plain & encrypted files...");
+  const inspectPlain = await inspectVaultBuffer(plainZip.buffer);
+  if (!inspectPlain.valid || inspectPlain.isEncrypted || !inspectPlain.payload) {
+    throw new Error("Inspection of plain ZIP archive failed");
+  }
+  console.log(`✓ Inspected plain ZIP: valid=true, isEncrypted=false, detected ${inspectPlain.payload.invoices.length} invoices`);
+
+  const inspectEncWithoutPass = await inspectVaultBuffer(encZip.buffer);
+  if (!inspectEncWithoutPass.valid || !inspectEncWithoutPass.isEncrypted || !inspectEncWithoutPass.requiresPassphrase) {
+    throw new Error("Encrypted archive should require passphrase during inspection");
+  }
+  console.log("✓ Encrypted ZIP without password correctly flagged requiresPassphrase=true");
+
+  const inspectEncWithPass = await inspectVaultBuffer(encZip.buffer, testPassphrase);
+  if (!inspectEncWithPass.valid || !inspectEncWithPass.payload) {
+    throw new Error("Inspection with valid passphrase failed");
+  }
+  console.log(`✓ Inspected encrypted ZIP with password: valid=true, unlocked ${inspectEncWithPass.payload.invoices.length} invoices`);
+
+  // 8. Test Restore Vault (Merge Mode)
+  console.log("Testing transactional vault restore in MERGE mode...");
+  const restoreMergeRes = await restoreVaultData(tenantId, inspectPlain.payload, "merge");
+  if (!restoreMergeRes.success) {
+    throw new Error("Vault restore in merge mode failed");
+  }
+  console.log(`✓ Merge restore succeeded: ${restoreMergeRes.restoredCounts.invoicesCount} invoices, ${restoreMergeRes.restoredCounts.clientsCount} clients in database`);
+
+  // 9. Test Restore Vault (Overwrite Mode)
+  console.log("Testing transactional vault restore in OVERWRITE mode...");
+  const restoreOverwriteRes = await restoreVaultData(tenantId, inspectPlain.payload, "overwrite");
+  if (!restoreOverwriteRes.success) {
+    throw new Error("Vault restore in overwrite mode failed");
+  }
+  console.log(`✓ Overwrite restore succeeded: ${restoreOverwriteRes.restoredCounts.invoicesCount} invoices, ${restoreOverwriteRes.restoredCounts.clientsCount} clients in database`);
+
+  console.log("=== ALL PHASE 3 MODULE 4 VAULT BACKUP & RESTORE TESTS PASSED WITH DISTINCTION ===");
 }
 
 runTests()

@@ -18,6 +18,7 @@ import {
   Calendar,
   Receipt,
   Briefcase,
+  Database,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { useI18n } from "@/lib/i18n/I18nContext";
@@ -67,7 +68,8 @@ export function Navbar({ user, tenantName }: NavbarProps) {
     pathname.startsWith("/quotes") ||
     pathname.startsWith("/credit-notes") ||
     pathname.startsWith("/tax-summary") ||
-    pathname.startsWith("/accountant");
+    pathname.startsWith("/accountant") ||
+    pathname.startsWith("/backup");
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -125,6 +127,14 @@ export function Navbar({ user, tenantName }: NavbarProps) {
       icon: Briefcase,
       isActive: pathname.startsWith("/accountant"),
       color: "text-indigo-600 bg-indigo-50",
+    },
+    {
+      href: "/backup",
+      label: t("vaultNavLabel"),
+      desc: t("vaultNavDesc"),
+      icon: Database,
+      isActive: pathname.startsWith("/backup"),
+      color: "text-purple-600 bg-purple-50",
     },
   ];
 
