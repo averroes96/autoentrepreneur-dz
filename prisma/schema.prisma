@@ -25,6 +25,7 @@ model Tenant {
   creditNoteSequences CreditNoteSequence[]
   pastTurnovers       PastTurnover[]
   expenses            Expense[]
+  accountantAccesses  AccountantAccess[]
 }
 
 model User {
@@ -320,5 +321,27 @@ model Expense {
   @@index([tenantId, fiscalYear])
   @@index([tenantId, category])
   @@index([tenantId, date])
+}
+
+model AccountantAccess {
+  id              String    @id @default(uuid())
+  tenantId        String
+  token           String    @unique
+  pinHash         String?
+  name            String
+  email           String?
+  fiscalYear      Int?
+  expiresAt       DateTime?
+  isRevoked       Boolean   @default(false)
+  lastAccessedAt  DateTime?
+  accessCount     Int       @default(0)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([token])
 }
 

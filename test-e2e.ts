@@ -9,6 +9,7 @@ import {
   calculateCeilingStatus,
   calculateIfu,
   evaluateThreeYearRule,
+  formatDZD,
 } from "./src/lib/tax";
 import {
   generateInvoicePdfBuffer,
@@ -66,6 +67,17 @@ import {
   getAmountInWordsWithCurrency,
   getExchangeRateNotice,
 } from "./src/lib/currencies";
+import {
+  createAccountantAccess,
+  validateAccountantToken,
+  verifyAccountantPin,
+  revokeAccountantAccess,
+  deleteAccountantAccess,
+  getAccountantAuditData,
+  generateAccountantAuditZipBuffer,
+  generateTenantAuditZipBuffer,
+} from "./src/lib/accountantAccess";
+import JSZip from "jszip";
 
 async function runTests() {
   console.log("=== STARTING PHASE 1 COMPLIANCE & INTEGRATION TEST ===");
@@ -1060,6 +1072,173 @@ async function runTests() {
   console.log("✓ Multi-currency test records cleaned up cleanly");
 
   console.log("=== ALL PHASE 3 MULTI-CURRENCY INVOICING TESTS PASSED WITH DISTINCTION ===");
+
+  // ==========================================
+  // SECTION 9: ROLE-BASED ACCOUNTANT ACCESS & AUDIT PACK (MODULE 3)
+  // ==========================================
+  console.log("\n=== TESTING PHASE 3 - MODULE 3: ROLE-BASED ACCOUNTANT ACCESS & AUDIT PACK ===");
+
+  // Clean up any existing test accountant accesses for tenant
+  await db.accountantAccess.deleteMany({
+    where: {
+      tenantId,
+      name: { in: ["Cabinet Audit Khellaf & Associés", "Cabinet Test Open Access", "Cabinet Expiré Test"] },
+    },
+  });
+
+  // 1. Create Accountant Access with 6-digit PIN and 30-day validity
+  console.log("Testing creation of accountant access with 6-digit PIN...");
+  const pinCode = "739281";
+  const accessWithPin = await createAccountantAccess({
+    tenantId,
+    name: "Cabinet Audit Khellaf & Associés",
+    email: "contact@cabinet-khellaf.dz",
+    pin: pinCode,
+    expiresInDays: 30,
+    fiscalYear: testFiscalYear,
+    notes: "Audit légal annuel Loi 22-23 et vérification IFU G12 bis",
+  });
+
+  if (!accessWithPin.token || accessWithPin.token.length < 32) {
+    throw new Error("Accountant access token generation failed");
+  }
+  if (!accessWithPin.pinHash) {
+    throw new Error("PIN hash was not created");
+  }
+  if (accessWithPin.rawPin !== pinCode) {
+    throw new Error("Raw PIN returned does not match");
+  }
+  console.log(`✓ Created accountant access with PIN: token=${accessWithPin.token.slice(0, 8)}... (expires: ${accessWithPin.expiresAt?.toISOString()})`);
+
+  // 2. Validate Token and Verify Telemetry Tracking
+  console.log("Testing token validation & access tracking...");
+  const valResult1 = await validateAccountantToken(accessWithPin.token);
+  if (!valResult1.valid || !valResult1.access) {
+    throw new Error(`Token validation failed: ${valResult1.reason}`);
+  }
+  if (valResult1.access.name !== "Cabinet Audit Khellaf & Associés") {
+    throw new Error("Accountant name mismatch in validated access");
+  }
+  if (valResult1.access.accessCount !== 1) {
+    throw new Error(`Expected accessCount 1, got ${valResult1.access.accessCount}`);
+  }
+  console.log(`✓ Token validated successfully. Telemetry updated (views=${valResult1.access.accessCount}, lastAccessed=${valResult1.access.lastAccessedAt})`);
+
+  // 3. Verify PIN Verification
+  console.log("Testing PIN verification logic...");
+  const isPinValid = await verifyAccountantPin(accessWithPin.token, pinCode);
+  if (!isPinValid) {
+    throw new Error("Valid PIN was rejected");
+  }
+  console.log("✓ Correct PIN verified successfully");
+
+  const isWrongPinValid = await verifyAccountantPin(accessWithPin.token, "000000");
+  if (isWrongPinValid) {
+    throw new Error("Wrong PIN was erroneously accepted");
+  }
+  console.log("✓ Wrong PIN was rejected as expected");
+
+  // 4. Test Open Access (No PIN)
+  console.log("Testing open access invitation without PIN...");
+  const openAccess = await createAccountantAccess({
+    tenantId,
+    name: "Cabinet Test Open Access",
+    expiresInDays: 7,
+  });
+  if (openAccess.pinHash !== null) {
+    throw new Error("Open access should not have a pinHash");
+  }
+  const isOpenAccessAllowed = await verifyAccountantPin(openAccess.token, "");
+  if (!isOpenAccessAllowed) {
+    throw new Error("Open access should not require PIN verification");
+  }
+  console.log("✓ Open access works without PIN");
+
+  // 5. Test Expired Token
+  console.log("Testing expired token handling...");
+  const expiredAccess = await db.accountantAccess.create({
+    data: {
+      tenantId,
+      token: "expired_token_test_1234567890abcdef",
+      name: "Cabinet Expiré Test",
+      expiresAt: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
+    },
+  });
+  const valExpired = await validateAccountantToken(expiredAccess.token);
+  if (valExpired.valid || valExpired.reason !== "EXPIRED") {
+    throw new Error(`Expired token should fail with reason EXPIRED, got ${valExpired.reason}`);
+  }
+  console.log("✓ Expired token properly rejected with reason EXPIRED");
+
+  // 6. Test Audit Data Retrieval
+  console.log("Testing full audit dataset extraction for external accountant...");
+  const auditData = await getAccountantAuditData(accessWithPin.token, testFiscalYear);
+  if (!auditData.profile || !auditData.taxSummary || !auditData.invoices) {
+    throw new Error("Audit dataset is missing required components");
+  }
+  console.log(`✓ Audit dataset loaded: ${auditData.invoices.length} invoices, ${auditData.creditNotes.length} credit notes, ${auditData.expenses.length} expenses, ${auditData.clients.length} clients`);
+  console.log(`  - Assiette IFU (CA Net Encaissé): ${formatDZD(auditData.taxSummary.metrics.netTaxableTurnoverDzd)}`);
+  console.log(`  - Impôt IFU calculé: ${formatDZD(auditData.taxSummary.metrics.finalTaxOwedDzd)}`);
+
+  // 7. Test One-Click Audit Package ZIP Generation
+  console.log("Testing complete audit package ZIP archive generation (JSZip)...");
+  const zipBuffer = await generateAccountantAuditZipBuffer(accessWithPin.token, testFiscalYear);
+  if (!zipBuffer || zipBuffer.length < 5000) {
+    throw new Error(`Audit ZIP buffer generation failed or too small (${zipBuffer?.length} bytes)`);
+  }
+  console.log(`✓ Audit ZIP buffer generated successfully (${zipBuffer.length} bytes)`);
+
+  // Unpack and verify all certified files in the ZIP archive
+  const loadedZip = await JSZip.loadAsync(zipBuffer);
+  const zipFileNames = Object.keys(loadedZip.files);
+  console.log("✓ ZIP Contents:", zipFileNames);
+
+  const expectedFiles = [
+    `01_Bilan_Fiscal_IFU_G12_bis_${testFiscalYear}.pdf`,
+    `02_Livre_des_Recettes_${testFiscalYear}.csv`,
+    `03_Registre_des_Depenses_${testFiscalYear}.csv`,
+    `04_Grand_Livre_Clients_${testFiscalYear}.csv`,
+    `05_Attestation_Audit_Loi_22-23_${testFiscalYear}.txt`,
+  ];
+
+  for (const expected of expectedFiles) {
+    if (!zipFileNames.includes(expected)) {
+      throw new Error(`Missing expected file in audit ZIP: ${expected}`);
+    }
+  }
+  console.log("✓ All 5 statutory audit files present in the archive!");
+
+  // Verify contents of the Attestation TXT manifest
+  const manifestContent = await loadedZip.file(`05_Attestation_Audit_Loi_22-23_${testFiscalYear}.txt`)!.async("string");
+  if (!manifestContent.includes("RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE") || !manifestContent.includes("Loi n° 22-23")) {
+    throw new Error("Audit manifest content does not contain mandatory legal references");
+  }
+  console.log("✓ Statutory compliance manifest verified");
+
+  // 8. Test Direct Tenant ZIP Generation
+  console.log("Testing direct tenant audit ZIP buffer generation...");
+  const tenantZipBuffer = await generateTenantAuditZipBuffer(tenantId, testFiscalYear);
+  if (!tenantZipBuffer || tenantZipBuffer.length < 5000) {
+    throw new Error("Direct tenant audit ZIP failed");
+  }
+  console.log(`✓ Direct tenant audit ZIP generated (${tenantZipBuffer.length} bytes)`);
+
+  // 9. Test Revocation
+  console.log("Testing accountant access revocation...");
+  await revokeAccountantAccess(tenantId, accessWithPin.id);
+  const valRevoked = await validateAccountantToken(accessWithPin.token);
+  if (valRevoked.valid || valRevoked.reason !== "REVOKED") {
+    throw new Error(`Revoked token should fail with reason REVOKED, got ${valRevoked.reason}`);
+  }
+  console.log("✓ Revoked token properly rejected with reason REVOKED");
+
+  // 10. Clean up test access records
+  await deleteAccountantAccess(tenantId, accessWithPin.id);
+  await deleteAccountantAccess(tenantId, openAccess.id);
+  await db.accountantAccess.delete({ where: { id: expiredAccess.id } });
+  console.log("✓ All accountant access test records cleaned up cleanly");
+
+  console.log("=== ALL PHASE 3 MODULE 3 ACCOUNTANT ACCESS & AUDIT PACK TESTS PASSED WITH DISTINCTION ===");
 }
 
 runTests()

@@ -17,6 +17,7 @@ import {
   ChevronDown,
   Calendar,
   Receipt,
+  Briefcase,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { useI18n } from "@/lib/i18n/I18nContext";
@@ -65,7 +66,8 @@ export function Navbar({ user, tenantName }: NavbarProps) {
     pathname.startsWith("/invoices") ||
     pathname.startsWith("/quotes") ||
     pathname.startsWith("/credit-notes") ||
-    pathname.startsWith("/tax-summary");
+    pathname.startsWith("/tax-summary") ||
+    pathname.startsWith("/accountant");
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -115,6 +117,14 @@ export function Navbar({ user, tenantName }: NavbarProps) {
       icon: Calendar,
       isActive: pathname.startsWith("/tax-summary"),
       color: "text-amber-600 bg-amber-50",
+    },
+    {
+      href: "/accountant",
+      label: t("accountantNavLabel"),
+      desc: t("accountantNavDesc"),
+      icon: Briefcase,
+      isActive: pathname.startsWith("/accountant"),
+      color: "text-indigo-600 bg-indigo-50",
     },
   ];
 

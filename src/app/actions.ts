@@ -46,6 +46,13 @@ import { persistInvoicePdf } from "@/lib/storage";
 import { captureException } from "@/lib/sentry";
 import { validateAlgerianNif } from "@/lib/nifValidator";
 import { calculateDzdEquivalent } from "@/lib/currencies";
+import { cookies } from "next/headers";
+import {
+  createAccountantAccess,
+  revokeAccountantAccess,
+  deleteAccountantAccess,
+  verifyAccountantPin,
+} from "@/lib/accountantAccess";
 
 /* =========================================================================
    AUTHENTICATION ACTIONS
@@ -1194,6 +1201,133 @@ export async function deleteExpenseAction(id: string) {
   } catch (err: any) {
     captureException(err, { action: "deleteExpenseAction", expenseId: id });
     return { error: err.message || "Erreur lors de la suppression de la dépense." };
+  }
+}
+
+/* =========================================================================
+   ACCOUNTANT AUDIT ACCESS ACTIONS
+========================================================================= */
+
+export async function createAccountantAccessAction(formData: FormData) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Non autorisé." };
+
+    const name = (formData.get("name") as string)?.trim();
+    const email = (formData.get("email") as string)?.trim() || null;
+    const rawFiscalYear = formData.get("fiscalYear") as string;
+    const pin = (formData.get("pin") as string)?.trim() || null;
+    const rawDuration = formData.get("durationDays") as string;
+    const notes = (formData.get("notes") as string)?.trim() || null;
+
+    if (!name) {
+      return { error: "Le nom ou raison sociale de l'expert-comptable est requis." };
+    }
+
+    if (pin && (pin.length < 4 || pin.length > 12)) {
+      return { error: "Le code PIN doit comporter entre 4 et 12 caractères." };
+    }
+
+    const fiscalYear = rawFiscalYear && rawFiscalYear !== "ALL" ? parseInt(rawFiscalYear, 10) : null;
+    const expiresInDays = rawDuration && rawDuration !== "NEVER" ? parseInt(rawDuration, 10) : null;
+
+    const access = await createAccountantAccess({
+      tenantId: session.tenantId,
+      name,
+      email,
+      fiscalYear,
+      pin,
+      expiresInDays,
+      notes,
+    });
+
+    revalidatePath("/accountant");
+    revalidatePath("/dashboard");
+    return {
+      success: true,
+      accessId: access.id,
+      token: access.token,
+      rawPin: access.rawPin,
+      access: {
+        id: access.id,
+        token: access.token,
+        name: access.name,
+        email: access.email,
+        fiscalYear: access.fiscalYear,
+        pinHash: access.pinHash,
+        expiresAt: access.expiresAt,
+        isRevoked: access.isRevoked,
+        notes: access.notes,
+      },
+    };
+  } catch (err: any) {
+    captureException(err, { action: "createAccountantAccessAction" });
+    return { error: err.message || "Erreur lors de la création de l'accès comptable." };
+  }
+}
+
+export async function revokeAccountantAccessAction(accessId: string) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Non autorisé." };
+
+    await revokeAccountantAccess(session.tenantId, accessId);
+
+    revalidatePath("/accountant");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "revokeAccountantAccessAction" });
+    return { error: err.message || "Erreur lors de la révocation de l'accès." };
+  }
+}
+
+export async function deleteAccountantAccessAction(accessId: string) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Non autorisé." };
+
+    await deleteAccountantAccess(session.tenantId, accessId);
+
+    revalidatePath("/accountant");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "deleteAccountantAccessAction" });
+    return { error: err.message || "Erreur lors de la suppression." };
+  }
+}
+
+export async function verifyAccountantPinAction(token: string, pin: string) {
+  try {
+    const isValid = await verifyAccountantPin(token, pin);
+    if (!isValid) {
+      return { error: "Code PIN incorrect. Veuillez réessayer." };
+    }
+
+    const cookieStore = await cookies();
+    cookieStore.set(`accountant_pin_${token}`, "verified", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: `/`,
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "verifyAccountantPinAction" });
+    return { error: "Erreur lors de la vérification du code PIN." };
+  }
+}
+
+export async function logoutAccountantAction(token: string) {
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete(`accountant_pin_${token}`);
+    return { success: true };
+  } catch (err: any) {
+    return { error: "Erreur lors de la déconnexion." };
   }
 }
 
