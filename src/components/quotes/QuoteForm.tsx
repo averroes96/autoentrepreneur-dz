@@ -13,6 +13,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/I18nContext";
+import {
+  SUPPORTED_CURRENCIES,
+  getCurrencyDef,
+  calculateDzdEquivalent,
+  formatCurrencyAmount,
+} from "@/lib/currencies";
 
 interface ClientOption {
   id: string;
@@ -34,6 +40,8 @@ interface QuoteFormProps {
   existingQuote?: {
     id: string;
     clientId: string;
+    currency?: string;
+    exchangeRate?: number | null;
     issueDate: Date | string;
     validUntil?: Date | string | null;
     notes?: string | null;
@@ -62,6 +70,24 @@ export function QuoteForm({
       ? new Date(existingQuote.issueDate).toISOString().split("T")[0]
       : new Date().toISOString().split("T")[0]
   );
+
+  const [currency, setCurrency] = useState(
+    existingQuote?.currency || defaultCurrency || "DZD"
+  );
+  const [exchangeRate, setExchangeRate] = useState<number>(
+    existingQuote?.exchangeRate ??
+      (currency === "DZD" ? 1.0 : getCurrencyDef(currency).defaultRate)
+  );
+
+  const handleCurrencyChange = (newCurr: string) => {
+    setCurrency(newCurr);
+    if (newCurr === "DZD") {
+      setExchangeRate(1.0);
+    } else {
+      const def = getCurrencyDef(newCurr);
+      setExchangeRate(def.defaultRate);
+    }
+  };
 
   // Default validity date: +30 days
   const defaultValidUntilDate = new Date();
@@ -188,6 +214,8 @@ export function QuoteForm({
           clientId,
           issueDate,
           validUntil: validUntil || undefined,
+          currency,
+          exchangeRate,
           notes,
           showDetailedItems: isDetailed,
           lineItems: payloadItems,
@@ -204,6 +232,8 @@ export function QuoteForm({
           clientId,
           issueDate,
           validUntil: validUntil || undefined,
+          currency,
+          exchangeRate,
           notes,
           showDetailedItems: isDetailed,
           lineItems: payloadItems,
@@ -299,16 +329,70 @@ export function QuoteForm({
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
             {t("billingCurrencyLabel")}
           </label>
-          <input
-            type="text"
-            disabled
-            value={t("algerianDinar")}
-            className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-500 cursor-not-allowed"
-          />
+          <select
+            value={currency}
+            onChange={(e) => handleCurrencyChange(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+          >
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {locale === "ar" ? c.nameAr : c.nameFr}
+              </option>
+            ))}
+          </select>
           <span className="text-[10px] text-slate-400 mt-1 block">
-            {t("activeRegulatoryCurrency")}
+            {currency === "DZD" ? t("activeRegulatoryCurrency") : t("foreignCurrencyExportAlert")}
           </span>
         </div>
+
+        {currency !== "DZD" && (
+          <div className="col-span-1 md:col-span-4 p-4 rounded-xl bg-sky-50/80 border border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-sky-600 flex items-center justify-center shrink-0 text-white font-black text-base shadow-xs">
+                {getCurrencyDef(currency).symbol}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-sky-950">
+                  {t("exchangeRateLabel")} : 1 {currency} =
+                </p>
+                <p className="text-[11px] text-sky-700">
+                  {t("exchangeRateHint")}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                  className="w-28 px-3 py-1.5 bg-white border border-sky-300 rounded-lg text-sm font-bold text-slate-900 focus:ring-2 focus:ring-sky-500 text-right"
+                />
+                <span className="text-xs font-semibold text-slate-700">DZD</span>
+              </div>
+
+              <div className="border-l border-sky-200 pl-4 rtl:border-l-0 rtl:border-r rtl:pl-0 rtl:pr-4">
+                <span className="text-[10px] uppercase font-bold text-sky-800 tracking-wider block">
+                  {t("fiscalCounterValue")}
+                </span>
+                <span className="text-sm font-black text-emerald-700">
+                  {formatCurrencyAmount(
+                    calculateDzdEquivalent(
+                      lineItems.reduce((s, i) => s + (i.amount || 0), 0),
+                      currency,
+                      exchangeRate
+                    ),
+                    "DZD",
+                    locale
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Line Items Section */}
@@ -476,7 +560,9 @@ export function QuoteForm({
           <div className="w-full sm:w-80 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
             <div className="flex justify-between items-center text-xs text-slate-500">
               <span>{t("totalPrestationsLabel")}</span>
-              <span className="font-semibold text-slate-700">{formatAmount(total)}</span>
+              <span className="font-semibold text-slate-700">
+                {formatCurrencyAmount(total, currency, locale)}
+              </span>
             </div>
             <div className="flex justify-between items-center text-xs text-slate-500">
               <span>{t("vatRateLabel")}</span>
@@ -484,8 +570,22 @@ export function QuoteForm({
             </div>
             <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
               <span className="text-xs font-bold text-slate-900 uppercase">{t("totalNetToPay")}</span>
-              <span className="text-base font-extrabold text-sky-700">{formatAmount(total)}</span>
+              <span className="text-base font-extrabold text-sky-700">
+                {formatCurrencyAmount(total, currency, locale)}
+              </span>
             </div>
+            {currency !== "DZD" && (
+              <div className="pt-2 border-t border-slate-200/80 flex justify-between items-center text-xs">
+                <span className="font-semibold text-sky-800">{t("dualCurrencyTotal")}</span>
+                <span className="font-black text-slate-800">
+                  {formatCurrencyAmount(
+                    calculateDzdEquivalent(total, currency, exchangeRate),
+                    "DZD",
+                    locale
+                  )}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

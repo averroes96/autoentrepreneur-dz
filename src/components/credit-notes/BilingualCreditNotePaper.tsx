@@ -8,6 +8,13 @@ import {
   formatArabicDate,
   getArabicAmountInWords,
 } from "@/lib/arabicNomenclature";
+import {
+  formatCurrencyAmount,
+  getCurrencyDef,
+  calculateDzdEquivalent,
+  getAmountInWordsWithCurrency,
+  getExchangeRateNotice,
+} from "@/lib/currencies";
 import { Printer, Globe, RotateCcw } from "lucide-react";
 
 interface BilingualCreditNotePaperProps {
@@ -19,6 +26,9 @@ interface BilingualCreditNotePaperProps {
     status: string;
     refundStatus: string;
     total: number;
+    currency?: string;
+    exchangeRate?: number | null;
+    totalDzd?: number | null;
     reason: string;
     notes?: string | null;
     originalInvoice: {
@@ -66,6 +76,11 @@ export function BilingualCreditNotePaper({
   const [lang, setLang] = useState<"fr" | "ar">(defaultLanguage);
   const isArabic = lang === "ar";
   const ar = ARABIC_NOMENCLATURE;
+
+  const creditCurrency = creditNote.currency || "DZD";
+  const isForeign = creditCurrency !== "DZD";
+  const exchangeRate = creditNote.exchangeRate || getCurrencyDef(creditCurrency).defaultRate;
+  const totalDzd = creditNote.totalDzd || calculateDzdEquivalent(creditNote.total, creditCurrency, exchangeRate);
 
   React.useEffect(() => {
     const handleGlobalLang = (e: any) => {
@@ -269,10 +284,10 @@ export function BilingualCreditNotePaper({
                   {isArabic ? ar.quantityHeader : "Quantité"}
                 </th>
                 <th className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}>
-                  {isArabic ? ar.unitPriceHeader : "Prix Unitaire"}
+                  {isArabic ? `${ar.unitPriceHeader} (${creditCurrency})` : `Prix Unitaire (${creditCurrency})`}
                 </th>
                 <th className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}>
-                  {isArabic ? ar.totalHeader : "Montant à Déduire"}
+                  {isArabic ? `${ar.totalHeader} (${creditCurrency})` : `Montant à Déduire (${creditCurrency})`}
                 </th>
               </tr>
             </thead>
@@ -286,10 +301,10 @@ export function BilingualCreditNotePaper({
                     {item.quantity}
                   </td>
                   <td className={`py-3.5 px-5 ${isArabic ? "text-left" : "text-right"} font-mono`}>
-                    {isArabic ? formatDZD_AR(item.unitPrice) : formatDZD(item.unitPrice)}
+                    {formatCurrencyAmount(item.unitPrice, creditCurrency, lang)}
                   </td>
                   <td className={`py-3.5 px-5 ${isArabic ? "text-left" : "text-right"} font-bold text-rose-700 font-mono`}>
-                    - {isArabic ? formatDZD_AR(item.totalPrice) : formatDZD(item.totalPrice)}
+                    - {formatCurrencyAmount(item.totalPrice, creditCurrency, lang)}
                   </td>
                 </tr>
               ))}
@@ -303,7 +318,7 @@ export function BilingualCreditNotePaper({
             <div className="flex justify-between items-center text-xs text-rose-900">
               <span>{isArabic ? "المبلغ الإجمالي للإنقاص :" : "Total à déduire :"}</span>
               <span className="font-semibold text-rose-800 font-mono">
-                - {isArabic ? formatDZD_AR(creditNote.total) : formatDZD(creditNote.total)}
+                - {formatCurrencyAmount(creditNote.total, creditCurrency, lang)}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs text-rose-800">
@@ -315,23 +330,46 @@ export function BilingualCreditNotePaper({
                 {isArabic ? "المبلغ الصافي المسترد :" : "Net à rembourser :"}
               </span>
               <span className="text-lg font-extrabold text-rose-700 font-mono">
-                {isArabic ? formatDZD_AR(creditNote.total) : formatDZD(creditNote.total)}
+                - {formatCurrencyAmount(creditNote.total, creditCurrency, lang)}
               </span>
             </div>
+
+            {/* Foreign Currency Conversion & Statutory Notice */}
+            {isForeign && (
+              <div className="pt-2.5 border-t border-rose-200 space-y-1.5 text-xs">
+                <div className="flex justify-between items-center text-rose-800 text-[11px]">
+                  <span>{isArabic ? "سعر الصرف (بنك الجزائر) :" : "Cours (Banque d'Algérie) :"}</span>
+                  <span className="font-semibold text-rose-900 font-mono">
+                    1 {creditCurrency} = {exchangeRate.toFixed(2)} DZD
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-900 bg-rose-100/70 p-2 rounded-lg border border-rose-300">
+                  <span className="font-bold text-rose-950 text-[11px]">
+                    {isArabic ? "المقابل الجبائي (IFU) :" : "Contre-valeur (IFU) :"}
+                  </span>
+                  <span className="font-extrabold text-rose-900 font-mono">
+                    - {formatCurrencyAmount(totalDzd, "DZD", lang)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Tafqeet Amount in Words */}
-        {isArabic && (
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium">
-            <span className="text-slate-500 font-semibold block text-[11px] mb-1">
-              {ar.amountInWordsPrefix}
-            </span>
-            <p className="text-slate-900 font-bold leading-relaxed">
-              {getArabicAmountInWords(creditNote.total)}
+        {/* Amount in Words */}
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium">
+          <span className="text-slate-500 font-semibold block text-[11px] mb-1">
+            {isArabic ? ar.amountInWordsPrefix : "Montant d'avoir arrêté en toutes lettres :"}
+          </span>
+          <p className="text-slate-900 font-bold leading-relaxed">
+            {getAmountInWordsWithCurrency(creditNote.total, creditCurrency, lang)}
+          </p>
+          {isForeign && (
+            <p className="text-rose-800 text-[11px] font-semibold mt-1">
+              {getExchangeRateNotice(creditCurrency, exchangeRate, totalDzd, lang)}
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Mandatory VAT Exemption Note */}
         <div className="p-4 rounded-xl bg-emerald-50/80 border-l-4 border-emerald-600 text-xs text-emerald-950 space-y-1">

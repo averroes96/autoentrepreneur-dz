@@ -8,6 +8,13 @@ import {
   formatArabicDate,
   getArabicAmountInWords,
 } from "@/lib/arabicNomenclature";
+import {
+  formatCurrencyAmount,
+  getCurrencyDef,
+  calculateDzdEquivalent,
+  getAmountInWordsWithCurrency,
+  getExchangeRateNotice,
+} from "@/lib/currencies";
 import { Printer, Globe } from "lucide-react";
 
 interface BilingualQuotePaperProps {
@@ -18,6 +25,9 @@ interface BilingualQuotePaperProps {
     validUntil?: Date | string | null;
     status: string;
     total: number;
+    currency?: string;
+    exchangeRate?: number | null;
+    totalDzd?: number | null;
     vatExemptionNote: string;
     notes?: string | null;
     showDetailedItems?: boolean;
@@ -61,6 +71,11 @@ export function BilingualQuotePaper({
   const [lang, setLang] = useState<"fr" | "ar">(defaultLanguage);
   const isArabic = lang === "ar";
   const ar = ARABIC_NOMENCLATURE;
+
+  const quoteCurrency = quote.currency || "DZD";
+  const isForeign = quoteCurrency !== "DZD";
+  const exchangeRate = quote.exchangeRate || getCurrencyDef(quoteCurrency).defaultRate;
+  const totalDzd = quote.totalDzd || calculateDzdEquivalent(quote.total, quoteCurrency, exchangeRate);
 
   React.useEffect(() => {
     const handleGlobalLang = (e: any) => {
@@ -291,10 +306,10 @@ export function BilingualQuotePaper({
                     {isArabic ? ar.quantityHeader : "Quantité"}
                   </th>
                   <th className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}>
-                    {isArabic ? ar.unitPriceHeader : "Prix Unitaire"}
+                    {isArabic ? `${ar.unitPriceHeader} (${quoteCurrency})` : `Prix Unitaire (${quoteCurrency})`}
                   </th>
                   <th className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}>
-                    {isArabic ? ar.totalHeader : "Montant Total"}
+                    {isArabic ? `${ar.totalHeader} (${quoteCurrency})` : `Montant Total (${quoteCurrency})`}
                   </th>
                 </tr>
               ) : (
@@ -303,7 +318,7 @@ export function BilingualQuotePaper({
                     {isArabic ? ar.descriptionHeader : "Désignation de la prestation / tâche"}
                   </th>
                   <th className={`py-3.5 px-6 ${isArabic ? "text-left" : "text-right"}`}>
-                    {isArabic ? ar.totalHeader : "Montant"}
+                    {isArabic ? `${ar.totalHeader} (${quoteCurrency})` : `Montant (${quoteCurrency})`}
                   </th>
                 </tr>
               )}
@@ -320,10 +335,10 @@ export function BilingualQuotePaper({
                         {item.quantity}
                       </td>
                       <td className={`py-3.5 px-5 ${isArabic ? "text-left" : "text-right"} font-mono`}>
-                        {isArabic ? formatDZD_AR(item.unitPrice) : formatDZD(item.unitPrice)}
+                        {formatCurrencyAmount(item.unitPrice, quoteCurrency, lang)}
                       </td>
                       <td className={`py-3.5 px-5 ${isArabic ? "text-left" : "text-right"} font-bold text-slate-900 font-mono`}>
-                        {isArabic ? formatDZD_AR(item.totalPrice) : formatDZD(item.totalPrice)}
+                        {formatCurrencyAmount(item.totalPrice, quoteCurrency, lang)}
                       </td>
                     </>
                   ) : (
@@ -332,7 +347,7 @@ export function BilingualQuotePaper({
                         {item.description}
                       </td>
                       <td className={`py-4 px-6 ${isArabic ? "text-left" : "text-right"} font-bold text-slate-900 text-sm font-mono`}>
-                        {isArabic ? formatDZD_AR(item.totalPrice) : formatDZD(item.totalPrice)}
+                        {formatCurrencyAmount(item.totalPrice, quoteCurrency, lang)}
                       </td>
                     </>
                   )}
@@ -348,7 +363,7 @@ export function BilingualQuotePaper({
             <div className="flex justify-between items-center text-xs text-slate-600">
               <span>{isArabic ? ar.totalServicesLabel : "Total des services :"}</span>
               <span className="font-semibold text-slate-800 font-mono">
-                {isArabic ? formatDZD_AR(quote.total) : formatDZD(quote.total)}
+                {formatCurrencyAmount(quote.total, quoteCurrency, lang)}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs text-slate-600">
@@ -362,23 +377,46 @@ export function BilingualQuotePaper({
                 {isArabic ? ar.netPayableLabel : "Total Net Estimé :"}
               </span>
               <span className="text-lg font-extrabold text-emerald-700 font-mono">
-                {isArabic ? formatDZD_AR(quote.total) : formatDZD(quote.total)}
+                {formatCurrencyAmount(quote.total, quoteCurrency, lang)}
               </span>
             </div>
+
+            {/* Foreign Currency Conversion & Statutory Notice */}
+            {isForeign && (
+              <div className="pt-2.5 border-t border-slate-200 space-y-1.5 text-xs">
+                <div className="flex justify-between items-center text-slate-500 text-[11px]">
+                  <span>{isArabic ? "سعر الصرف (بنك الجزائر) :" : "Cours (Banque d'Algérie) :"}</span>
+                  <span className="font-semibold text-slate-700 font-mono">
+                    1 {quoteCurrency} = {exchangeRate.toFixed(2)} DZD
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-900 bg-emerald-50/80 p-2 rounded-lg border border-emerald-200">
+                  <span className="font-bold text-emerald-950 text-[11px]">
+                    {isArabic ? "المقابل الجبائي (IFU) :" : "Contre-valeur (IFU) :"}
+                  </span>
+                  <span className="font-extrabold text-emerald-800 font-mono">
+                    {formatCurrencyAmount(totalDzd, "DZD", lang)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Tafqeet Amount in Words */}
-        {isArabic && (
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium">
-            <span className="text-slate-500 font-semibold block text-[11px] mb-1">
-              {ar.amountInWordsPrefix}
-            </span>
-            <p className="text-slate-900 font-bold leading-relaxed">
-              {getArabicAmountInWords(quote.total)}
+        {/* Amount in Words */}
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-medium">
+          <span className="text-slate-500 font-semibold block text-[11px] mb-1">
+            {isArabic ? ar.amountInWordsPrefix : "Montant estimé en toutes lettres :"}
+          </span>
+          <p className="text-slate-900 font-bold leading-relaxed">
+            {getAmountInWordsWithCurrency(quote.total, quoteCurrency, lang)}
+          </p>
+          {isForeign && (
+            <p className="text-emerald-800 text-[11px] font-semibold mt-1">
+              {getExchangeRateNotice(quoteCurrency, exchangeRate, totalDzd, lang)}
             </p>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Mandatory VAT Exemption Note */}
         <div className="p-4 rounded-xl bg-emerald-50/80 border-l-4 border-emerald-600 text-xs text-emerald-950 space-y-1">

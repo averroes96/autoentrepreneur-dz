@@ -4,6 +4,11 @@ import type { AnnualTaxSummary } from "./taxSummary";
 import { getFrenchAmountInWords } from "./numberToWordsFr";
 import type { ClientLedgerData } from "./clientLedger";
 import { formatPaymentMethodLabel } from "./clientLedger";
+import {
+  formatCurrencyAmount,
+  getCurrencyDef,
+  calculateDzdEquivalent,
+} from "./currencies";
 
 export interface InvoicePdfData {
   invoice: {
@@ -11,6 +16,8 @@ export interface InvoicePdfData {
     issueDate: Date | string;
     total: number;
     currency: string;
+    exchangeRate?: number | null;
+    totalDzd?: number | null;
     vatExemptionNote: string;
     notes?: string | null;
     sellerSnapshot?: string | null;
@@ -170,6 +177,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
 
       // Table Rows
       data.invoice.lineItems.forEach((item, index) => {
+        const curr = data.invoice.currency || "DZD";
         const rowHeight = 24;
         if (index % 2 === 1) {
           doc.rect(margin, tableY - 4, contentWidth, rowHeight).fill("#fafafa");
@@ -180,11 +188,11 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
         if (isDetailed) {
           doc.text(item.description, col1, tableY, { width: 260 });
           doc.text(String(item.quantity), col2, tableY, { width: 50, align: "right" });
-          doc.text(formatDZD(item.unitPrice), col3, tableY, { width: 75, align: "right" });
-          doc.font("Helvetica-Bold").text(formatDZD(item.totalPrice), col4, tableY, { width: 70, align: "right" });
+          doc.text(formatCurrencyAmount(item.unitPrice, curr, "fr"), col3, tableY, { width: 75, align: "right" });
+          doc.font("Helvetica-Bold").text(formatCurrencyAmount(item.totalPrice, curr, "fr"), col4, tableY, { width: 70, align: "right" });
         } else {
           doc.text(item.description, col1, tableY, { width: contentWidth - 150 });
-          doc.font("Helvetica-Bold").text(formatDZD(item.totalPrice), margin + contentWidth - 130, tableY, {
+          doc.font("Helvetica-Bold").text(formatCurrencyAmount(item.totalPrice, curr, "fr"), margin + contentWidth - 130, tableY, {
             width: 120,
             align: "right",
           });
@@ -197,17 +205,27 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       tableY += 15;
 
       // --- TOTAL BOX (NO VAT, NO HT/TTC SPLIT) ---
+      const curr = data.invoice.currency || "DZD";
+      const isForeign = curr !== "DZD";
       const totalBoxWidth = 230;
       const totalBoxX = margin + contentWidth - totalBoxWidth;
-      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, 42, 6).fillAndStroke(lightBg, borderColor);
+      const totalBoxHeight = isForeign ? 62 : 42;
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, 6).fillAndStroke(lightBg, borderColor);
 
       doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL NET À PAYER :", totalBoxX + 12, tableY + 14);
-      doc.fillColor(primaryColor).fontSize(12).font("Helvetica-Bold").text(formatDZD(data.invoice.total), totalBoxX + 110, tableY + 13, {
+      doc.fillColor(primaryColor).fontSize(12).font("Helvetica-Bold").text(formatCurrencyAmount(data.invoice.total, curr, "fr"), totalBoxX + 110, tableY + 13, {
         width: 110,
         align: "right",
       });
 
-      tableY += 56;
+      if (isForeign) {
+        const rate = data.invoice.exchangeRate || getCurrencyDef(curr).defaultRate;
+        const totalDzd = data.invoice.totalDzd || calculateDzdEquivalent(data.invoice.total, curr, rate);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica").text(`1 ${curr} = ${rate.toFixed(2)} DZD (Banque d'Algérie)`, totalBoxX + 12, tableY + 33);
+        doc.fillColor("#0f766e").fontSize(8.5).font("Helvetica-Bold").text(`Contre-valeur : ${formatDZD(totalDzd)}`, totalBoxX + 12, tableY + 45);
+      }
+
+      tableY += isForeign ? 76 : 56;
 
       // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
       doc.roundedRect(margin, tableY, contentWidth, 44, 4).fillAndStroke("#f0fdf4", "#bbf7d0");
@@ -258,6 +276,8 @@ export interface QuotePdfData {
     validUntil?: Date | string | null;
     total: number;
     currency: string;
+    exchangeRate?: number | null;
+    totalDzd?: number | null;
     vatExemptionNote: string;
     notes?: string | null;
     sellerSnapshot?: string | null;
@@ -417,12 +437,15 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       let tableY = cardY + cardHeight + 20;
 
       // Table Header
+      const quoteCurr = data.quote.currency || "DZD";
+      const isQuoteForeign = quoteCurr !== "DZD";
+
       doc.rect(margin, tableY, contentWidth, 22).fill("#0f172a");
       doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold");
       doc.text("DESCRIPTION DES PRESTATIONS", margin + 10, tableY + 7);
       doc.text("QTÉ", margin + 300, tableY + 7, { width: 40, align: "center" });
-      doc.text("P.U (DZD)", margin + 345, tableY + 7, { width: 75, align: "right" });
-      doc.text("TOTAL (DZD)", margin + 425, tableY + 7, { width: 80, align: "right" });
+      doc.text(`P.U (${quoteCurr})`, margin + 345, tableY + 7, { width: 75, align: "right" });
+      doc.text(`TOTAL (${quoteCurr})`, margin + 425, tableY + 7, { width: 80, align: "right" });
 
       tableY += 22;
 
@@ -435,8 +458,8 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
         doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 7, { width: 285 });
         doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 7, { width: 40, align: "center" });
-        doc.text(formatDZD(item.unitPrice), margin + 345, tableY + 7, { width: 75, align: "right" });
-        doc.fillColor(darkColor).font("Helvetica-Bold").text(formatDZD(item.totalPrice), margin + 425, tableY + 7, { width: 80, align: "right" });
+        doc.text(formatCurrencyAmount(item.unitPrice, quoteCurr, "fr"), margin + 345, tableY + 7, { width: 75, align: "right" });
+        doc.fillColor(darkColor).font("Helvetica-Bold").text(formatCurrencyAmount(item.totalPrice, quoteCurr, "fr"), margin + 425, tableY + 7, { width: 80, align: "right" });
 
         doc.font("Helvetica");
         tableY += 24;
@@ -445,17 +468,25 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       // --- TOTAL BOX ---
       const totalBoxWidth = 240;
       const totalBoxX = margin + contentWidth - totalBoxWidth;
+      const totalBoxHeight = isQuoteForeign ? 62 : 42;
       tableY += 12;
 
-      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, 42, 4).fillAndStroke("#f0f9ff", "#bae6fd");
-      doc.rect(totalBoxX, tableY, 4, 42).fill(accentColor);
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, 4).fillAndStroke("#f0f9ff", "#bae6fd");
+      doc.rect(totalBoxX, tableY, 4, totalBoxHeight).fill(accentColor);
       doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL ESTIMÉ (NET) :", totalBoxX + 12, tableY + 14);
-      doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(formatDZD(data.quote.total), totalBoxX + 110, tableY + 13, {
+      doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(formatCurrencyAmount(data.quote.total, quoteCurr, "fr"), totalBoxX + 110, tableY + 13, {
         width: 115,
         align: "right",
       });
 
-      tableY += 54;
+      if (isQuoteForeign) {
+        const rate = data.quote.exchangeRate || getCurrencyDef(quoteCurr).defaultRate;
+        const totalDzd = data.quote.totalDzd || calculateDzdEquivalent(data.quote.total, quoteCurr, rate);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica").text(`1 ${quoteCurr} = ${rate.toFixed(2)} DZD (Banque d'Algérie)`, totalBoxX + 12, tableY + 33);
+        doc.fillColor("#0284c7").fontSize(8.5).font("Helvetica-Bold").text(`Contre-valeur : ${formatDZD(totalDzd)}`, totalBoxX + 12, tableY + 45);
+      }
+
+      tableY += isQuoteForeign ? 74 : 54;
 
       // --- LEGAL NOTE ---
       doc.roundedRect(margin, tableY, contentWidth, 38, 4).fillAndStroke("#f0fdf4", "#bbf7d0");
@@ -511,6 +542,8 @@ export interface CreditNotePdfData {
     reason: string;
     total: number;
     currency: string;
+    exchangeRate?: number | null;
+    totalDzd?: number | null;
     vatExemptionNote: string;
     notes?: string | null;
     sellerSnapshot?: string | null;
@@ -668,12 +701,15 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       let tableY = cardY + cardHeight + 20;
 
       // Table Header
+      const creditCurr = data.creditNote.currency || "DZD";
+      const isCreditForeign = creditCurr !== "DZD";
+
       doc.rect(margin, tableY, contentWidth, 22).fill("#0f172a");
       doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold");
       doc.text("LIGNES CRÉDITÉES / ANNULÉES", margin + 10, tableY + 7);
       doc.text("QTÉ", margin + 300, tableY + 7, { width: 40, align: "center" });
-      doc.text("P.U (DZD)", margin + 345, tableY + 7, { width: 75, align: "right" });
-      doc.text("CRÉDIT (DZD)", margin + 425, tableY + 7, { width: 80, align: "right" });
+      doc.text(`P.U (${creditCurr})`, margin + 345, tableY + 7, { width: 75, align: "right" });
+      doc.text(`CRÉDIT (${creditCurr})`, margin + 425, tableY + 7, { width: 80, align: "right" });
 
       tableY += 22;
 
@@ -686,8 +722,8 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
 
         doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 7, { width: 285 });
         doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 7, { width: 40, align: "center" });
-        doc.text(formatDZD(item.unitPrice), margin + 345, tableY + 7, { width: 75, align: "right" });
-        doc.fillColor(accentColor).font("Helvetica-Bold").text(`- ${formatDZD(item.totalPrice)}`, margin + 425, tableY + 7, { width: 80, align: "right" });
+        doc.text(formatCurrencyAmount(item.unitPrice, creditCurr, "fr"), margin + 345, tableY + 7, { width: 75, align: "right" });
+        doc.fillColor(accentColor).font("Helvetica-Bold").text(`- ${formatCurrencyAmount(item.totalPrice, creditCurr, "fr")}`, margin + 425, tableY + 7, { width: 80, align: "right" });
 
         doc.font("Helvetica");
         tableY += 24;
@@ -696,17 +732,25 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       // --- TOTAL BOX ---
       const totalBoxWidth = 240;
       const totalBoxX = margin + contentWidth - totalBoxWidth;
+      const totalBoxHeight = isCreditForeign ? 62 : 42;
       tableY += 12;
 
-      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, 42, 4).fillAndStroke("#fff1f2", "#fecdd3");
-      doc.rect(totalBoxX, tableY, 4, 42).fill(accentColor);
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, 4).fillAndStroke("#fff1f2", "#fecdd3");
+      doc.rect(totalBoxX, tableY, 4, totalBoxHeight).fill(accentColor);
       doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL CRÉDIT NET :", totalBoxX + 12, tableY + 14);
-      doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(`- ${formatDZD(data.creditNote.total)}`, totalBoxX + 100, tableY + 13, {
+      doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(`- ${formatCurrencyAmount(data.creditNote.total, creditCurr, "fr")}`, totalBoxX + 100, tableY + 13, {
         width: 125,
         align: "right",
       });
 
-      tableY += 54;
+      if (isCreditForeign) {
+        const rate = data.creditNote.exchangeRate || getCurrencyDef(creditCurr).defaultRate;
+        const totalDzd = data.creditNote.totalDzd || calculateDzdEquivalent(data.creditNote.total, creditCurr, rate);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica").text(`1 ${creditCurr} = ${rate.toFixed(2)} DZD (Banque d'Algérie)`, totalBoxX + 12, tableY + 33);
+        doc.fillColor("#e11d48").fontSize(8.5).font("Helvetica-Bold").text(`Contre-valeur : - ${formatDZD(totalDzd)}`, totalBoxX + 12, tableY + 45);
+      }
+
+      tableY += isCreditForeign ? 74 : 54;
 
       // --- LEGAL NOTE ---
       doc.roundedRect(margin, tableY, contentWidth, 38, 4).fillAndStroke("#f0fdf4", "#bbf7d0");

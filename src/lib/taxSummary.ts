@@ -109,10 +109,10 @@ export async function getAnnualTaxSummary(
     orderBy: { refundedAt: "asc" },
   });
 
-  // Calculs financiers
-  const grossBilledDzd = invoices.reduce((acc, i) => acc + i.total, 0);
-  const rawCollectedDzd = paidInvoices.reduce((acc, i) => acc + i.total, 0);
-  const totalRefundedCreditDzd = creditNotes.reduce((acc, cn) => acc + cn.total, 0);
+  // Calculs financiers (en équivalent DZD officiel Banque d'Algérie)
+  const grossBilledDzd = invoices.reduce((acc, i) => acc + (i.totalDzd ?? i.total), 0);
+  const rawCollectedDzd = paidInvoices.reduce((acc, i) => acc + (i.totalDzd ?? i.total), 0);
+  const totalRefundedCreditDzd = creditNotes.reduce((acc, cn) => acc + (cn.totalDzd ?? cn.total), 0);
 
   // Chiffre d'affaires net imposable (déduction des avoirs officiellement remboursés)
   const netTaxableTurnoverDzd = Math.max(0, rawCollectedDzd - totalRefundedCreditDzd);
@@ -130,7 +130,7 @@ export async function getAnnualTaxSummary(
     clientType: inv.client.clientType === "PROFESSIONAL" ? "Société" : "Particulier",
     clientNif: inv.client.nif,
     paymentMethod: "Virement / Versement",
-    total: inv.total,
+    total: inv.totalDzd ?? inv.total,
   }));
 
   const formattedCreditNotes: RefundedCreditNoteLedgerItem[] = creditNotes.map((cn) => ({
@@ -141,7 +141,7 @@ export async function getAnnualTaxSummary(
     originalInvoiceNumber: cn.originalInvoice.invoiceNumber || "—",
     clientName: cn.client.name,
     reason: cn.reason,
-    total: cn.total,
+    total: cn.totalDzd ?? cn.total,
   }));
 
   return {

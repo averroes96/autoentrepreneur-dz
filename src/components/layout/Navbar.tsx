@@ -16,6 +16,7 @@ import {
   Building2,
   ChevronDown,
   Calendar,
+  Receipt,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { useI18n } from "@/lib/i18n/I18nContext";
@@ -285,6 +286,23 @@ export function Navbar({ user, tenantName }: NavbarProps) {
                 <span>{t("clients")}</span>
               </Link>
 
+              {/* Dépenses */}
+              <Link
+                href="/expenses"
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pathname.startsWith("/expenses")
+                    ? "bg-emerald-50 text-emerald-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                <Receipt
+                  className={`w-4 h-4 ${
+                    pathname.startsWith("/expenses") ? "text-emerald-600" : "text-slate-400"
+                  }`}
+                />
+                <span>{t("expenses")}</span>
+              </Link>
+
               {/* Profil & Conformité */}
               <Link
                 href="/profile"
@@ -367,6 +385,16 @@ export function Navbar({ user, tenantName }: NavbarProps) {
           >
             <Users className="w-4 h-4" />
             <span>{t("clients")}</span>
+          </Link>
+
+          <Link
+            href="/expenses"
+            className={`flex flex-col items-center gap-1 py-1 px-2 text-xs font-medium ${
+              pathname.startsWith("/expenses") ? "text-emerald-600" : "text-slate-500"
+            }`}
+          >
+            <Receipt className="w-4 h-4" />
+            <span>{t("expenses")}</span>
           </Link>
 
           <Link

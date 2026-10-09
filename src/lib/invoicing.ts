@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { Prisma } from "@prisma/client";
+import { calculateDzdEquivalent, getCurrencyDef } from "./currencies";
 
 export interface LineItemInput {
   description: string;
@@ -12,6 +13,8 @@ export interface CreateInvoiceInput {
   tenantId: string;
   clientId: string;
   issueDate: Date;
+  currency?: string;
+  exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
   lineItems: LineItemInput[];
@@ -33,6 +36,14 @@ export async function createDraftInvoice(data: CreateInvoiceInput) {
     profile?.vatExemptionNote ||
     "Exonéré de la TVA en vertu de la loi n° 22-23 relative au statut de l'auto-entrepreneur et du Code des Impôts Directs.";
 
+  const currency = (data.currency || profile?.defaultCurrency || "DZD").toUpperCase();
+  const exchangeRate =
+    currency === "DZD"
+      ? 1.0
+      : typeof data.exchangeRate === "number" && data.exchangeRate > 0
+      ? data.exchangeRate
+      : getCurrencyDef(currency).defaultRate;
+
   const normalizedItems = data.lineItems.map((item, index) => {
     const qty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
     let total = 0;
@@ -51,12 +62,13 @@ export async function createDraftInvoice(data: CreateInvoiceInput) {
       quantity: qty,
       unitPrice: unit,
       totalPrice: total,
-      currency: profile?.defaultCurrency || "DZD",
+      currency,
       position: index,
     };
   });
 
   const total = normalizedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalDzd = calculateDzdEquivalent(total, currency, exchangeRate);
 
   return db.invoice.create({
     data: {
@@ -66,8 +78,10 @@ export async function createDraftInvoice(data: CreateInvoiceInput) {
       issueDate: data.issueDate,
       status: "DRAFT",
       paymentStatus: "UNPAID",
-      currency: profile?.defaultCurrency || "DZD",
+      currency,
+      exchangeRate,
       total,
+      totalDzd,
       vatExemptionNote,
       notes: data.notes,
       showDetailedItems: data.showDetailedItems ?? false,
@@ -91,6 +105,8 @@ export async function updateDraftInvoice(
   data: {
     clientId?: string;
     issueDate?: Date;
+    currency?: string;
+    exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
     lineItems?: LineItemInput[];
@@ -116,6 +132,14 @@ export async function updateDraftInvoice(
       fiscalYear = data.issueDate.getFullYear();
     }
 
+    const currency = (data.currency || existing.currency || "DZD").toUpperCase();
+    const exchangeRate =
+      currency === "DZD"
+        ? 1.0
+        : typeof data.exchangeRate === "number" && data.exchangeRate > 0
+        ? data.exchangeRate
+        : existing.exchangeRate || getCurrencyDef(currency).defaultRate;
+
     if (data.lineItems) {
       await tx.invoiceLineItem.deleteMany({
         where: { invoiceId },
@@ -140,7 +164,7 @@ export async function updateDraftInvoice(
           quantity: qty,
           unitPrice: unit,
           totalPrice: total,
-          currency: existing.currency,
+          currency,
           position: index,
         };
       });
@@ -152,6 +176,8 @@ export async function updateDraftInvoice(
       });
     }
 
+    const totalDzd = calculateDzdEquivalent(newTotal, currency, exchangeRate);
+
     return tx.invoice.update({
       where: { id: invoiceId },
       data: {
@@ -159,7 +185,10 @@ export async function updateDraftInvoice(
         ...(data.issueDate && { issueDate: data.issueDate, fiscalYear }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.showDetailedItems !== undefined && { showDetailedItems: data.showDetailedItems }),
+        currency,
+        exchangeRate,
         total: newTotal,
+        totalDzd,
       },
       include: {
         client: true,

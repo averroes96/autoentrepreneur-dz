@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { calculateDzdEquivalent, getCurrencyDef } from "./currencies";
 
 export interface QuoteLineItemInput {
   description: string;
@@ -12,6 +13,8 @@ export interface CreateQuoteInput {
   clientId: string;
   issueDate: Date;
   validUntil?: Date | null;
+  currency?: string;
+  exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
   lineItems: QuoteLineItemInput[];
@@ -32,6 +35,14 @@ export async function createDraftQuote(data: CreateQuoteInput) {
     profile?.vatExemptionNote ||
     "Exonéré de la TVA en vertu de la loi n° 22-23 relative au statut de l'auto-entrepreneur et du Code des Impôts Directs.";
 
+  const currency = (data.currency || profile?.defaultCurrency || "DZD").toUpperCase();
+  const exchangeRate =
+    currency === "DZD"
+      ? 1.0
+      : typeof data.exchangeRate === "number" && data.exchangeRate > 0
+      ? data.exchangeRate
+      : getCurrencyDef(currency).defaultRate;
+
   const normalizedItems = data.lineItems.map((item, index) => {
     const qty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
     let total = 0;
@@ -50,12 +61,13 @@ export async function createDraftQuote(data: CreateQuoteInput) {
       quantity: qty,
       unitPrice: unit,
       totalPrice: total,
-      currency: profile?.defaultCurrency || "DZD",
+      currency,
       position: index,
     };
   });
 
   const total = normalizedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalDzd = calculateDzdEquivalent(total, currency, exchangeRate);
 
   // Default validity date: 30 days after issueDate if not specified
   const validUntil =
@@ -70,8 +82,10 @@ export async function createDraftQuote(data: CreateQuoteInput) {
       issueDate: data.issueDate,
       validUntil,
       status: "DRAFT",
-      currency: profile?.defaultCurrency || "DZD",
+      currency,
+      exchangeRate,
       total,
+      totalDzd,
       vatExemptionNote,
       notes: data.notes,
       showDetailedItems: data.showDetailedItems ?? false,
@@ -96,6 +110,8 @@ export async function updateDraftQuote(
     clientId?: string;
     issueDate?: Date;
     validUntil?: Date | null;
+    currency?: string;
+    exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
     lineItems?: QuoteLineItemInput[];
@@ -121,6 +137,14 @@ export async function updateDraftQuote(
       fiscalYear = data.issueDate.getFullYear();
     }
 
+    const currency = (data.currency || existing.currency || "DZD").toUpperCase();
+    const exchangeRate =
+      currency === "DZD"
+        ? 1.0
+        : typeof data.exchangeRate === "number" && data.exchangeRate > 0
+        ? data.exchangeRate
+        : existing.exchangeRate || getCurrencyDef(currency).defaultRate;
+
     if (data.lineItems) {
       await tx.quoteLineItem.deleteMany({
         where: { quoteId },
@@ -145,7 +169,7 @@ export async function updateDraftQuote(
           quantity: qty,
           unitPrice: unit,
           totalPrice: total,
-          currency: existing.currency,
+          currency,
           position: index,
         };
       });
@@ -157,6 +181,8 @@ export async function updateDraftQuote(
       });
     }
 
+    const totalDzd = calculateDzdEquivalent(newTotal, currency, exchangeRate);
+
     return tx.quote.update({
       where: { id: quoteId },
       data: {
@@ -165,7 +191,10 @@ export async function updateDraftQuote(
         ...(data.validUntil !== undefined && { validUntil: data.validUntil }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.showDetailedItems !== undefined && { showDetailedItems: data.showDetailedItems }),
+        currency,
+        exchangeRate,
         total: newTotal,
+        totalDzd,
       },
       include: {
         client: true,
@@ -328,7 +357,9 @@ export async function convertQuoteToInvoice(tenantId: string, quoteId: string) {
         status: "DRAFT",
         paymentStatus: "UNPAID",
         currency: quote.currency,
+        exchangeRate: quote.exchangeRate ?? 1.0,
         total: quote.total,
+        totalDzd: quote.totalDzd ?? quote.total,
         vatExemptionNote:
           quote.vatExemptionNote ||
           profile?.vatExemptionNote ||

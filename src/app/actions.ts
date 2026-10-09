@@ -45,6 +45,7 @@ import {
 import { persistInvoicePdf } from "@/lib/storage";
 import { captureException } from "@/lib/sentry";
 import { validateAlgerianNif } from "@/lib/nifValidator";
+import { calculateDzdEquivalent } from "@/lib/currencies";
 
 /* =========================================================================
    AUTHENTICATION ACTIONS
@@ -402,6 +403,8 @@ export async function toggleArchiveClientAction(id: string, isArchived: boolean)
 export async function createInvoiceAction(payload: {
   clientId: string;
   issueDate: string;
+  currency?: string;
+  exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
   lineItems: Array<{
@@ -424,6 +427,8 @@ export async function createInvoiceAction(payload: {
       tenantId: session.tenantId,
       clientId: payload.clientId,
       issueDate: new Date(payload.issueDate || new Date()),
+      currency: payload.currency,
+      exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems ?? false,
       lineItems: payload.lineItems,
@@ -443,6 +448,8 @@ export async function updateInvoiceAction(
   payload: {
     clientId: string;
     issueDate: string;
+    currency?: string;
+    exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
     lineItems: Array<{
@@ -460,6 +467,8 @@ export async function updateInvoiceAction(
     await updateDraftInvoice(session.tenantId, invoiceId, {
       clientId: payload.clientId,
       issueDate: new Date(payload.issueDate),
+      currency: payload.currency,
+      exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems,
       lineItems: payload.lineItems,
@@ -644,6 +653,8 @@ export async function createQuoteAction(payload: {
   clientId: string;
   issueDate: string;
   validUntil?: string | null;
+  currency?: string;
+  exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
   lineItems: Array<{
@@ -667,6 +678,8 @@ export async function createQuoteAction(payload: {
       clientId: payload.clientId,
       issueDate: new Date(payload.issueDate),
       validUntil: payload.validUntil ? new Date(payload.validUntil) : null,
+      currency: payload.currency,
+      exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems,
       lineItems: payload.lineItems,
@@ -689,6 +702,8 @@ export async function updateQuoteAction(
     clientId?: string;
     issueDate?: string;
     validUntil?: string | null;
+    currency?: string;
+    exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
     lineItems?: Array<{
@@ -707,6 +722,8 @@ export async function updateQuoteAction(
       clientId: payload.clientId,
       issueDate: payload.issueDate ? new Date(payload.issueDate) : undefined,
       validUntil: payload.validUntil !== undefined ? (payload.validUntil ? new Date(payload.validUntil) : null) : undefined,
+      currency: payload.currency,
+      exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems,
       lineItems: payload.lineItems,
@@ -1015,4 +1032,169 @@ export async function emailCreditNoteAction(
     return { error: err.message || "Erreur interne lors de l'envoi." };
   }
 }
+
+/* =========================================================================
+   EXPENSE ACTIONS (PHASE 3 - LIGHTWEIGHT EXPENSE & NET PROFIT TRACKING)
+========================================================================= */
+
+export async function createExpenseAction(formData: FormData) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Non autorisé." };
+
+    const title = (formData.get("title") as string)?.trim();
+    const rawAmount = formData.get("amount") as string;
+    const rawDate = formData.get("date") as string;
+    const category = (formData.get("category") as string)?.trim() || "OTHER";
+    const paymentMethod = (formData.get("paymentMethod") as string)?.trim() || "OTHER";
+    const supplier = (formData.get("supplier") as string)?.trim() || null;
+    const invoiceNumber = (formData.get("invoiceNumber") as string)?.trim() || null;
+    const notes = (formData.get("notes") as string)?.trim() || null;
+    const receiptUrl = (formData.get("receiptUrl") as string)?.trim() || null;
+    const rawCurrency = (formData.get("currency") as string)?.trim() || "DZD";
+    const rawExchangeRate = parseFloat((formData.get("exchangeRate") as string) || "1");
+
+    if (!title) {
+      return { error: "Le titre de la dépense est requis." };
+    }
+
+    const amount = parseFloat(rawAmount);
+    if (isNaN(amount) || amount <= 0) {
+      return { error: "Veuillez saisir un montant valide (supérieur à 0)." };
+    }
+
+    const currency = rawCurrency.toUpperCase();
+    const exchangeRate = !isNaN(rawExchangeRate) && rawExchangeRate > 0 ? rawExchangeRate : 1.0;
+    const amountDzd = calculateDzdEquivalent(amount, currency, exchangeRate);
+
+    const date = rawDate ? new Date(rawDate) : new Date();
+    if (isNaN(date.getTime())) {
+      return { error: "Date invalide." };
+    }
+    const fiscalYear = date.getFullYear();
+
+    const expense = await db.expense.create({
+      data: {
+        tenantId: session.tenantId,
+        title,
+        amount,
+        currency,
+        exchangeRate,
+        amountDzd,
+        date,
+        fiscalYear,
+        category,
+        paymentMethod,
+        supplier,
+        invoiceNumber,
+        receiptUrl,
+        notes,
+      },
+    });
+
+    revalidatePath("/expenses");
+    revalidatePath("/dashboard");
+    return { success: true, expenseId: expense.id };
+  } catch (err: any) {
+    captureException(err, { action: "createExpenseAction" });
+    return { error: err.message || "Erreur lors de l'enregistrement de la dépense." };
+  }
+}
+
+export async function updateExpenseAction(id: string, formData: FormData) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Non autorisé." };
+
+    const title = (formData.get("title") as string)?.trim();
+    const rawAmount = formData.get("amount") as string;
+    const rawDate = formData.get("date") as string;
+    const category = (formData.get("category") as string)?.trim() || "OTHER";
+    const paymentMethod = (formData.get("paymentMethod") as string)?.trim() || "OTHER";
+    const supplier = (formData.get("supplier") as string)?.trim() || null;
+    const invoiceNumber = (formData.get("invoiceNumber") as string)?.trim() || null;
+    const notes = (formData.get("notes") as string)?.trim() || null;
+    const receiptUrl = (formData.get("receiptUrl") as string)?.trim() || null;
+
+    if (!title) {
+      return { error: "Le titre de la dépense est requis." };
+    }
+
+    const amount = parseFloat(rawAmount);
+    if (isNaN(amount) || amount <= 0) {
+      return { error: "Veuillez saisir un montant valide (supérieur à 0)." };
+    }
+
+    const date = rawDate ? new Date(rawDate) : new Date();
+    if (isNaN(date.getTime())) {
+      return { error: "Date invalide." };
+    }
+    const fiscalYear = date.getFullYear();
+
+    const existing = await db.expense.findFirst({
+      where: { id, tenantId: session.tenantId },
+    });
+    if (!existing) {
+      return { error: "Dépense introuvable." };
+    }
+
+    const rawCurrency = (formData.get("currency") as string)?.trim() || existing.currency || "DZD";
+    const rawExchangeRate = parseFloat((formData.get("exchangeRate") as string) || String(existing.exchangeRate || 1));
+    const currency = rawCurrency.toUpperCase();
+    const exchangeRate = !isNaN(rawExchangeRate) && rawExchangeRate > 0 ? rawExchangeRate : 1.0;
+    const amountDzd = calculateDzdEquivalent(amount, currency, exchangeRate);
+
+    await db.expense.update({
+      where: { id },
+      data: {
+        title,
+        amount,
+        currency,
+        exchangeRate,
+        amountDzd,
+        date,
+        fiscalYear,
+        category,
+        paymentMethod,
+        supplier,
+        invoiceNumber,
+        receiptUrl,
+        notes,
+      },
+    });
+
+    revalidatePath("/expenses");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "updateExpenseAction", expenseId: id });
+    return { error: err.message || "Erreur lors de la mise à jour de la dépense." };
+  }
+}
+
+export async function deleteExpenseAction(id: string) {
+  try {
+    const session = await getSession();
+    if (!session) return { error: "Non autorisé." };
+
+    const existing = await db.expense.findFirst({
+      where: { id, tenantId: session.tenantId },
+    });
+    if (!existing) {
+      return { error: "Dépense introuvable." };
+    }
+
+    await db.expense.delete({
+      where: { id },
+    });
+
+    revalidatePath("/expenses");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (err: any) {
+    captureException(err, { action: "deleteExpenseAction", expenseId: id });
+    return { error: err.message || "Erreur lors de la suppression de la dépense." };
+  }
+}
+
 

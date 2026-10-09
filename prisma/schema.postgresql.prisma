@@ -24,6 +24,7 @@ model Tenant {
   creditNotes         CreditNote[]
   creditNoteSequences CreditNoteSequence[]
   pastTurnovers       PastTurnover[]
+  expenses            Expense[]
 }
 
 model User {
@@ -117,7 +118,9 @@ model Invoice {
   paymentReference   String?   // Transaction or check reference
   receiptNumber      String?   // REC-YYYY-XXXX
   currency           String    @default("DZD")
+  exchangeRate       Float?    @default(1.0)
   total              Float     @default(0)
+  totalDzd           Float?    @default(0)
   vatExemptionNote   String
   sellerSnapshot     String?   // JSON snapshot of profile when issued
   clientSnapshot     String?   // JSON snapshot of client when issued
@@ -167,7 +170,9 @@ model Quote {
   issueDate          DateTime
   validUntil         DateTime?
   currency           String          @default("DZD")
+  exchangeRate       Float?          @default(1.0)
   total              Float           @default(0)
+  totalDzd           Float?          @default(0)
   notes              String?
   vatExemptionNote   String
   showDetailedItems  Boolean         @default(false)
@@ -228,7 +233,9 @@ model CreditNote {
   refundedAt         DateTime?
   reason             String
   currency           String               @default("DZD")
+  exchangeRate       Float?               @default(1.0)
   total              Float                @default(0)
+  totalDzd           Float?               @default(0)
   notes              String?
   vatExemptionNote   String
   sellerSnapshot     String?
@@ -287,3 +294,31 @@ model PastTurnover {
 
   @@unique([tenantId, fiscalYear])
 }
+
+model Expense {
+  id            String    @id @default(uuid())
+  tenantId      String
+  title         String
+  amount        Float
+  currency      String    @default("DZD")
+  exchangeRate  Float?    @default(1.0)
+  amountDzd     Float?    @default(0)
+  date          DateTime
+  fiscalYear    Int
+  category      String
+  paymentMethod String    @default("OTHER")
+  supplier      String?
+  invoiceNumber String?
+  receiptUrl    String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, category])
+  @@index([tenantId, date])
+}
+

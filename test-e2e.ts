@@ -52,6 +52,20 @@ import {
   getArabicAmountInWords,
 } from "./src/lib/arabicNomenclature";
 import { translations } from "./src/lib/i18n/translations";
+import {
+  EXPENSE_CATEGORIES,
+  getExpensesSummary,
+  generateExpensesCsv,
+  ExpenseCategory,
+} from "./src/lib/expenses";
+import {
+  SUPPORTED_CURRENCIES,
+  getCurrencyDef,
+  calculateDzdEquivalent,
+  formatCurrencyAmount,
+  getAmountInWordsWithCurrency,
+  getExchangeRateNotice,
+} from "./src/lib/currencies";
 
 async function runTests() {
   console.log("=== STARTING PHASE 1 COMPLIANCE & INTEGRATION TEST ===");
@@ -696,6 +710,356 @@ async function runTests() {
   console.log(`✓ Client Statement PDF generated successfully (${statementPdfBuffer.length} bytes)`);
 
   console.log("=== ALL SECTION 6 PAYMENT RECEIPTS & CLIENT STATEMENTS TESTS PASSED PERFECTLY ===");
+
+  // 37. Phase 3: Expense Tracking & Real Net Profit Analysis
+  console.log("\n=== TESTING PHASE 3: EXPENSE TRACKING & NET PROFIT ANALYTICS ===");
+  const testFiscalYear = new Date().getFullYear();
+
+  // Clean up any potential prior test expenses
+  await db.expense.deleteMany({
+    where: {
+      tenantId,
+      title: { in: ["Abonnement GitHub Copilot & Vercel Pro", "Abonnement Fibre Optique Professionnel"] },
+    },
+  });
+
+  // Create test expenses across categories
+  const expense1 = await db.expense.create({
+    data: {
+      tenantId,
+      title: "Abonnement GitHub Copilot & Vercel Pro",
+      amount: 12500,
+      currency: "DZD",
+      exchangeRate: 1.0,
+      amountDzd: 12500,
+      date: new Date(),
+      fiscalYear: testFiscalYear,
+      category: "SOFTWARE_SUBSCRIPTIONS",
+      paymentMethod: "CIB",
+      supplier: "GitHub / Vercel",
+      invoiceNumber: "INV-GH-2026-09",
+      notes: "Outils de développement essentiels",
+    },
+  });
+
+  const expense2 = await db.expense.create({
+    data: {
+      tenantId,
+      title: "Abonnement Fibre Optique Professionnel",
+      amount: 4500,
+      currency: "DZD",
+      exchangeRate: 1.0,
+      amountDzd: 4500,
+      date: new Date(),
+      fiscalYear: testFiscalYear,
+      category: "TELECOM_INTERNET",
+      paymentMethod: "EDAHABIA",
+      supplier: "Algérie Télécom",
+      invoiceNumber: "AT-489201",
+    },
+  });
+
+  console.log(`✓ Created 2 expenses: ${expense1.title} (${expense1.amount} DZD) and ${expense2.title} (${expense2.amount} DZD)`);
+
+  // Verify getExpensesSummary
+  const expenseSummary = await getExpensesSummary(tenantId, testFiscalYear);
+  console.log("Expense Summary Results:");
+  console.log(`  - Total Dépenses: ${expenseSummary.totalExpensesDzd} DZD (${expenseSummary.expenseCount} écritures)`);
+  console.log(`  - Chiffre d'Affaires Net Encaissé: ${expenseSummary.netCollectedTurnoverDzd} DZD`);
+  console.log(`  - Impôt IFU (0.5%): ${expenseSummary.estimatedIfuTaxDzd} DZD`);
+  console.log(`  - Cotisation CASNOS: ${expenseSummary.casnosContributionDzd} DZD`);
+  console.log(`  - BÉNÉFICE NET RÉEL: ${expenseSummary.realNetProfitDzd} DZD`);
+  console.log(`  - Marge Nette: ${expenseSummary.netProfitMarginPercent}%`);
+  console.log(`  - Ratio de Charges: ${expenseSummary.expenseRatioPercent}%`);
+
+  if (expenseSummary.totalExpensesDzd < 17000) {
+    throw new Error(`Total expenses should be at least 17,000 DZD, got: ${expenseSummary.totalExpensesDzd}`);
+  }
+
+  // Verify Real Net Profit Math
+  const expectedNetProfit =
+    expenseSummary.netCollectedTurnoverDzd -
+    expenseSummary.totalExpensesDzd -
+    expenseSummary.estimatedIfuTaxDzd -
+    expenseSummary.casnosContributionDzd;
+  if (Math.abs(expenseSummary.realNetProfitDzd - expectedNetProfit) > 0.01) {
+    throw new Error(`Net profit calculation mismatch: expected ${expectedNetProfit}, got ${expenseSummary.realNetProfitDzd}`);
+  }
+  console.log("✓ Net profit formula verified (Net CA - Charges - IFU - CASNOS)");
+
+  // Verify Category Breakdown
+  if (expenseSummary.categoryBreakdown.length === 0) {
+    throw new Error("Category breakdown should not be empty");
+  }
+  const softwareCategory = expenseSummary.categoryBreakdown.find((c) => c.category === "SOFTWARE_SUBSCRIPTIONS");
+  if (!softwareCategory || softwareCategory.totalAmount < 12500) {
+    throw new Error("Software category missing or incorrect amount");
+  }
+  console.log(`✓ Category breakdown verified (${expenseSummary.categoryBreakdown.length} active categories)`);
+
+  // Verify Monthly Trends
+  if (expenseSummary.monthlyTrends.length !== 12) {
+    throw new Error("Monthly trends should contain 12 months");
+  }
+  console.log("✓ 12-month evolution trend calculated");
+
+  // Verify CSV Generation
+  const expensesList = await db.expense.findMany({
+    where: { tenantId, fiscalYear: testFiscalYear },
+    orderBy: { date: "desc" },
+  });
+  const expenseCsv = generateExpensesCsv(expensesList as any, testFiscalYear);
+  if (!expenseCsv.startsWith("\uFEFF")) {
+    throw new Error("Expenses CSV missing UTF-8 BOM");
+  }
+  if (!expenseCsv.includes("Loi 22-23")) {
+    throw new Error("Expenses CSV missing legal disclaimer regarding non-deductibility");
+  }
+  if (!expenseCsv.includes("GitHub / Vercel")) {
+    throw new Error("Expenses CSV missing supplier entry");
+  }
+  console.log(`✓ Expenses CSV exported with UTF-8 BOM and Law 22-23 disclaimer (${expenseCsv.length} chars)`);
+
+  // Clean up test expenses
+  await db.expense.deleteMany({
+    where: { id: { in: [expense1.id, expense2.id] } },
+  });
+  console.log("✓ Test expenses cleaned up cleanly");
+
+  console.log("=== ALL PHASE 3 EXPENSES & NET PROFIT TESTS PASSED WITH DISTINCTION ===");
+
+  console.log("\n=== STARTING PHASE 3 MULTI-CURRENCY INVOICING TEST SUITE ===");
+
+  // 1. Currency Engine Validation
+  if (SUPPORTED_CURRENCIES.length !== 6) {
+    throw new Error(`Expected 6 supported currencies, got: ${SUPPORTED_CURRENCIES.length}`);
+  }
+  const eurDef = getCurrencyDef("EUR");
+  if (eurDef.symbol !== "€" || eurDef.defaultRate <= 100) {
+    throw new Error("EUR currency definition invalid");
+  }
+  const formattedEurFr = formatCurrencyAmount(1500, "EUR", "fr");
+  const formattedEurAr = formatCurrencyAmount(1500, "EUR", "ar");
+  if (!formattedEurFr.includes("€") || !formattedEurAr.includes("€")) {
+    throw new Error("Currency formatting failed");
+  }
+  const wordsFr = getAmountInWordsWithCurrency(1500, "EUR", "fr");
+  const wordsAr = getAmountInWordsWithCurrency(1500, "EUR", "ar");
+  if (!wordsFr.includes("euros") || !wordsAr.includes("يورو")) {
+    throw new Error("Currency amount in words failed");
+  }
+  const noticeFr = getExchangeRateNotice("EUR", 146.5, 219750, "fr");
+  if (!noticeFr.includes("Banque d'Algérie") || !noticeFr.includes("219 750")) {
+    throw new Error("Exchange rate notice generation failed");
+  }
+  console.log("✓ Currency engine verified (6 currencies, formatting, Tafqeet/French words, regulatory notices)");
+
+  // 2. Multi-Currency Draft Invoice Creation & Computation
+  const draftEur = await createDraftInvoice({
+    tenantId,
+    clientId: client.id,
+    issueDate: new Date(),
+    currency: "EUR",
+    exchangeRate: 146.5,
+    notes: "Exportation de services numériques - Règlement par virement international SWIFT",
+    lineItems: [
+      { description: "Développement application mobile iOS/Android", quantity: 1, unitPrice: 1500 },
+    ],
+  });
+
+  if (draftEur.currency !== "EUR") {
+    throw new Error(`Expected EUR currency, got: ${draftEur.currency}`);
+  }
+  if (draftEur.exchangeRate !== 146.5) {
+    throw new Error(`Expected exchange rate 146.5, got: ${draftEur.exchangeRate}`);
+  }
+  if (Math.abs((draftEur.totalDzd ?? 0) - 219750) > 0.01) {
+    throw new Error(`Expected totalDzd 219750, got: ${draftEur.totalDzd}`);
+  }
+  console.log(`✓ Created EUR invoice draft: ${draftEur.id} (1 500 € = ${draftEur.totalDzd} DZD à 146.50 DZD/EUR)`);
+
+  // 3. Issue EUR Invoice & Generate Official PDF
+  const issuedEur = await issueInvoice(tenantId, draftEur.id);
+  console.log(`✓ Issued EUR Invoice: ${issuedEur.invoiceNumber}`);
+
+  const eurPdfBuffer = await generateInvoicePdfBuffer({
+    invoice: {
+      ...issuedEur,
+      issueDate: issuedEur.issueDate,
+      lineItems: issuedEur.lineItems.map((li) => ({
+        description: li.description,
+        quantity: li.quantity,
+        unitPrice: li.unitPrice,
+        totalPrice: li.totalPrice,
+      })),
+    },
+    seller: {
+      fullName: profile.fullName || "Émetteur",
+      rnaeNumber: profile.rnaeNumber || "—",
+      nif: profile.nif || "—",
+      address: profile.address || "—",
+      email: profile.email || "—",
+      phone: profile.phone || "—",
+      activityCode: profile.activityCode || "—",
+      activityLabel: profile.activityLabel || "—",
+    },
+    client: {
+      name: client.name,
+      clientType: client.clientType,
+      address: client.address || "—",
+      nif: client.nif,
+      nis: client.nis,
+      rc: client.rc,
+      email: client.email,
+      phone: client.phone,
+    },
+  });
+
+  if (!eurPdfBuffer || eurPdfBuffer.length < 3000) {
+    throw new Error("EUR Invoice PDF generation failed or too small");
+  }
+  console.log(`✓ EUR Invoice PDF generated with dual-currency & statutory exchange notice (${eurPdfBuffer.length} bytes)`);
+
+  // 4. Multi-Currency Quote Creation & PDF Generation
+  const quoteUsd = await createDraftQuote({
+    tenantId,
+    clientId: client.id,
+    issueDate: new Date(),
+    currency: "USD",
+    exchangeRate: 134.8,
+    notes: "Export prestation DevOps & Cloud Architecture",
+    lineItems: [
+      { description: "Configuration cluster Kubernetes", quantity: 2, unitPrice: 1000 },
+    ],
+  });
+
+  if (quoteUsd.currency !== "USD" || quoteUsd.exchangeRate !== 134.8) {
+    throw new Error(`Quote USD currency/rate mismatch`);
+  }
+  if (Math.abs((quoteUsd.totalDzd ?? 0) - 269600) > 0.01) {
+    throw new Error(`Expected quote totalDzd 269600, got: ${quoteUsd.totalDzd}`);
+  }
+  console.log(`✓ Created USD Quote: ${quoteUsd.id} ($2,000 = ${quoteUsd.totalDzd} DZD à 134.80 DZD/USD)`);
+
+  const usdQuotePdfBuffer = await generateQuotePdfBuffer({
+    quote: {
+      ...quoteUsd,
+      issueDate: quoteUsd.issueDate,
+      lineItems: quoteUsd.lineItems.map((li) => ({
+        description: li.description,
+        quantity: li.quantity,
+        unitPrice: li.unitPrice,
+        totalPrice: li.totalPrice,
+      })),
+    },
+    seller: {
+      fullName: profile.fullName || "Émetteur",
+      rnaeNumber: profile.rnaeNumber || "—",
+      nif: profile.nif || "—",
+      address: profile.address || "—",
+      email: profile.email || "—",
+      phone: profile.phone || "—",
+      activityCode: profile.activityCode || "—",
+      activityLabel: profile.activityLabel || "—",
+    },
+    client: {
+      name: client.name,
+      clientType: client.clientType,
+      address: client.address || "—",
+      nif: client.nif,
+      nis: client.nis,
+      rc: client.rc,
+      email: client.email,
+      phone: client.phone,
+    },
+  });
+
+  if (!usdQuotePdfBuffer || usdQuotePdfBuffer.length < 3000) {
+    throw new Error("USD Quote PDF generation failed or too small");
+  }
+  console.log(`✓ USD Quote PDF generated successfully (${usdQuotePdfBuffer.length} bytes)`);
+
+  // 5. Convert USD Quote to Invoice with Multi-Currency Carry-Over
+  const convertedInvoice = await convertQuoteToInvoice(tenantId, quoteUsd.id);
+  if (convertedInvoice.currency !== "USD") {
+    throw new Error(`Converted invoice should inherit USD currency, got: ${convertedInvoice.currency}`);
+  }
+  if (convertedInvoice.exchangeRate !== 134.8) {
+    throw new Error(`Converted invoice should inherit exchange rate 134.8, got: ${convertedInvoice.exchangeRate}`);
+  }
+  if (Math.abs((convertedInvoice.totalDzd ?? 0) - 269600) > 0.01) {
+    throw new Error(`Converted invoice totalDzd mismatch: ${convertedInvoice.totalDzd}`);
+  }
+  console.log(`✓ Converted USD Quote to Invoice preserving currency, rate, and totalDzd`);
+
+  // 6. Multi-Currency Credit Note (Avoir) from Foreign Invoice
+  const creditNoteEur = await createCreditNoteFromInvoice({
+    tenantId,
+    originalInvoiceId: issuedEur.id,
+    reason: "Remise commerciale sur prestation export",
+    issueDate: new Date(),
+    lineItems: [
+      { description: "Développement application mobile iOS/Android - Remise", quantity: 1, unitPrice: 500 },
+    ],
+  });
+
+  if (creditNoteEur.currency !== "EUR" || creditNoteEur.exchangeRate !== 146.5) {
+    throw new Error("Credit note should inherit currency & rate from original invoice");
+  }
+  if (Math.abs((creditNoteEur.totalDzd ?? 0) - 73250) > 0.01) {
+    throw new Error(`Expected credit note totalDzd 73250, got: ${creditNoteEur.totalDzd}`);
+  }
+  console.log(`✓ Created EUR Credit Note: ${creditNoteEur.id} (500 € = ${creditNoteEur.totalDzd} DZD)`);
+
+  const cnPdfBuffer = await generateCreditNotePdfBuffer({
+    creditNote: {
+      ...creditNoteEur,
+      issueDate: creditNoteEur.issueDate,
+      originalInvoiceNumber: issuedEur.invoiceNumber,
+      lineItems: creditNoteEur.lineItems.map((li) => ({
+        description: li.description,
+        quantity: li.quantity,
+        unitPrice: li.unitPrice,
+        totalPrice: li.totalPrice,
+      })),
+    },
+    seller: {
+      fullName: profile.fullName || "Émetteur",
+      rnaeNumber: profile.rnaeNumber || "—",
+      nif: profile.nif || "—",
+      address: profile.address || "—",
+      email: profile.email || "—",
+      phone: profile.phone || "—",
+      activityCode: profile.activityCode || "—",
+      activityLabel: profile.activityLabel || "—",
+    },
+    client: {
+      name: client.name,
+      clientType: client.clientType,
+      address: client.address || "—",
+      nif: client.nif,
+      nis: client.nis,
+      rc: client.rc,
+      email: client.email,
+      phone: client.phone,
+    },
+  });
+
+  if (!cnPdfBuffer || cnPdfBuffer.length < 3000) {
+    throw new Error("EUR Credit Note PDF generation failed or too small");
+  }
+  console.log(`✓ EUR Credit Note PDF generated successfully (${cnPdfBuffer.length} bytes)`);
+
+  // Clean up Multi-Currency Test Artifacts
+  await db.creditNoteLineItem.deleteMany({ where: { creditNoteId: creditNoteEur.id } });
+  await db.creditNote.delete({ where: { id: creditNoteEur.id } });
+  await db.invoiceLineItem.deleteMany({ where: { invoiceId: { in: [issuedEur.id, convertedInvoice.id] } } });
+  await db.invoice.deleteMany({ where: { id: { in: [issuedEur.id, convertedInvoice.id] } } });
+  await db.quoteLineItem.deleteMany({ where: { quoteId: quoteUsd.id } });
+  await db.quote.delete({ where: { id: quoteUsd.id } });
+  console.log("✓ Multi-currency test records cleaned up cleanly");
+
+  console.log("=== ALL PHASE 3 MULTI-CURRENCY INVOICING TESTS PASSED WITH DISTINCTION ===");
 }
 
 runTests()

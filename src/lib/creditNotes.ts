@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { calculateDzdEquivalent } from "./currencies";
 
 export interface CreditNoteLineItemInput {
   description: string;
@@ -137,6 +138,9 @@ export async function createCreditNoteFromInvoice(data: CreateCreditNoteInput) {
       phone: invoice.client.phone,
     };
 
+    const exchangeRate = invoice.exchangeRate ?? 1.0;
+    const totalDzd = calculateDzdEquivalent(total, invoice.currency, exchangeRate);
+
     const creditNote = await tx.creditNote.create({
       data: {
         tenantId: data.tenantId,
@@ -151,7 +155,9 @@ export async function createCreditNoteFromInvoice(data: CreateCreditNoteInput) {
         issuedAt: new Date(),
         reason: data.reason.trim(),
         currency: invoice.currency,
+        exchangeRate,
         total,
+        totalDzd,
         notes: data.notes,
         vatExemptionNote: invoice.vatExemptionNote || profile.vatExemptionNote,
         sellerSnapshot: JSON.stringify(sellerSnapshot),
