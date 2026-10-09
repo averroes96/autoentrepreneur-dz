@@ -1,4 +1,4 @@
-# Moukawil.dz — Algerian Auto-Entrepreneur Management Platform
+# Auto Entrepreneur DZ — Algerian Auto-Entrepreneur Management Platform
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16.4-black?logo=next.js)](https://nextjs.org/)
 [![React 19](https://img.shields.io/badge/React-19.3-blue?logo=react)](https://react.dev/)
@@ -8,7 +8,7 @@
 [![Law 22-23](https://img.shields.io/badge/Compliance-Law_22--23_Algeria-059669)](https://www.joradp.dz/)
 [![License](https://img.shields.io/badge/License-Proprietary-slate)](LICENSE)
 
-**Moukawil.dz (MoukawilOS)** is a sovereign, web-based operating system purpose-built for Algerian auto-entrepreneurs operating under **Law No. 22-23 of December 18, 2022** and the **Single Flat Tax (IFU - Impôt Forfaitaire Unique)** regime updated by the **2024 Finance Law**.
+**Auto Entrepreneur DZ** is a sovereign, web-based operating system purpose-built for Algerian auto-entrepreneurs operating under **Law No. 22-23 of December 18, 2022** and the **Single Flat Tax (IFU - Impôt Forfaitaire Unique)** regime updated by the **2024 Finance Law**.
 
 It delivers rigorous commercial and tax compliance: immutable sequential invoicing, quote and credit note management, multi-currency invoicing (EUR, USD, GBP, CAD) with Bank of Algeria exchange rates and repatriation notices, cost and real net profit tracking, a role-based audit portal for external certified accountants (*Commissaires aux comptes / Experts-comptables*) with 6-digit PIN verification, and automated AES-256-GCM encrypted data vault backups.
 

@@ -1,6 +1,6 @@
 # Cryptographic Specification of the Data Vault (Module 4)
 
-This document describes the cryptographic architecture, data format, and transactional restoration protocols implemented in the **Data Vault Backup & Restore** module of Moukawil.dz.
+This document describes the cryptographic architecture, data format, and transactional restoration protocols implemented in the **Data Vault Backup & Restore** module of Auto Entrepreneur DZ.
 
 ---
 
@@ -60,7 +60,7 @@ During restore, the decrypted payload is verified against this checksum prior to
 For users requiring both machine-readable backups and human-readable spreadsheets:
 
 ```
-Moukawil_Vault_Backup_2026-10-09_Karim_Meziane.zip
+AutoEntrepreneurDZ_Vault_Backup_2026-10-09_Karim_Meziane.zip
 ├── data_vault.json               # Full JSON payload (or data_vault.enc.json if encrypted)
 ├── vault_manifest.json           # Metadata, version, timestamp, and SHA-256 checksum
 ├── 01_clients.csv                # Client directory

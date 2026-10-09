@@ -150,7 +150,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-slate-900 text-base leading-tight tracking-tight">
-                  Moukawil<span className="text-emerald-600">.dz</span>
+                  Auto Entrepreneur <span className="text-emerald-600">DZ</span>
                 </span>
                 <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-500">
                   {t("brandSub")}

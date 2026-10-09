@@ -757,7 +757,7 @@ export function AccountantAuditPortal({
       {/* Footer */}
       <footer className="mt-12 py-6 border-t border-slate-200 bg-white text-center text-xs text-slate-500">
         <p>
-          Portail d&apos;audit externe certifié • Moukawil.dz • Conforme aux dispositions de la Loi n°
+          Portail d&apos;audit externe certifié • Auto Entrepreneur DZ • Conforme aux dispositions de la Loi n°
           22-23 portant statut de l&apos;auto-entrepreneur.
         </p>
       </footer>

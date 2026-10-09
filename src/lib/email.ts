@@ -11,7 +11,7 @@ export function resolveSenderEmail(): string {
       return envFrom;
     }
   }
-  return "Moukawil.dz <onboarding@resend.dev>";
+  return "Auto Entrepreneur DZ <onboarding@resend.dev>";
 }
 
 export function getAppUrl(): string {

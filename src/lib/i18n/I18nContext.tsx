@@ -17,7 +17,8 @@ interface I18nContextType {
 
 const I18nContext = createContext<I18nContextType | null>(null);
 
-const STORAGE_KEY = "moukawil_locale";
+const STORAGE_KEY = "autoentrepreneur_locale";
+const LEGACY_STORAGE_KEY = "moukawil_locale";
 
 export function I18nProvider({
   children,
@@ -31,7 +32,7 @@ export function I18nProvider({
 
   useEffect(() => {
     // Initial sync from localStorage or html attribute
-    const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
+    const stored = (localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY)) as Locale | null;
     const activeLocale: Locale =
       stored === "ar" || stored === "fr"
         ? stored
@@ -43,7 +44,7 @@ export function I18nProvider({
     setMounted(true);
 
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && (e.newValue === "fr" || e.newValue === "ar")) {
+      if ((e.key === STORAGE_KEY || e.key === LEGACY_STORAGE_KEY) && (e.newValue === "fr" || e.newValue === "ar")) {
         setLocaleState(e.newValue);
         document.documentElement.dir = e.newValue === "ar" ? "rtl" : "ltr";
         document.documentElement.lang = e.newValue;
@@ -60,6 +61,9 @@ export function I18nProvider({
     document.cookie = `${STORAGE_KEY}=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
     document.documentElement.dir = newLocale === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = newLocale;
+    window.dispatchEvent(
+      new CustomEvent("autoentrepreneur:language-change", { detail: { lang: newLocale } })
+    );
     window.dispatchEvent(
       new CustomEvent("moukawil:language-change", { detail: { lang: newLocale } })
     );

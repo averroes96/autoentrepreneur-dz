@@ -1,5 +1,5 @@
 /**
- * Moukawil.dz - Complete Algerian Administrative UI Translations (FR / AR)
+ * Auto Entrepreneur DZ - Complete Algerian Administrative UI Translations (FR / AR)
  * Conformité : Journal Officiel de la République Algérienne (JORADP)
  * Loi n° 22-23 du 18 décembre 2022 (Statut de l'Auto-Entrepreneur) & Décret exécutif n° 23-197.
  */

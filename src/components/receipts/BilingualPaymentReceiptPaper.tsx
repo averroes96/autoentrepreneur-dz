@@ -408,8 +408,8 @@ export function BilingualPaymentReceiptPaper({
           <div className="text-[11px] text-slate-400 space-y-0.5 max-w-md">
             <p>
               {isArabic
-                ? "وثيقة رسمية صادرة إلكترونياً عن منصة المقاول الذاتي Moukawil.dz"
-                : "Document certifié édité sous la plateforme de facturation réglementaire Moukawil.dz."}
+                ? "وثيقة رسمية صادرة إلكترونياً عن منصة المقاول الذاتي Auto Entrepreneur DZ"
+                : "Document certifié édité sous la plateforme de facturation réglementaire Auto Entrepreneur DZ."}
             </p>
             <p className="font-mono text-[10px]">
               {isArabic ? "المعرف الفريد للمستند: " : "Empreinte documentaire : "}

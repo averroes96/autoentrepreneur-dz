@@ -16,7 +16,7 @@ export interface VaultStats {
 
 export interface VaultManifest {
   version: "1.0";
-  system: "Moukawil.dz Data Vault";
+  system: "Auto Entrepreneur DZ Data Vault";
   legalNotice: "Conforme Loi n° 22-23 portant statut de l'auto-entrepreneur en Algérie";
   exportedAt: string;
   tenantId: string;
@@ -231,7 +231,7 @@ export async function exportTenantVaultData(tenantId: string): Promise<VaultExpo
 
   const manifest: VaultManifest = {
     version: "1.0",
-    system: "Moukawil.dz Data Vault",
+    system: "Auto Entrepreneur DZ Data Vault",
     legalNotice: "Conforme Loi n° 22-23 portant statut de l'auto-entrepreneur en Algérie",
     exportedAt: new Date().toISOString(),
     tenantId,
@@ -263,7 +263,7 @@ export async function generateVaultJsonBuffer(
     const jsonOutput = JSON.stringify(envelope, null, 2);
     return {
       buffer: Buffer.from(jsonOutput, "utf8"),
-      filename: `Moukawil_Vault_Encrypted_${dateStr}_${safeName}.vault.json`,
+      filename: `AutoEntrepreneurDZ_Vault_Encrypted_${dateStr}_${safeName}.vault.json`,
     };
   }
 
@@ -271,7 +271,7 @@ export async function generateVaultJsonBuffer(
   const jsonOutput = JSON.stringify(container, null, 2);
   return {
     buffer: Buffer.from(jsonOutput, "utf8"),
-    filename: `Moukawil_Vault_Backup_${dateStr}_${safeName}.json`,
+    filename: `AutoEntrepreneurDZ_Vault_Backup_${dateStr}_${safeName}.json`,
   };
 }
 
@@ -320,7 +320,7 @@ export async function generateVaultZipArchive(
   const encSuffix = options?.passphrase ? "_Encrypted" : "";
   return {
     buffer: zipBuffer,
-    filename: `Moukawil_Vault_Backup${encSuffix}_${dateStr}_${safeName}.zip`,
+    filename: `AutoEntrepreneurDZ_Vault_Backup${encSuffix}_${dateStr}_${safeName}.zip`,
   };
 }
 
@@ -994,7 +994,7 @@ function generateExpensesCsv(expenses: any[]): string {
 function generateInstructionsText(manifest: VaultManifest): string {
   return `================================================================================
 RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE
-ARCHIVE DE COFFRE-FORT NUMÉRIQUE & SAUVEGARDE — MOUKAWIL.DZ
+ARCHIVE DE COFFRE-FORT NUMÉRIQUE & SAUVEGARDE — AUTO ENTREPRENEUR DZ
 (Conformément aux dispositions de la Loi n° 22-23 du 18 décembre 2022)
 ================================================================================
 
@@ -1018,8 +1018,8 @@ ARCHIVE DE COFFRE-FORT NUMÉRIQUE & SAUVEGARDE — MOUKAWIL.DZ
 
 3. PROCÉDURE DE RESTAURATION :
 --------------------------------------------------------------------------------
-Cette archive peut être restaurée à tout moment sur la plateforme Moukawil.dz :
-1. Connectez-vous à votre espace personnel Moukawil.dz.
+Cette archive peut être restaurée à tout moment sur la plateforme Auto Entrepreneur DZ :
+1. Connectez-vous à votre espace personnel Auto Entrepreneur DZ.
 2. Rendez-vous dans la section « Coffre-fort & Sauvegarde » (/backup).
 3. Glissez-déposez ce fichier (.zip ou le fichier data_vault.json inclus).
 4. Si un mot de passe a été configuré lors de l'exportation, saisissez-le pour déchiffrer vos données.
@@ -1027,7 +1027,7 @@ Cette archive peut être restaurée à tout moment sur la plateforme Moukawil.dz
 6. Validez : l'intégrité des données est revérifiée par empreinte SHA-256 avant toute écriture.
 
 ================================================================================
-Moukawil.dz • Plateforme de gestion pour Auto-Entrepreneurs en Algérie
+Auto Entrepreneur DZ • Plateforme de gestion pour Auto-Entrepreneurs en Algérie
 ================================================================================
 `;
 }

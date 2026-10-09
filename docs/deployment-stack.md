@@ -1,6 +1,6 @@
 # Cloud Architecture & Production Deployment Guide: Vercel + Supabase + Cloudflare R2 + Resend + Sentry
 
-This document details the production cloud architecture implemented for **MoukawilOS (Moukawil.dz)**:
+This document details the production cloud architecture implemented for **Auto Entrepreneur DZ** :
 - **Hosting & CDN**: [Vercel](https://vercel.com)
 - **Web Analytics & Core Web Vitals**: [Vercel Analytics & Speed Insights](https://vercel.com/analytics)
 - **Relational Database & Storage**: [Supabase (PostgreSQL)](https://supabase.com)
@@ -125,11 +125,11 @@ This document details the production cloud architecture implemented for **Moukaw
 ### Step 2: Configure Resend
 1. Create an account at [resend.com](https://resend.com).
 2. Generate an API Key under **API Keys**.
-3. (Production) Add your custom domain (e.g. `moukawil.dz`) or use testing domains.
+3. (Production) Add your custom domain (e.g. `autoentrepreneur.dz`) or use testing domains.
 
 ### Step 3: Configure Cloudflare R2
 1. In Cloudflare Dashboard, navigate to **R2 Object Storage**.
-2. Create a bucket named `moukawil-invoices`.
+2. Create a bucket named `autoentrepreneur-dz-invoices`.
 3. In **Manage R2 API Tokens**, create a token with "Object Read & Write" permissions.
 
 ### Step 4: Deploy on Vercel

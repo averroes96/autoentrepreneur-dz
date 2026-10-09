@@ -51,7 +51,7 @@ export function HomeView({ session }: HomeViewProps) {
             </div>
             <div>
               <span className="text-lg font-extrabold text-white tracking-tight">
-                Moukawil<span className="text-emerald-400">.dz</span>
+                Auto Entrepreneur <span className="text-emerald-400">DZ</span>
               </span>
             </div>
           </Link>
@@ -197,7 +197,7 @@ export function HomeView({ session }: HomeViewProps) {
                   <div className="w-3 h-3 rounded-full bg-amber-500/80" />
                   <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
                   <span className="ml-2 rtl:mr-2 text-xs font-mono text-slate-500">
-                    {isAr ? "moukawil.dz / لوحة-القيادة" : "moukawil.dz / tableau-de-bord"}
+                    {isAr ? "autoentrepreneur.dz / لوحة-القيادة" : "autoentrepreneur.dz / tableau-de-bord"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
@@ -486,7 +486,7 @@ export function HomeView({ session }: HomeViewProps) {
               <p className="text-xs text-slate-400 leading-relaxed">
                 {isAr
                   ? "في حال تجاوز السقف لمدة ثلاث سنوات متتالية، يلتزم المقاول بالتحول إلى شركة تجارية (ش.ذ.م.م أو ش.ش.ذ.م.م). ترسل المنصة تنبيهات مسبقة لتفادي أي إشكاليات قانونية."
-                  : "Si vous dépassez le plafond pendant 3 années consécutives, vous êtes tenu de changer de statut juridique et d'évoluer vers une société commerciale (EURL ou SARL). Moukawil.dz vous alerte en amont pour anticiper cette transition."}
+                  : "Si vous dépassez le plafond pendant 3 années consécutives, vous êtes tenu de changer de statut juridique et d'évoluer vers une société commerciale (EURL ou SARL). Auto Entrepreneur DZ vous alerte en amont pour anticiper cette transition."}
               </p>
             </div>
           </div>
@@ -503,8 +503,8 @@ export function HomeView({ session }: HomeViewProps) {
           </h2>
           <p className="text-sm text-slate-400 max-w-xl mx-auto">
             {isAr
-              ? "انضم إلى Moukawil.dz اليوم لإصدار فواتيرك الرسمية والتحكم التام في التزاماتك الجبائية."
-              : "Rejoignez Moukawil.dz dès aujourd'hui pour éditer vos factures conformes et garder le contrôle absolu sur votre fiscalité."}
+              ? "انضم إلى Auto Entrepreneur DZ اليوم لإصدار فواتيرك الرسمية والتحكم التام في التزاماتك الجبائية."
+              : "Rejoignez Auto Entrepreneur DZ dès aujourd'hui pour éditer vos factures conformes et garder le contrôle absolu sur votre fiscalité."}
           </p>
 
           <div className="flex items-center justify-center gap-4 pt-2">
@@ -536,8 +536,8 @@ export function HomeView({ session }: HomeViewProps) {
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
             <span className="font-semibold text-slate-400">
               {isAr
-                ? "Moukawil.dz — مطابق لأحكام القانون رقم 22-23 (الجمهورية الجزائرية)"
-                : "Moukawil.dz — Conforme Loi n° 22-23 (Algérie)"}
+                ? "Auto Entrepreneur DZ — مطابق لأحكام القانون رقم 22-23 (الجمهورية الجزائرية)"
+                : "Auto Entrepreneur DZ — Conforme Loi n° 22-23 (Algérie)"}
             </span>
           </div>
 

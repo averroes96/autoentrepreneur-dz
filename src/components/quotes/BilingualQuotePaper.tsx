@@ -83,8 +83,12 @@ export function BilingualQuotePaper({
         setLang(e.detail.lang);
       }
     };
+    window.addEventListener("autoentrepreneur:language-change", handleGlobalLang);
     window.addEventListener("moukawil:language-change", handleGlobalLang);
-    return () => window.removeEventListener("moukawil:language-change", handleGlobalLang);
+    return () => {
+      window.removeEventListener("autoentrepreneur:language-change", handleGlobalLang);
+      window.removeEventListener("moukawil:language-change", handleGlobalLang);
+    };
   }, []);
 
   const handlePrint = () => {

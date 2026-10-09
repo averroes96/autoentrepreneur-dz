@@ -130,7 +130,7 @@ export function AccountantPinGate({
 
           <div className="mt-8 pt-6 border-t border-slate-100 text-center">
             <span className="text-[11px] text-slate-400">
-              Plateforme certifiée Moukawil.dz • Conforme Décret exécutif n° 23-197
+              Plateforme certifiée Auto Entrepreneur DZ • Conforme Décret exécutif n° 23-197
             </span>
           </div>
         </div>

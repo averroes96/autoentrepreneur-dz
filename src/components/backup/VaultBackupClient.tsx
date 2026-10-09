@@ -106,7 +106,7 @@ export function VaultBackupClient({
     const downloadUrl = `/api/backup/export?${queryParams.toString()}`;
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = `Moukawil_Vault_Backup.${exportFormat}`;
+    link.download = `AutoEntrepreneurDZ_Vault_Backup.${exportFormat}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

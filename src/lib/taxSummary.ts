@@ -243,7 +243,7 @@ export function generateTaxSummaryCsv(summary: AnnualTaxSummary): string {
   }
 
   lines.push("");
-  lines.push(`Généré le ${new Date().toLocaleDateString("fr-DZ")} par Moukawil.dz — Conforme Loi 22-23`);
+  lines.push(`Généré le ${new Date().toLocaleDateString("fr-DZ")} par Auto Entrepreneur DZ — Conforme Loi 22-23`);
 
   return bom + lines.join("\r\n");
 }

@@ -58,7 +58,7 @@ export default function LoginPage() {
           <ShieldCheck className="w-8 h-8" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-white">
-          Moukawil<span className="text-emerald-400">.dz</span>
+          Auto Entrepreneur <span className="text-emerald-400">DZ</span>
         </h1>
         <p className="mt-2 text-sm text-slate-300">
           {t("loginSubtitle")}

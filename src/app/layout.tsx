@@ -22,7 +22,7 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "Moukawil.dz | Gestion Auto-Entrepreneur Algérie",
+  title: "Auto Entrepreneur DZ | Gestion Auto-Entrepreneur Algérie",
   description:
     "Application de gestion d'activité, facturation conforme sans TVA et suivi du plafond IFU pour auto-entrepreneurs en Algérie (Loi 22-23).",
 };
@@ -36,7 +36,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const cookieStore = await cookies();
-  const rawLocale = cookieStore.get("moukawil_locale")?.value;
+  const rawLocale = cookieStore.get("autoentrepreneur_locale")?.value || cookieStore.get("moukawil_locale")?.value;
   const initialLocale: "ar" | "fr" = rawLocale === "ar" ? "ar" : "fr";
   const dir = initialLocale === "ar" ? "rtl" : "ltr";
 

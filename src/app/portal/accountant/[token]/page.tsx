@@ -60,7 +60,7 @@ export default async function AccountantPortalPage({
           </p>
 
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500">
-            Plateforme d&apos;Audit Moukawil.dz • Loi n° 22-23 du 18 décembre 2022
+            Plateforme d&apos;Audit Auto Entrepreneur DZ • Loi n° 22-23 du 18 décembre 2022
           </div>
         </div>
       </div>

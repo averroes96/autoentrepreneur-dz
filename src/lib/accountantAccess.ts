@@ -412,7 +412,7 @@ DOSSIER D'AUDIT COMPTABLE & FISCAL — STATUT DE L'AUTO-ENTREPRENEUR
 - Date de génération de l'archive : ${dateStr}
 - Destinataire de l'audit : ${auditData.access?.name || "Titulaire du compte (Auto-Entrepreneur)"} ${auditData.access?.email ? `(${auditData.access.email})` : ""}
 - Intégrité : Tous les fichiers inclus dans cette archive ont été exportés depuis le registre
-  immuable horodaté de la plateforme Moukawil.dz.
+  immuable horodaté de la plateforme Auto Entrepreneur DZ.
 ================================================================================
 `;
 }

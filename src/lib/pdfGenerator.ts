@@ -1038,7 +1038,7 @@ export async function generateTaxSummaryPdfBuffer(summary: AnnualTaxSummary): Pr
       doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
       doc.fontSize(6.5).font("Helvetica").fillColor(mutedColor);
       doc.text(
-        `Bordereau Récapitulatif Annuel édité par Moukawil.dz pour ${summary.seller.fullName} • NIF : ${summary.seller.nif || "—"} • Conforme Loi 22-23`,
+        `Bordereau Récapitulatif Annuel édité par Auto Entrepreneur DZ pour ${summary.seller.fullName} • NIF : ${summary.seller.nif || "—"} • Conforme Loi 22-23`,
         margin,
         footerY + 6,
         { align: "center", width: contentWidth }
@@ -1275,7 +1275,7 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
       doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
       doc.fontSize(6.5).font("Helvetica").fillColor(mutedColor);
       doc.text(
-        `Quittance officielle générée par Moukawil.dz pour ${data.seller.fullName} • NIF : ${data.seller.nif || "—"} • Conforme Loi 22-23`,
+        `Quittance officielle générée par Auto Entrepreneur DZ pour ${data.seller.fullName} • NIF : ${data.seller.nif || "—"} • Conforme Loi 22-23`,
         margin,
         footerY + 6,
         { align: "center", width: contentWidth }
@@ -1507,7 +1507,7 @@ export function generateClientStatementPdfBuffer(data: ClientLedgerData): Promis
       doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
       doc.fontSize(6.5).font("Helvetica").fillColor(mutedColor);
       doc.text(
-        `Relevé de compte certifié édité par Moukawil.dz pour ${data.seller.fullName} • NIF : ${data.seller.nif || "—"} • Conforme Loi 22-23`,
+        `Relevé de compte certifié édité par Auto Entrepreneur DZ pour ${data.seller.fullName} • NIF : ${data.seller.nif || "—"} • Conforme Loi 22-23`,
         margin,
         footerY + 6,
         { align: "center", width: contentWidth }
