@@ -1,6 +1,6 @@
 # Guide d'Audit Légal & Accès Expert-Comptable (Loi 22-23)
 
-Ce guide est destiné aux auto-entrepreneurs et à leurs **experts-comptables / commissaires aux comptes**. Il détaille le fonctionnement du portail d'audit dédié en lecture seule, le modèle de sécurité à code PIN, et la structure de l'archive ZIP d'audit légal générée par Moukawil.dz.
+Ce guide est destiné aux auto-entrepreneurs et à leurs **experts-comptables / commissaires aux comptes**. Il détaille le fonctionnement du portail d'audit dédié en lecture seule, le modèle de sécurité à code PIN, et la structure de l'archive ZIP d'audit légal générée par Auto Entrepreneur DZ.
 
 ---
 
@@ -11,7 +11,7 @@ En vertu de la **Loi n° 22-23 du 18 décembre 2022** portant statut de l'auto-e
 - En contrepartie, il est soumis à la tenue obligatoire d'un **Livre des Recettes** chronologique inaltérable et d'un **Registre des Dépenses**.
 - L'assiette d'imposition à **l'Impôt Forfaitaire Unique (IFU)** à 0,5% (Loi de Finances 2024) est calculée sur le **Chiffre d'Affaires Net Encaissé** (comptabilité de caisse / encaissement réel).
 
-Le module **Accès Expert-Comptable** de Moukawil.dz permet au professionnel du chiffre de certifier les écritures annuelles, de vérifier l'absence de dépassement du plafond de 5 000 000 DZD, et d'établir la déclaration fiscale annuelle (série G n° 12 bis).
+Le module **Accès Expert-Comptable** de Auto Entrepreneur DZ permet au professionnel du chiffre de certifier les écritures annuelles, de vérifier l'absence de dépassement du plafond de 5 000 000 DZD, et d'établir la déclaration fiscale annuelle (série G n° 12 bis).
 
 ---
 
@@ -20,7 +20,7 @@ Le module **Accès Expert-Comptable** de Moukawil.dz permet au professionnel du 
 ### 2.1 Invitation et Token Sécurisé
 - L'auto-entrepreneur génère un lien d'accès nominatif depuis l'onglet `/accountant`.
 - Un jeton cryptographique aléatoire de 32 octets (`crypto.randomBytes(32).toString('hex')`) est généré.
-- Le lien prend la forme : `https://moukawil.dz/portal/accountant/<token>`.
+- Le lien prend la forme : `https://autoentrepreneur.dz/portal/accountant/<token>`.
 - Une durée de validité est obligatoirement fixée : **7 jours, 30 jours, 90 jours ou 1 an**.
 - L'auto-entrepreneur peut **révoquer** l'accès à tout instant.
 
