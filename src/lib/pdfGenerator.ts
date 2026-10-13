@@ -173,51 +173,63 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
 
       const headerTopY = margin + 12;
-      let leftTitleX = margin;
-
-      // Center logo option
-      if (logoBuf && logoPos === "CENTER") {
-        const centerW = 100;
-        const centerH = 34;
-        const centerLogoX = (pageWidth - centerW) / 2;
-        tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
-          fit: [centerW, centerH],
-          align: "center",
-          valign: "center",
-        });
-      }
-
-      // Left logo option
-      if (logoBuf && logoPos === "LEFT") {
-        const leftW = 75;
-        const leftH = 38;
-        const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
-          fit: [leftW, leftH],
-          valign: "center",
-        });
-        if (drawn) {
-          leftTitleX = margin + leftW + 12;
-        }
-      }
-
-      // Invoice Title
-      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE", leftTitleX, headerTopY);
-      doc
-        .fontSize(8)
-        .font("Helvetica-Bold")
-        .fillColor(primaryColor)
-        .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / IFU)", leftTitleX, headerTopY + 24);
-
-      // Invoice metadata on the right
-      const metaY = headerTopY;
       const dateStr = new Date(data.invoice.issueDate).toLocaleDateString("fr-DZ", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
 
-      if (logoBuf && logoPos === "RIGHT") {
-        const rightW = 75;
+      let boxesY = 120;
+
+      if (logoBuf && logoPos === "CENTER") {
+        // --- 1. CENTERED LOGO & HEADER ---
+        const centerW = 110;
+        const centerH = 36;
+        const centerLogoX = (pageWidth - centerW) / 2;
+        tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
+          fit: [centerW, centerH],
+          align: "center",
+          valign: "center",
+        });
+
+        const titleY = headerTopY + centerH + 6;
+        doc.fontSize(20).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE", margin, titleY, {
+          align: "center",
+          width: contentWidth,
+        });
+        doc
+          .fontSize(7.5)
+          .font("Helvetica-Bold")
+          .fillColor(primaryColor)
+          .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / IFU)", margin, titleY + 22, {
+            align: "center",
+            width: contentWidth,
+          });
+        doc
+          .fontSize(8.5)
+          .font("Helvetica")
+          .fillColor(mutedColor)
+          .text(
+            `N° de Facture : ${data.invoice.invoiceNumber || "BROUILLON"}    •    Date d'émission : ${dateStr}`,
+            margin,
+            titleY + 34,
+            { align: "center", width: contentWidth }
+          );
+
+        doc.moveTo(margin, titleY + 48).lineTo(margin + contentWidth, titleY + 48).strokeColor(borderColor).stroke();
+        boxesY = titleY + 56;
+      } else if (logoBuf && logoPos === "RIGHT") {
+        // --- 2. LOGO ON RIGHT, TITLE ON LEFT ---
+        doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE", margin, headerTopY);
+        doc
+          .fontSize(8)
+          .font("Helvetica-Bold")
+          .fillColor(primaryColor)
+          .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / IFU)", margin, headerTopY + 24, {
+            width: 230,
+          });
+
+        const rightW = 80;
         const rightH = 38;
         const rightLogoX = margin + contentWidth - rightW;
         tryDrawImage(doc, logoBuf, rightLogoX, headerTopY, {
@@ -227,32 +239,56 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
         });
 
         doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
-        doc.text("N° de Facture :", 270, metaY, { width: 90, align: "right" });
+        doc.text("N° de Facture :", 240, headerTopY, { width: 95, align: "right" });
         doc
           .font("Helvetica-Bold")
           .fillColor(darkColor)
-          .text(data.invoice.invoiceNumber || "BROUILLON", 365, metaY, { width: 95 });
+          .text(data.invoice.invoiceNumber || "BROUILLON", 340, headerTopY, { width: 90 });
 
         doc.font("Helvetica").fillColor(mutedColor);
-        doc.text("Date d'émission :", 270, metaY + 16, { width: 90, align: "right" });
-        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 365, metaY + 16, { width: 95 });
+        doc.text("Date d'émission :", 240, headerTopY + 16, { width: 95, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 340, headerTopY + 16, { width: 90 });
+
+        doc.moveTo(margin, headerTopY + 46).lineTo(margin + contentWidth, headerTopY + 46).strokeColor(borderColor).stroke();
+        boxesY = headerTopY + 54;
       } else {
-        doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
-        doc.text("N° de Facture :", 360, metaY, { width: 90, align: "right" });
+        // --- 3. LOGO ON LEFT (OR NO LOGO) ---
+        let leftTitleX = margin;
+        if (logoBuf && logoPos === "LEFT") {
+          const leftW = 80;
+          const leftH = 38;
+          const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
+            fit: [leftW, leftH],
+            valign: "center",
+          });
+          if (drawn) {
+            leftTitleX = margin + leftW + 12;
+          }
+        }
+
+        doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE", leftTitleX, headerTopY);
+        doc
+          .fontSize(8)
+          .font("Helvetica-Bold")
+          .fillColor(primaryColor)
+          .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / IFU)", leftTitleX, headerTopY + 24, {
+            width: 220,
+          });
+
+        doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° de Facture :", 340, headerTopY, { width: 95, align: "right" });
         doc
           .font("Helvetica-Bold")
           .fillColor(darkColor)
-          .text(data.invoice.invoiceNumber || "BROUILLON", 455, metaY, { width: 100 });
+          .text(data.invoice.invoiceNumber || "BROUILLON", 440, headerTopY, { width: 115 });
 
         doc.font("Helvetica").fillColor(mutedColor);
-        doc.text("Date d'émission :", 360, metaY + 16, { width: 90, align: "right" });
-        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 16, { width: 100 });
+        doc.text("Date d'émission :", 340, headerTopY + 16, { width: 95, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 440, headerTopY + 16, { width: 115 });
+
+        doc.moveTo(margin, headerTopY + 46).lineTo(margin + contentWidth, headerTopY + 46).strokeColor(borderColor).stroke();
+        boxesY = headerTopY + 54;
       }
-
-      doc.moveDown(2);
-
-      // --- SELLER & CLIENT BOXES ---
-      const boxesY = 120;
       const boxWidth = (contentWidth - 16) / 2;
       const boxHeight = template.key === "COMPACT" ? 108 : 120;
 
@@ -282,7 +318,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       if (client.email) doc.text(`Email : ${client.email}`, clientX + 12, boxesY + 104);
 
       // --- TABLE OF LINE ITEMS ---
-      let tableY = 260;
+      let tableY = boxesY + boxHeight + 14;
       const isDetailed = Boolean((data.invoice as any).showDetailedItems);
 
       const col1 = margin + 12;
@@ -359,38 +395,53 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
 
       tableY += isForeign ? 76 : 56;
 
-      // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
-      doc.roundedRect(margin, tableY, contentWidth, 44, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
-      doc.rect(margin, tableY, 4, 44).fill(primaryColor);
+      // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
+      const footerLineY = 788;
+      const legalBoxH = 44;
+      const notesBoxH = data.invoice.notes ? 36 : 0;
+      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 10 : 0) + 16;
 
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 8);
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, tableY + 20, {
-        width: contentWidth - 24,
-      });
+      // If content overflows into bottom area, add new page
+      if (tableY + neededBottomSpace > footerLineY) {
+        doc.addPage();
+        drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
+        tableY = margin + 20;
+      }
 
-      tableY += 56;
+      // Pin legal mention right above the footer line
+      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 10 : 0) + 12, footerLineY - 8 - legalBoxH);
+      const notesY = legalY - (notesBoxH ? notesBoxH + 10 : 0);
 
       // --- NOTES / MODALITÉS DE RÈGLEMENT ---
       if (data.invoice.notes) {
-        doc.roundedRect(margin, tableY, contentWidth, 36, 4).fillAndStroke(lightBg, borderColor);
-        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("MODALITÉS DE RÈGLEMENT & REMARQUES :", margin + 10, tableY + 7);
-        doc.fillColor(darkColor).fontSize(8).font("Helvetica").text(data.invoice.notes, margin + 10, tableY + 18, { width: contentWidth - 20 });
+        doc.roundedRect(margin, notesY, contentWidth, notesBoxH, cornerRadius).fillAndStroke(lightBg, borderColor);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("MODALITÉS DE RÈGLEMENT & REMARQUES :", margin + 10, notesY + 6);
+        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.invoice.notes, margin + 10, notesY + 17, { width: contentWidth - 20, lineGap: 1 });
       }
 
+      // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
+      doc.roundedRect(margin, legalY, contentWidth, legalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
+      doc.rect(margin, legalY, 4, legalBoxH).fill(primaryColor);
+
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 7);
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, legalY + 19, {
+        width: contentWidth - 24,
+        lineGap: 1,
+      });
+
       // --- FOOTER ---
-      const footerY = 770;
-      doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
+      doc.moveTo(margin, footerLineY).lineTo(margin + contentWidth, footerLineY).strokeColor(borderColor).stroke();
       doc.fontSize(7).font("Helvetica").fillColor(mutedColor);
       doc.text(
         `Facture émise conformément aux dispositions de la loi n° 22-23 du 18 décembre 2022 portant statut de l'auto-entrepreneur.`,
         margin,
-        footerY + 8,
+        footerLineY + 6,
         { align: "center", width: contentWidth }
       );
       doc.text(
         `Titulaire immatriculé au Registre National de l'Auto-Entrepreneur (RNAE N° ${seller.rnaeNumber || "—"}) — NIF : ${seller.nif || "—"}`,
         margin,
-        footerY + 18,
+        footerLineY + 16,
         { align: "center", width: contentWidth }
       );
 
@@ -503,48 +554,70 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
 
       const headerTopY = margin + 12;
-      let leftTitleX = margin;
+      const dateStr = new Date(data.quote.issueDate).toLocaleDateString("fr-DZ", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const validStr = data.quote.validUntil
+        ? new Date(data.quote.validUntil).toLocaleDateString("fr-DZ", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        : null;
+
+      let cardY = margin + 65;
 
       if (logoBuf && logoPos === "CENTER") {
-        const centerW = 100;
-        const centerH = 34;
+        // --- 1. CENTERED LOGO & HEADER ---
+        const centerW = 110;
+        const centerH = 36;
         const centerLogoX = (pageWidth - centerW) / 2;
         tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
           fit: [centerW, centerH],
           align: "center",
           valign: "center",
         });
-      }
 
-      if (logoBuf && logoPos === "LEFT") {
-        const leftW = 75;
-        const leftH = 38;
-        const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
-          fit: [leftW, leftH],
-          valign: "center",
+        const titleY = headerTopY + centerH + 6;
+        doc.fontSize(20).font("Helvetica-Bold").fillColor(darkColor).text("DEVIS", margin, titleY, {
+          align: "center",
+          width: contentWidth,
         });
-        if (drawn) {
-          leftTitleX = margin + leftW + 12;
-        }
-      }
+        doc
+          .fontSize(7.5)
+          .font("Helvetica-Bold")
+          .fillColor(accentColor)
+          .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / PROFORMA)", margin, titleY + 22, {
+            align: "center",
+            width: contentWidth,
+          });
+        doc
+          .fontSize(8.5)
+          .font("Helvetica")
+          .fillColor(mutedColor)
+          .text(
+            `N° de Devis : ${data.quote.quoteNumber || "PROJET BROUILLON"}    •    Date : ${dateStr}${validStr ? `    •    Validité : ${validStr}` : ""}`,
+            margin,
+            titleY + 34,
+            { align: "center", width: contentWidth }
+          );
 
-      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("DEVIS", leftTitleX, headerTopY);
-      doc
-        .fontSize(8)
-        .font("Helvetica-Bold")
-        .fillColor(accentColor)
-        .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / PROFORMA)", leftTitleX, headerTopY + 24);
+        doc.moveTo(margin, titleY + 48).lineTo(margin + contentWidth, titleY + 48).strokeColor(borderColor).stroke();
+        cardY = titleY + 56;
+      } else if (logoBuf && logoPos === "RIGHT") {
+        // --- 2. LOGO ON RIGHT, TITLE ON LEFT ---
+        doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("DEVIS", margin, headerTopY);
+        doc
+          .fontSize(8)
+          .font("Helvetica-Bold")
+          .fillColor(accentColor)
+          .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / PROFORMA)", margin, headerTopY + 24, {
+            width: 230,
+          });
 
-      // Metadata on the right
-      const metaY = headerTopY;
-      const dateStr = new Date(data.quote.issueDate).toLocaleDateString("fr-DZ", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-
-      if (logoBuf && logoPos === "RIGHT") {
-        const rightW = 75;
+        const rightW = 80;
         const rightH = 38;
         const rightLogoX = margin + contentWidth - rightW;
         tryDrawImage(doc, logoBuf, rightLogoX, headerTopY, {
@@ -554,52 +627,68 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
         });
 
         doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
-        doc.text("N° de Devis :", 270, metaY, { width: 90, align: "right" });
+        doc.text("N° de Devis :", 240, headerTopY, { width: 95, align: "right" });
         doc
           .font("Helvetica-Bold")
           .fillColor(darkColor)
-          .text(data.quote.quoteNumber || "PROJET BROUILLON", 365, metaY, { width: 95, align: "right" });
+          .text(data.quote.quoteNumber || "PROJET BROUILLON", 340, headerTopY, { width: 90 });
 
         doc.font("Helvetica").fillColor(mutedColor);
-        doc.text("Date d'émission :", 270, metaY + 14, { width: 90, align: "right" });
-        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 365, metaY + 14, { width: 95, align: "right" });
+        doc.text("Date d'émission :", 240, headerTopY + 14, { width: 95, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 340, headerTopY + 14, { width: 90 });
 
-        if (data.quote.validUntil) {
-          const validStr = new Date(data.quote.validUntil).toLocaleDateString("fr-DZ", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
+        if (validStr) {
           doc.font("Helvetica").fillColor(mutedColor);
-          doc.text("Valable jusqu'au :", 260, metaY + 28, { width: 100, align: "right" });
-          doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 365, metaY + 28, { width: 95, align: "right" });
+          doc.text("Valable jusqu'au :", 230, headerTopY + 28, { width: 105, align: "right" });
+          doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 340, headerTopY + 28, { width: 90 });
         }
+
+        doc.moveTo(margin, headerTopY + 46).lineTo(margin + contentWidth, headerTopY + 46).strokeColor(borderColor).stroke();
+        cardY = headerTopY + 54;
       } else {
-        doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
-        doc.text("N° de Devis :", 360, metaY, { width: 90, align: "right" });
+        // --- 3. LOGO ON LEFT (OR NO LOGO) ---
+        let leftTitleX = margin;
+        if (logoBuf && logoPos === "LEFT") {
+          const leftW = 80;
+          const leftH = 38;
+          const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
+            fit: [leftW, leftH],
+            valign: "center",
+          });
+          if (drawn) {
+            leftTitleX = margin + leftW + 12;
+          }
+        }
+
+        doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("DEVIS", leftTitleX, headerTopY);
+        doc
+          .fontSize(8)
+          .font("Helvetica-Bold")
+          .fillColor(accentColor)
+          .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / PROFORMA)", leftTitleX, headerTopY + 24, {
+            width: 220,
+          });
+
+        doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° de Devis :", 340, headerTopY, { width: 95, align: "right" });
         doc
           .font("Helvetica-Bold")
           .fillColor(darkColor)
-          .text(data.quote.quoteNumber || "PROJET BROUILLON", 455, metaY, { width: 100, align: "right" });
+          .text(data.quote.quoteNumber || "PROJET BROUILLON", 440, headerTopY, { width: 115 });
 
         doc.font("Helvetica").fillColor(mutedColor);
-        doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
-        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
+        doc.text("Date d'émission :", 340, headerTopY + 14, { width: 95, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 440, headerTopY + 14, { width: 115 });
 
-        if (data.quote.validUntil) {
-          const validStr = new Date(data.quote.validUntil).toLocaleDateString("fr-DZ", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
+        if (validStr) {
           doc.font("Helvetica").fillColor(mutedColor);
-          doc.text("Valable jusqu'au :", 350, metaY + 28, { width: 100, align: "right" });
-          doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 455, metaY + 28, { width: 100, align: "right" });
+          doc.text("Valable jusqu'au :", 330, headerTopY + 28, { width: 105, align: "right" });
+          doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 440, headerTopY + 28, { width: 115 });
         }
-      }
 
-      // --- SENDER & CLIENT CARDS ---
-      const cardY = margin + 65;
+        doc.moveTo(margin, headerTopY + 46).lineTo(margin + contentWidth, headerTopY + 46).strokeColor(borderColor).stroke();
+        cardY = headerTopY + 54;
+      }
       const cardWidth = (contentWidth - 16) / 2;
       const cardHeight = template.key === "COMPACT" ? 100 : 110;
 
@@ -700,43 +789,58 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
       tableY += isQuoteForeign ? 74 : 54;
 
-      // --- LEGAL NOTE ---
-      doc.roundedRect(margin, tableY, contentWidth, 38, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
-      doc.rect(margin, tableY, 4, 38).fill(accentColor);
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 6);
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.quote.vatExemptionNote, margin + 12, tableY + 18, {
-        width: contentWidth - 24,
-      });
+      // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
+      const footerLineY = 788;
+      const legalBoxH = 40;
+      const approvalBoxH = 48;
+      const neededBottomSpace = legalBoxH + approvalBoxH + 20;
 
-      tableY += 48;
+      // If content overflows into bottom area, add new page
+      if (tableY + neededBottomSpace > footerLineY) {
+        doc.addPage();
+        drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
+        tableY = margin + 20;
+      }
+
+      // Pin legal note right above the footer line
+      const legalY = Math.max(tableY + approvalBoxH + 12, footerLineY - 8 - legalBoxH);
+      const approvalY = legalY - approvalBoxH - 8;
 
       // --- NOTES & APPROVAL BOX ---
       if (data.quote.notes) {
-        doc.roundedRect(margin, tableY, contentWidth - 180, 50, 4).fillAndStroke(lightBg, borderColor);
-        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("CONDITIONS DU DEVIS :", margin + 10, tableY + 7);
-        doc.fillColor(darkColor).fontSize(8).font("Helvetica").text(data.quote.notes, margin + 10, tableY + 18, { width: contentWidth - 200 });
+        doc.roundedRect(margin, approvalY, contentWidth - 180, approvalBoxH, cornerRadius).fillAndStroke(lightBg, borderColor);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("CONDITIONS DU DEVIS :", margin + 10, approvalY + 6);
+        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.quote.notes, margin + 10, approvalY + 16, { width: contentWidth - 200, lineGap: 1 });
       }
 
       // Client Signature & Stamp Box
       const sigX = margin + contentWidth - 165;
-      doc.roundedRect(sigX, tableY, 165, 50, 4).fillAndStroke("#ffffff", borderColor);
-      doc.fillColor(mutedColor).fontSize(7).font("Helvetica-Bold").text("BON POUR ACCORD ET COMMANDE", sigX + 8, tableY + 6, { width: 150, align: "center" });
-      doc.fontSize(6.5).font("Helvetica").text("Date et signature précédées de la mention 'Bon pour accord'", sigX + 8, tableY + 17, { width: 150, align: "center" });
+      doc.roundedRect(sigX, approvalY, 165, approvalBoxH, cornerRadius).fillAndStroke("#ffffff", borderColor);
+      doc.fillColor(mutedColor).fontSize(7).font("Helvetica-Bold").text("BON POUR ACCORD ET COMMANDE", sigX + 8, approvalY + 6, { width: 150, align: "center" });
+      doc.fontSize(6).font("Helvetica").text("Date et signature précédées de la mention 'Bon pour accord'", sigX + 8, approvalY + 18, { width: 150, align: "center" });
+
+      // --- MANDATORY LEGAL NOTE ---
+      doc.roundedRect(margin, legalY, contentWidth, legalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
+      doc.rect(margin, legalY, 4, legalBoxH).fill(accentColor);
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 6);
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.quote.vatExemptionNote, margin + 12, legalY + 18, {
+        width: contentWidth - 24,
+        lineGap: 1,
+      });
 
       // --- FOOTER ---
-      const footerY = 770;
-      doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
+      doc.moveTo(margin, footerLineY).lineTo(margin + contentWidth, footerLineY).strokeColor(borderColor).stroke();
       doc.fontSize(7).font("Helvetica").fillColor(mutedColor);
       doc.text(
         `Devis établi conformément aux dispositions de la loi n° 22-23 du 18 décembre 2022 portant statut de l'auto-entrepreneur.`,
         margin,
-        footerY + 8,
+        footerLineY + 6,
         { align: "center", width: contentWidth }
       );
       doc.text(
         `Titulaire immatriculé au Registre National de l'Auto-Entrepreneur (RNAE N° ${seller.rnaeNumber || "—"}) — NIF : ${seller.nif || "—"}`,
         margin,
-        footerY + 18,
+        footerLineY + 16,
         { align: "center", width: contentWidth }
       );
 
@@ -850,48 +954,63 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
 
       const headerTopY = margin + 12;
-      let leftTitleX = margin;
-
-      if (logoBuf && logoPos === "CENTER") {
-        const centerW = 100;
-        const centerH = 34;
-        const centerLogoX = (pageWidth - centerW) / 2;
-        tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
-          fit: [centerW, centerH],
-          align: "center",
-          valign: "center",
-        });
-      }
-
-      if (logoBuf && logoPos === "LEFT") {
-        const leftW = 75;
-        const leftH = 38;
-        const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
-          fit: [leftW, leftH],
-          valign: "center",
-        });
-        if (drawn) {
-          leftTitleX = margin + leftW + 12;
-        }
-      }
-
-      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE D'AVOIR", leftTitleX, headerTopY);
-      doc
-        .fontSize(8)
-        .font("Helvetica-Bold")
-        .fillColor(accentColor)
-        .text("NOTE DE CRÉDIT COMPTABLE — ALGÉRIE (LOI 22-23 / IFU)", leftTitleX, headerTopY + 24);
-
-      // Metadata on the right
-      const metaY = headerTopY;
       const dateStr = new Date(data.creditNote.issueDate).toLocaleDateString("fr-DZ", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
 
-      if (logoBuf && logoPos === "RIGHT") {
-        const rightW = 75;
+      let refY = margin + 50;
+
+      if (logoBuf && logoPos === "CENTER") {
+        // --- 1. CENTERED LOGO & HEADER ---
+        const centerW = 110;
+        const centerH = 36;
+        const centerLogoX = (pageWidth - centerW) / 2;
+        tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
+          fit: [centerW, centerH],
+          align: "center",
+          valign: "center",
+        });
+
+        const titleY = headerTopY + centerH + 6;
+        doc.fontSize(20).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE D'AVOIR", margin, titleY, {
+          align: "center",
+          width: contentWidth,
+        });
+        doc
+          .fontSize(7.5)
+          .font("Helvetica-Bold")
+          .fillColor(accentColor)
+          .text("NOTE DE CRÉDIT COMPTABLE — ALGÉRIE (LOI 22-23 / IFU)", margin, titleY + 22, {
+            align: "center",
+            width: contentWidth,
+          });
+        doc
+          .fontSize(8.5)
+          .font("Helvetica")
+          .fillColor(mutedColor)
+          .text(
+            `N° d'Avoir : ${data.creditNote.creditNoteNumber || "BROUILLON"}    •    Date d'émission : ${dateStr}`,
+            margin,
+            titleY + 34,
+            { align: "center", width: contentWidth }
+          );
+
+        doc.moveTo(margin, titleY + 48).lineTo(margin + contentWidth, titleY + 48).strokeColor(borderColor).stroke();
+        refY = titleY + 54;
+      } else if (logoBuf && logoPos === "RIGHT") {
+        // --- 2. LOGO ON RIGHT, TITLE ON LEFT ---
+        doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE D'AVOIR", margin, headerTopY);
+        doc
+          .fontSize(8)
+          .font("Helvetica-Bold")
+          .fillColor(accentColor)
+          .text("NOTE DE CRÉDIT COMPTABLE — ALGÉRIE (LOI 22-23 / IFU)", margin, headerTopY + 24, {
+            width: 230,
+          });
+
+        const rightW = 80;
         const rightH = 38;
         const rightLogoX = margin + contentWidth - rightW;
         tryDrawImage(doc, logoBuf, rightLogoX, headerTopY, {
@@ -901,30 +1020,58 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
         });
 
         doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
-        doc.text("N° d'Avoir :", 270, metaY, { width: 90, align: "right" });
+        doc.text("N° d'Avoir :", 240, headerTopY, { width: 95, align: "right" });
         doc
           .font("Helvetica-Bold")
           .fillColor(darkColor)
-          .text(data.creditNote.creditNoteNumber || "BROUILLON", 365, metaY, { width: 95, align: "right" });
+          .text(data.creditNote.creditNoteNumber || "BROUILLON", 340, headerTopY, { width: 90 });
 
         doc.font("Helvetica").fillColor(mutedColor);
-        doc.text("Date d'émission :", 270, metaY + 14, { width: 90, align: "right" });
-        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 365, metaY + 14, { width: 95, align: "right" });
+        doc.text("Date d'émission :", 240, headerTopY + 14, { width: 95, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 340, headerTopY + 14, { width: 90 });
+
+        doc.moveTo(margin, headerTopY + 46).lineTo(margin + contentWidth, headerTopY + 46).strokeColor(borderColor).stroke();
+        refY = headerTopY + 52;
       } else {
-        doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
-        doc.text("N° d'Avoir :", 360, metaY, { width: 90, align: "right" });
+        // --- 3. LOGO ON LEFT (OR NO LOGO) ---
+        let leftTitleX = margin;
+        if (logoBuf && logoPos === "LEFT") {
+          const leftW = 80;
+          const leftH = 38;
+          const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
+            fit: [leftW, leftH],
+            valign: "center",
+          });
+          if (drawn) {
+            leftTitleX = margin + leftW + 12;
+          }
+        }
+
+        doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE D'AVOIR", leftTitleX, headerTopY);
+        doc
+          .fontSize(8)
+          .font("Helvetica-Bold")
+          .fillColor(accentColor)
+          .text("NOTE DE CRÉDIT COMPTABLE — ALGÉRIE (LOI 22-23 / IFU)", leftTitleX, headerTopY + 24, {
+            width: 220,
+          });
+
+        doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° d'Avoir :", 340, headerTopY, { width: 95, align: "right" });
         doc
           .font("Helvetica-Bold")
           .fillColor(darkColor)
-          .text(data.creditNote.creditNoteNumber || "BROUILLON", 455, metaY, { width: 100, align: "right" });
+          .text(data.creditNote.creditNoteNumber || "BROUILLON", 440, headerTopY, { width: 115 });
 
         doc.font("Helvetica").fillColor(mutedColor);
-        doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
-        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
+        doc.text("Date d'émission :", 340, headerTopY + 14, { width: 95, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 440, headerTopY + 14, { width: 115 });
+
+        doc.moveTo(margin, headerTopY + 46).lineTo(margin + contentWidth, headerTopY + 46).strokeColor(borderColor).stroke();
+        refY = headerTopY + 52;
       }
 
       // Referenced invoice badge
-      const refY = margin + 50;
       doc.roundedRect(margin, refY, contentWidth, 24, cornerRadius).fillAndStroke("#fff1f2", "#fecdd3");
       doc.rect(margin, refY, 4, 24).fill(accentColor);
       doc.fillColor("#9f1239").fontSize(8).font("Helvetica-Bold").text("RÉFÉRENCE FACTURE D'ORIGINE :", margin + 12, refY + 7);
@@ -1033,36 +1180,52 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
 
       tableY += isCreditForeign ? 74 : 54;
 
-      // --- LEGAL NOTE ---
-      doc.roundedRect(margin, tableY, contentWidth, 38, 4).fillAndStroke("#f0fdf4", "#bbf7d0");
-      doc.rect(margin, tableY, 4, 38).fill("#059669");
-      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 6);
-      doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.creditNote.vatExemptionNote, margin + 12, tableY + 18, {
-        width: contentWidth - 24,
-      });
+      // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
+      const footerLineY = 788;
+      const legalBoxH = 40;
+      const notesBoxH = data.creditNote.notes ? 36 : 0;
+      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 10 : 0) + 16;
 
-      tableY += 48;
-
-      if (data.creditNote.notes) {
-        doc.roundedRect(margin, tableY, contentWidth, 36, 4).fillAndStroke(lightBg, borderColor);
-        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("REMARQUES & MODALITÉS :", margin + 10, tableY + 7);
-        doc.fillColor(darkColor).fontSize(8).font("Helvetica").text(data.creditNote.notes, margin + 10, tableY + 18, { width: contentWidth - 20 });
+      // If content overflows into bottom area, add new page
+      if (tableY + neededBottomSpace > footerLineY) {
+        doc.addPage();
+        drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
+        tableY = margin + 20;
       }
 
+      // Pin legal note right above the footer line
+      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 10 : 0) + 12, footerLineY - 8 - legalBoxH);
+      const notesY = legalY - (notesBoxH ? notesBoxH + 10 : 0);
+
+      // --- NOTES / REMARQUES ---
+      if (data.creditNote.notes) {
+        doc.roundedRect(margin, notesY, contentWidth, notesBoxH, cornerRadius).fillAndStroke(lightBg, borderColor);
+        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("REMARQUES & MODALITÉS :", margin + 10, notesY + 6);
+        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.creditNote.notes, margin + 10, notesY + 16, { width: contentWidth - 20, lineGap: 1 });
+      }
+
+      // --- MANDATORY LEGAL NOTE ---
+      doc.roundedRect(margin, legalY, contentWidth, legalBoxH, cornerRadius).fillAndStroke("#f0fdf4", "#bbf7d0");
+      doc.rect(margin, legalY, 4, legalBoxH).fill("#059669");
+      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 6);
+      doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.creditNote.vatExemptionNote, margin + 12, legalY + 18, {
+        width: contentWidth - 24,
+        lineGap: 1,
+      });
+
       // --- FOOTER ---
-      const footerY = 770;
-      doc.moveTo(margin, footerY).lineTo(margin + contentWidth, footerY).strokeColor(borderColor).stroke();
+      doc.moveTo(margin, footerLineY).lineTo(margin + contentWidth, footerLineY).strokeColor(borderColor).stroke();
       doc.fontSize(7).font("Helvetica").fillColor(mutedColor);
       doc.text(
         `Avoir émis conformément aux obligations comptables de la loi n° 22-23 portant statut de l'auto-entrepreneur.`,
         margin,
-        footerY + 8,
+        footerLineY + 6,
         { align: "center", width: contentWidth }
       );
       doc.text(
         `Titulaire immatriculé au Registre National de l'Auto-Entrepreneur (RNAE N° ${seller.rnaeNumber || "—"}) — NIF : ${seller.nif || "—"}`,
         margin,
-        footerY + 18,
+        footerLineY + 16,
         { align: "center", width: contentWidth }
       );
 

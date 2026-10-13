@@ -200,103 +200,152 @@ export function BilingualCreditNotePaper({
           />
         )}
 
-        <div className="p-8 sm:p-12 space-y-8 print:p-0">
-          {isArabic && (
-            <div className="text-center pb-6 border-b border-slate-100 space-y-1">
-              <h3 className="text-sm font-bold text-slate-900 tracking-wide">
-                {ar.republicTitle}
-              </h3>
-              <p className="text-xs font-semibold text-rose-800">
-                {ar.autoEntrepreneurRegime}
-              </p>
-            </div>
-          )}
-
-          {/* Centered Logo if position is CENTER */}
-          {seller.logoUrl && logoPos === "CENTER" && (
-            <div className="flex justify-center pb-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={seller.logoUrl}
-                alt={seller.fullName || "Logo"}
-                className="max-h-16 max-w-[220px] object-contain"
-              />
-            </div>
-          )}
-
-          {/* Main Document Header */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-8 border-b-2 border-slate-100 gap-4">
-            <div className="flex items-center gap-4">
-              {seller.logoUrl && logoPos === "LEFT" && (
-                <div className="shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={seller.logoUrl}
-                    alt={seller.fullName || "Logo"}
-                    className="max-h-14 max-w-[180px] object-contain"
-                  />
-                </div>
-              )}
-
-              <div>
-                <span className="text-3xl font-extrabold text-rose-700 tracking-tight flex items-center gap-2">
-                  <RotateCcw className="w-7 h-7 text-rose-600 inline" />
-                  <span>{isArabic ? ar.creditNoteTitle : "FACTURE D'AVOIR"}</span>
-                </span>
-                <p className="text-xs font-bold text-rose-800 uppercase tracking-wider mt-1">
-                  {isArabic
-                    ? "سند إنقاص وتعديل محاسبي — معفى من الرسم على القيمة المضافة (TVA)"
-                    : "Rectification Comptable — Régime Auto-Entrepreneur (Loi 22-23)"}
+        <div className="p-8 sm:p-12 min-h-[1050px] flex flex-col justify-between print:min-h-0 print:p-0">
+          <div className="space-y-8 flex-1">
+            {isArabic && (
+              <div className="text-center pb-6 border-b border-slate-100 space-y-1">
+                <h3 className="text-sm font-bold text-slate-900 tracking-wide">
+                  {ar.republicTitle}
+                </h3>
+                <p className="text-xs font-semibold text-rose-800">
+                  {ar.autoEntrepreneurRegime}
                 </p>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-start gap-4">
-              <div className={`space-y-1 text-xs ${isArabic ? "text-right sm:text-left" : "text-left sm:text-right"}`}>
+            {/* Main Document Header */}
+            {logoPos === "CENTER" ? (
+              <div className="flex flex-col items-center text-center pb-8 border-b-2 border-slate-100 gap-3">
+                {seller.logoUrl && (
+                  <div className="flex justify-center pb-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={seller.logoUrl}
+                      alt={seller.fullName || "Logo"}
+                      className="max-h-16 max-w-[220px] object-contain"
+                    />
+                  </div>
+                )}
                 <div>
-                  <span className="text-slate-400 font-medium">
-                    {isArabic ? `${ar.creditNoteNumberLabel} : ` : "N° d'avoir : "}
+                  <span className="text-3xl font-extrabold text-rose-700 tracking-tight flex items-center justify-center gap-2">
+                    <RotateCcw className="w-7 h-7 text-rose-600 inline" />
+                    <span>{isArabic ? ar.creditNoteTitle : "FACTURE D'AVOIR"}</span>
                   </span>
-                  <span className="font-bold text-rose-700 text-sm font-mono">
-                    {creditNote.creditNoteNumber || (isArabic ? ar.draftBadge : "BROUILLON")}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 font-medium">
-                    {isArabic ? `${ar.issueDateLabel} : ` : "Date d'émission : "}
-                  </span>
-                  <span className="font-semibold text-slate-900">
+                  <p className="text-xs font-bold text-rose-800 uppercase tracking-wider mt-1">
                     {isArabic
-                      ? formatArabicDate(creditNote.issueDate)
-                      : new Date(creditNote.issueDate).toLocaleDateString("fr-DZ", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                  </span>
+                      ? "سند إنقاص وتعديل محاسبي — معفى من الرسم على القيمة المضافة (TVA)"
+                      : "Rectification Comptable — Régime Auto-Entrepreneur (Loi 22-23)"}
+                  </p>
                 </div>
-                <div>
-                  <span className="text-slate-400 font-medium">
-                    {isArabic ? `${ar.linkedInvoiceLabel} : ` : "Facture rattachée : "}
-                  </span>
-                  <span className="font-bold text-slate-800 font-mono">
-                    {creditNote.originalInvoice.invoiceNumber || "Facture"}
-                  </span>
+                <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-1">
+                  <div>
+                    <span className="text-slate-400 font-medium">
+                      {isArabic ? `${ar.creditNoteNumberLabel} : ` : "N° d'avoir : "}
+                    </span>
+                    <span className="font-bold text-rose-700 text-sm font-mono">
+                      {creditNote.creditNoteNumber || (isArabic ? ar.draftBadge : "BROUILLON")}
+                    </span>
+                  </div>
+                  <span className="text-slate-300">•</span>
+                  <div>
+                    <span className="text-slate-400 font-medium">
+                      {isArabic ? `${ar.issueDateLabel} : ` : "Date d'émission : "}
+                    </span>
+                    <span className="font-semibold text-slate-900">
+                      {isArabic
+                        ? formatArabicDate(creditNote.issueDate)
+                        : new Date(creditNote.issueDate).toLocaleDateString("fr-DZ", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                    </span>
+                  </div>
+                  <span className="text-slate-300">•</span>
+                  <div>
+                    <span className="text-slate-400 font-medium">
+                      {isArabic ? `${ar.linkedInvoiceLabel} : ` : "Facture rattachée : "}
+                    </span>
+                    <span className="font-bold text-slate-800 font-mono">
+                      {creditNote.originalInvoice.invoiceNumber || "Facture"}
+                    </span>
+                  </div>
                 </div>
               </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-8 border-b-2 border-slate-100 gap-4">
+                <div className="flex items-center gap-4">
+                  {seller.logoUrl && logoPos === "LEFT" && (
+                    <div className="shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={seller.logoUrl}
+                        alt={seller.fullName || "Logo"}
+                        className="max-h-14 max-w-[180px] object-contain"
+                      />
+                    </div>
+                  )}
 
-              {seller.logoUrl && logoPos === "RIGHT" && (
-                <div className="shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={seller.logoUrl}
-                    alt={seller.fullName || "Logo"}
-                    className="max-h-14 max-w-[180px] object-contain"
-                  />
+                  <div>
+                    <span className="text-3xl font-extrabold text-rose-700 tracking-tight flex items-center gap-2">
+                      <RotateCcw className="w-7 h-7 text-rose-600 inline" />
+                      <span>{isArabic ? ar.creditNoteTitle : "FACTURE D'AVOIR"}</span>
+                    </span>
+                    <p className="text-xs font-bold text-rose-800 uppercase tracking-wider mt-1">
+                      {isArabic
+                        ? "سند إنقاص وتعديل محاسبي — معفى من الرسم على القيمة المضافة (TVA)"
+                        : "Rectification Comptable — Régime Auto-Entrepreneur (Loi 22-23)"}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div className="flex items-start gap-4">
+                  <div className={`space-y-1 text-xs ${isArabic ? "text-right sm:text-left" : "text-left sm:text-right"}`}>
+                    <div>
+                      <span className="text-slate-400 font-medium">
+                        {isArabic ? `${ar.creditNoteNumberLabel} : ` : "N° d'avoir : "}
+                      </span>
+                      <span className="font-bold text-rose-700 text-sm font-mono">
+                        {creditNote.creditNoteNumber || (isArabic ? ar.draftBadge : "BROUILLON")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">
+                        {isArabic ? `${ar.issueDateLabel} : ` : "Date d'émission : "}
+                      </span>
+                      <span className="font-semibold text-slate-900">
+                        {isArabic
+                          ? formatArabicDate(creditNote.issueDate)
+                          : new Date(creditNote.issueDate).toLocaleDateString("fr-DZ", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">
+                        {isArabic ? `${ar.linkedInvoiceLabel} : ` : "Facture rattachée : "}
+                      </span>
+                      <span className="font-bold text-slate-800 font-mono">
+                        {creditNote.originalInvoice.invoiceNumber || "Facture"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {seller.logoUrl && logoPos === "RIGHT" && (
+                    <div className="shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={seller.logoUrl}
+                        alt={seller.fullName || "Logo"}
+                        className="max-h-14 max-w-[180px] object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
         {/* Seller and Client Blocks */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -461,25 +510,29 @@ export function BilingualCreditNotePaper({
             </p>
           )}
         </div>
+      </div>
 
-        {/* Mandatory VAT Exemption Note */}
-        <div className="p-4 rounded-xl bg-emerald-50/80 border-l-4 border-emerald-600 text-xs text-emerald-950 space-y-1">
-          <span className="font-bold block text-emerald-900 uppercase tracking-wider text-[11px]">
-            {isArabic
-              ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
-              : "Mention légale d'exonération de TVA :"}
-          </span>
-          <p className="italic text-emerald-800 leading-relaxed">
-            « {ar.vatExemptionClause} »
-          </p>
+      {/* Bottom Section Anchored to Page Bottom */}
+      <div className="mt-auto pt-8 space-y-6">
+          {/* Mandatory VAT Exemption Note */}
+          <div className="p-4 rounded-xl bg-emerald-50/80 border-l-4 border-emerald-600 text-xs text-emerald-950 space-y-1">
+            <span className="font-bold block text-emerald-900 uppercase tracking-wider text-[11px]">
+              {isArabic
+                ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
+                : "Mention légale d'exonération de TVA :"}
+            </span>
+            <p className="italic text-emerald-800 leading-relaxed">
+              « {ar.vatExemptionClause} »
+            </p>
+          </div>
+
+          {/* Official Statutory Footer */}
+          <div className="pt-6 border-t border-slate-100 text-center text-[11px] text-slate-400">
+            <p>{isArabic ? ar.legalFooterClause : "Facture d'avoir établie conformément à la Loi 22-23."}</p>
+          </div>
         </div>
-
-        {/* Official Statutory Footer */}
-        <div className="pt-6 border-t border-slate-100 text-center text-[11px] text-slate-400">
-          <p>{isArabic ? ar.legalFooterClause : "Facture d'avoir établie conformément à la Loi 22-23."}</p>
         </div>
       </div>
-    </div>
   </div>
   );
 }

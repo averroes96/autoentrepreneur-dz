@@ -500,66 +500,144 @@ export function DocumentDesignSection({
 
             <div className="p-6 space-y-6">
               {/* Header with Logo and Seller */}
-              <div
-                className={`flex flex-col sm:flex-row items-center gap-4 pb-4 border-b ${
-                  templateStyle === "CLASSIC"
-                    ? "border-slate-800 border-b-2"
-                    : "border-slate-100"
-                } ${
-                  logoPosition === "CENTER"
-                    ? "sm:flex-col sm:text-center justify-center"
-                    : logoPosition === "RIGHT"
-                    ? "sm:flex-row-reverse justify-between"
-                    : "justify-between"
-                }`}
-              >
-                {/* Logo container */}
-                {logoUrl ? (
-                  <div className="h-12 max-w-[160px] flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={logoUrl}
-                      alt="Logo Preview"
-                      className="max-h-12 max-w-[160px] object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="px-3 py-1.5 rounded-lg border text-[11px] font-bold"
-                    style={{
-                      borderColor: activePalette.borderHex,
-                      backgroundColor: activePalette.lightBgHex,
-                      color: activePalette.hex,
-                    }}
-                  >
-                    {sellerName}
-                  </div>
-                )}
-
-                {/* Document Title & Reference */}
+              {logoPosition === "CENTER" ? (
                 <div
-                  className={`space-y-0.5 ${
-                    logoPosition === "CENTER"
-                      ? "text-center"
-                      : logoPosition === "RIGHT"
-                      ? "text-left"
-                      : "text-right"
+                  className={`flex flex-col items-center text-center gap-2 pb-4 border-b ${
+                    templateStyle === "CLASSIC"
+                      ? "border-slate-800 border-b-2"
+                      : "border-slate-100"
                   }`}
                 >
-                  <span
-                    className="text-lg font-extrabold tracking-tight block"
-                    style={{ color: activePalette.darkHex }}
-                  >
-                    FACTURE
-                  </span>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    N° FAC-2026-0001
-                  </div>
-                  <div className="text-[10px] text-slate-400">
-                    Date : 13 octobre 2026
+                  {logoUrl ? (
+                    <div className="h-12 max-w-[160px] flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={logoUrl}
+                        alt="Logo Preview"
+                        className="max-h-12 max-w-[160px] object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="px-3 py-1.5 rounded-lg border text-[11px] font-bold"
+                      style={{
+                        borderColor: activePalette.borderHex,
+                        backgroundColor: activePalette.lightBgHex,
+                        color: activePalette.hex,
+                      }}
+                    >
+                      {sellerName}
+                    </div>
+                  )}
+
+                  <div>
+                    <span
+                      className="text-lg font-extrabold tracking-tight block"
+                      style={{ color: activePalette.darkHex }}
+                    >
+                      FACTURE
+                    </span>
+                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                      N° FAC-2026-0001 • Date : 13 octobre 2026
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : logoPosition === "RIGHT" ? (
+                <div
+                  className={`flex items-center justify-between pb-4 border-b ${
+                    templateStyle === "CLASSIC"
+                      ? "border-slate-800 border-b-2"
+                      : "border-slate-100"
+                  }`}
+                >
+                  <div>
+                    <span
+                      className="text-lg font-extrabold tracking-tight block"
+                      style={{ color: activePalette.darkHex }}
+                    >
+                      FACTURE
+                    </span>
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      N° FAC-2026-0001
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Date : 13 octobre 2026
+                    </div>
+                  </div>
+
+                  {logoUrl ? (
+                    <div className="h-12 max-w-[160px] flex items-center justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={logoUrl}
+                        alt="Logo Preview"
+                        className="max-h-12 max-w-[160px] object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="px-3 py-1.5 rounded-lg border text-[11px] font-bold"
+                      style={{
+                        borderColor: activePalette.borderHex,
+                        backgroundColor: activePalette.lightBgHex,
+                        color: activePalette.hex,
+                      }}
+                    >
+                      {sellerName}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={`flex items-center justify-between pb-4 border-b ${
+                    templateStyle === "CLASSIC"
+                      ? "border-slate-800 border-b-2"
+                      : "border-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {logoUrl ? (
+                      <div className="h-12 max-w-[160px] flex items-center justify-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={logoUrl}
+                          alt="Logo Preview"
+                          className="max-h-12 max-w-[160px] object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="px-3 py-1.5 rounded-lg border text-[11px] font-bold"
+                        style={{
+                          borderColor: activePalette.borderHex,
+                          backgroundColor: activePalette.lightBgHex,
+                          color: activePalette.hex,
+                        }}
+                      >
+                        {sellerName}
+                      </div>
+                    )}
+
+                    <div>
+                      <span
+                        className="text-lg font-extrabold tracking-tight block"
+                        style={{ color: activePalette.darkHex }}
+                      >
+                        FACTURE
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] text-slate-500 font-mono">
+                      N° FAC-2026-0001
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Date : 13 octobre 2026
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Seller and Client Row */}
               <div className="grid grid-cols-2 gap-4 text-[11px]">
@@ -642,12 +720,8 @@ export function DocumentDesignSection({
                 </table>
               </div>
 
-              {/* Legal Notice & Total Block */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                <div className="text-[10px] text-slate-500 italic max-w-xs">
-                  « Facture exonérée de TVA en vertu de l&apos;article 13 du Décret exécutif n° 23-197. »
-                </div>
-
+              {/* Total Block (Aligned Right) */}
+              <div className="flex justify-end pt-1">
                 <div
                   className="px-4 py-2.5 rounded-xl border flex items-center gap-4"
                   style={{
@@ -665,6 +739,25 @@ export function DocumentDesignSection({
                     150 000,00 DZD
                   </span>
                 </div>
+              </div>
+
+              {/* Mandatory VAT Exemption Note (At Page Bottom) */}
+              <div
+                className="p-3 rounded-lg border-l-4 text-[10px] space-y-0.5"
+                style={{
+                  backgroundColor: activePalette.lightBgHex,
+                  borderLeftColor: activePalette.hex,
+                }}
+              >
+                <span
+                  className="font-bold block uppercase tracking-wider text-[9px]"
+                  style={{ color: activePalette.darkHex }}
+                >
+                  Mention légale d&apos;exonération de TVA (Loi 22-23 / Régime IFU) :
+                </span>
+                <p className="italic leading-relaxed" style={{ color: activePalette.darkHex }}>
+                  « Facture exonérée de TVA en vertu de l&apos;article 13 du Décret exécutif n° 23-197. »
+                </p>
               </div>
             </div>
           </div>

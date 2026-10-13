@@ -195,116 +195,180 @@ export function BilingualQuotePaper({
           />
         )}
 
-        <div className="p-8 sm:p-12 space-y-8 print:p-0">
-          {isArabic && (
-            <div className="text-center pb-6 border-b border-slate-100 space-y-1">
-              <h3 className="text-sm font-bold text-slate-900 tracking-wide">
-                {ar.republicTitle}
-              </h3>
-              <p className="text-xs font-semibold" style={{ color: palette.darkHex }}>
-                {ar.autoEntrepreneurRegime}
-              </p>
-            </div>
-          )}
-
-          {/* Centered Logo if position is CENTER */}
-          {seller.logoUrl && logoPos === "CENTER" && (
-            <div className="flex justify-center pb-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={seller.logoUrl}
-                alt={seller.fullName || "Logo"}
-                className="max-h-16 max-w-[220px] object-contain"
-              />
-            </div>
-          )}
-
-          {/* Main Document Header */}
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-8 border-b-2 border-slate-100 gap-4">
-            <div className="flex items-center gap-4">
-              {seller.logoUrl && logoPos === "LEFT" && (
-                <div className="shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={seller.logoUrl}
-                    alt={seller.fullName || "Logo"}
-                    className="max-h-14 max-w-[180px] object-contain"
-                  />
-                </div>
-              )}
-
-              <div>
-                <span
-                  className="text-3xl font-extrabold tracking-tight"
-                  style={{ color: palette.darkHex }}
-                >
-                  {isArabic ? ar.quoteTitle : "DEVIS COMMERCIAL"}
-                </span>
-                <p
-                  className="text-xs font-bold uppercase tracking-wider mt-1"
-                  style={{ color: palette.hex }}
-                >
-                  {isArabic
-                    ? "عرض أسعار تقديري — معفى من الرسم على القيمة المضافة (TVA)"
-                    : "Proposition Tarifaire — Régime Auto-Entrepreneur (Loi 22-23)"}
+        <div className="p-8 sm:p-12 min-h-[1050px] flex flex-col justify-between print:min-h-0 print:p-0">
+          <div className="space-y-8 flex-1">
+            {isArabic && (
+              <div className="text-center pb-6 border-b border-slate-100 space-y-1">
+                <h3 className="text-sm font-bold text-slate-900 tracking-wide">
+                  {ar.republicTitle}
+                </h3>
+                <p className="text-xs font-semibold" style={{ color: palette.darkHex }}>
+                  {ar.autoEntrepreneurRegime}
                 </p>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-start gap-4">
-              <div className={`space-y-1 text-xs ${isArabic ? "text-right sm:text-left" : "text-left sm:text-right"}`}>
-            <div>
-              <span className="text-slate-400 font-medium">
-                {isArabic ? `${ar.quoteNumberLabel} : ` : "N° de devis : "}
-              </span>
-              <span className="font-bold text-slate-900 text-sm font-mono">
-                {quote.quoteNumber || (isArabic ? ar.draftBadge : "BROUILLON")}
-              </span>
-            </div>
-            <div>
-              <span className="text-slate-400 font-medium">
-                {isArabic ? `${ar.issueDateLabel} : ` : "Date d'émission : "}
-              </span>
-              <span className="font-semibold text-slate-900">
-                {isArabic
-                  ? formatArabicDate(quote.issueDate)
-                  : new Date(quote.issueDate).toLocaleDateString("fr-DZ", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-              </span>
-            </div>
-            {quote.validUntil && (
-              <div>
-                <span className="text-slate-400 font-medium">
-                  {isArabic ? `${ar.validUntilLabel} : ` : "Valable jusqu'au : "}
-                </span>
-                <span className="font-semibold" style={{ color: palette.hex }}>
-                  {isArabic
-                    ? formatArabicDate(quote.validUntil)
-                    : new Date(quote.validUntil).toLocaleDateString("fr-DZ", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                </span>
+            {/* Main Document Header */}
+            {logoPos === "CENTER" ? (
+              <div className="flex flex-col items-center text-center pb-8 border-b-2 border-slate-100 gap-3">
+                {seller.logoUrl && (
+                  <div className="flex justify-center pb-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={seller.logoUrl}
+                      alt={seller.fullName || "Logo"}
+                      className="max-h-16 max-w-[220px] object-contain"
+                    />
+                  </div>
+                )}
+                <div>
+                  <span
+                    className="text-3xl font-extrabold tracking-tight block"
+                    style={{ color: palette.darkHex }}
+                  >
+                    {isArabic ? ar.quoteTitle : "DEVIS COMMERCIAL"}
+                  </span>
+                  <p
+                    className="text-xs font-bold uppercase tracking-wider mt-1"
+                    style={{ color: palette.hex }}
+                  >
+                    {isArabic
+                      ? "عرض أسعار تقديري — معفى من الرسم على القيمة المضافة (TVA)"
+                      : "Proposition Tarifaire — Régime Auto-Entrepreneur (Loi 22-23)"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-1">
+                  <div>
+                    <span className="text-slate-400 font-medium">
+                      {isArabic ? `${ar.quoteNumberLabel} : ` : "N° de devis : "}
+                    </span>
+                    <span className="font-bold text-slate-900 text-sm font-mono">
+                      {quote.quoteNumber || (isArabic ? ar.draftBadge : "BROUILLON")}
+                    </span>
+                  </div>
+                  <span className="text-slate-300">•</span>
+                  <div>
+                    <span className="text-slate-400 font-medium">
+                      {isArabic ? `${ar.issueDateLabel} : ` : "Date d'émission : "}
+                    </span>
+                    <span className="font-semibold text-slate-900">
+                      {isArabic
+                        ? formatArabicDate(quote.issueDate)
+                        : new Date(quote.issueDate).toLocaleDateString("fr-DZ", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                    </span>
+                  </div>
+                  {quote.validUntil && (
+                    <>
+                      <span className="text-slate-300">•</span>
+                      <div>
+                        <span className="text-slate-400 font-medium">
+                          {isArabic ? `${ar.validUntilLabel} : ` : "Valable jusqu'au : "}
+                        </span>
+                        <span className="font-semibold" style={{ color: palette.hex }}>
+                          {isArabic
+                            ? formatArabicDate(quote.validUntil)
+                            : new Date(quote.validUntil).toLocaleDateString("fr-DZ", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-8 border-b-2 border-slate-100 gap-4">
+                <div className="flex items-center gap-4">
+                  {seller.logoUrl && logoPos === "LEFT" && (
+                    <div className="shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={seller.logoUrl}
+                        alt={seller.fullName || "Logo"}
+                        className="max-h-14 max-w-[180px] object-contain"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <span
+                      className="text-3xl font-extrabold tracking-tight"
+                      style={{ color: palette.darkHex }}
+                    >
+                      {isArabic ? ar.quoteTitle : "DEVIS COMMERCIAL"}
+                    </span>
+                    <p
+                      className="text-xs font-bold uppercase tracking-wider mt-1"
+                      style={{ color: palette.hex }}
+                    >
+                      {isArabic
+                        ? "عرض أسعار تقديري — معفى من الرسم على القيمة المضافة (TVA)"
+                        : "Proposition Tarifaire — Régime Auto-Entrepreneur (Loi 22-23)"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className={`space-y-1 text-xs ${isArabic ? "text-right sm:text-left" : "text-left sm:text-right"}`}>
+                    <div>
+                      <span className="text-slate-400 font-medium">
+                        {isArabic ? `${ar.quoteNumberLabel} : ` : "N° de devis : "}
+                      </span>
+                      <span className="font-bold text-slate-900 text-sm font-mono">
+                        {quote.quoteNumber || (isArabic ? ar.draftBadge : "BROUILLON")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium">
+                        {isArabic ? `${ar.issueDateLabel} : ` : "Date d'émission : "}
+                      </span>
+                      <span className="font-semibold text-slate-900">
+                        {isArabic
+                          ? formatArabicDate(quote.issueDate)
+                          : new Date(quote.issueDate).toLocaleDateString("fr-DZ", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                      </span>
+                    </div>
+                    {quote.validUntil && (
+                      <div>
+                        <span className="text-slate-400 font-medium">
+                          {isArabic ? `${ar.validUntilLabel} : ` : "Valable jusqu'au : "}
+                        </span>
+                        <span className="font-semibold" style={{ color: palette.hex }}>
+                          {isArabic
+                            ? formatArabicDate(quote.validUntil)
+                            : new Date(quote.validUntil).toLocaleDateString("fr-DZ", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {seller.logoUrl && logoPos === "RIGHT" && (
+                    <div className="shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={seller.logoUrl}
+                        alt={seller.fullName || "Logo"}
+                        className="max-h-14 max-w-[180px] object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-          </div>
-
-          {seller.logoUrl && logoPos === "RIGHT" && (
-            <div className="shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={seller.logoUrl}
-                alt={seller.fullName || "Logo"}
-                className="max-h-14 max-w-[180px] object-contain"
-              />
-            </div>
-          )}
-        </div>
-      </div>
 
         {/* Seller and Client Blocks */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -548,67 +612,71 @@ export function BilingualQuotePaper({
             </p>
           )}
         </div>
+      </div>
 
-        {/* Mandatory VAT Exemption Note */}
-        <div
-          className="p-4 rounded-xl border-l-4 text-xs space-y-1"
-          style={{
-            backgroundColor: palette.lightBgHex,
-            borderLeftColor: palette.hex,
-          }}
-        >
-          <span
-            className="font-bold block uppercase tracking-wider text-[11px]"
-            style={{ color: palette.darkHex }}
-          >
-            {isArabic
-              ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
-              : "Mention légale d'exonération de TVA :"}
-          </span>
-          <p className="italic leading-relaxed" style={{ color: palette.darkHex }}>
-            « {isArabic ? ar.vatExemptionClause : quote.vatExemptionNote} »
-          </p>
-        </div>
-
-        {/* Notes */}
-        {quote.notes && (
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
-            <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] block">
-              {isArabic ? ar.notesTitle : "Conditions commerciales & Remarques :"}
-            </span>
-            <p className="whitespace-pre-line">{quote.notes}</p>
-          </div>
-        )}
-
-        {/* Signature & Seal Area */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
-          <div className="border border-dashed border-slate-200 rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase">
-              {isArabic ? "توقيع وموافقة العميل (مسبوقة بعبارة قرأت ووافقت)" : "Bon pour accord (Signature & Cachet du client)"}
-            </span>
-            <span className="text-[10px] text-slate-400 italic">
-              {isArabic ? "التاريخ : ...................." : "Date : ...................."}
-            </span>
-          </div>
-
+      {/* Bottom Section Anchored to Page Bottom */}
+      <div className="mt-auto pt-8 space-y-6">
+          {/* Mandatory VAT Exemption Note */}
           <div
-            className="border border-dashed rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between"
+            className="p-4 rounded-xl border-l-4 text-xs space-y-1"
             style={{
-              borderColor: palette.borderHex,
-              backgroundColor: `${palette.lightBgHex}66`,
+              backgroundColor: palette.lightBgHex,
+              borderLeftColor: palette.hex,
             }}
           >
-            <span className="text-[11px] font-bold uppercase" style={{ color: palette.darkHex }}>
-              {isArabic ? "توقيع وخاتم المقاول الذاتي" : "Signature & Cachet du Prestataire"}
+            <span
+              className="font-bold block uppercase tracking-wider text-[11px]"
+              style={{ color: palette.darkHex }}
+            >
+              {isArabic
+                ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
+                : "Mention légale d'exonération de TVA :"}
             </span>
-            <div className="text-[10px] text-slate-500">
-              <p>{seller.fullName}</p>
-              <p>RNAE: {seller.rnaeNumber}</p>
+            <p className="italic leading-relaxed" style={{ color: palette.darkHex }}>
+              « {isArabic ? ar.vatExemptionClause : quote.vatExemptionNote} »
+            </p>
+          </div>
+
+          {/* Notes */}
+          {quote.notes && (
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+              <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] block">
+                {isArabic ? ar.notesTitle : "Conditions commerciales & Remarques :"}
+              </span>
+              <p className="whitespace-pre-line">{quote.notes}</p>
+            </div>
+          )}
+
+          {/* Signature & Seal Area */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
+            <div className="border border-dashed border-slate-200 rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">
+                {isArabic ? "توقيع وموافقة العميل (مسبوقة بعبارة قرأت ووافقت)" : "Bon pour accord (Signature & Cachet du client)"}
+              </span>
+              <span className="text-[10px] text-slate-400 italic">
+                {isArabic ? "التاريخ : ...................." : "Date : ...................."}
+              </span>
+            </div>
+
+            <div
+              className="border border-dashed rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between"
+              style={{
+                borderColor: palette.borderHex,
+                backgroundColor: `${palette.lightBgHex}66`,
+              }}
+            >
+              <span className="text-[11px] font-bold uppercase" style={{ color: palette.darkHex }}>
+                {isArabic ? "توقيع وخاتم المقاول الذاتي" : "Signature & Cachet du Prestataire"}
+              </span>
+              <div className="text-[10px] text-slate-500">
+                <p>{seller.fullName}</p>
+                <p>RNAE: {seller.rnaeNumber}</p>
+              </div>
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
   </div>
   );
 }
