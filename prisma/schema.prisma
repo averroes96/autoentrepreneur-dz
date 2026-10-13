@@ -71,12 +71,16 @@ model AutoEntrepreneurProfile {
   brandColor         String    @default("EMERALD") // EMERALD, NAVY, BURGUNDY, SLATE, AMBER
   templateStyle      String    @default("MODERN") // MODERN, CLASSIC, MINIMALIST, COMPACT
 
-  // Payment & Banking Coordinates
-  bankName           String?
-  bankRib            String?
-  bankIban           String?
-  bankBic            String?
-  paymentTerms       String?
+  // Payment & Banking Coordinates (Module 2)
+  bankName            String?
+  bankRib             String?   // 20-digit RIP (Algérie Poste / Bank)
+  bankIban            String?   // IBAN for foreign currency payments (EUR, USD, etc.)
+  bankBic             String?   // SWIFT / BIC
+  accountHolder       String?   // Titulaire du compte (default: fullName)
+  bankAgency          String?   // Agence / Wilaya
+  ccpNumber           String?   // Legacy CCP account number
+  ccpKey              String?   // Legacy CCP key
+  paymentTerms        String?   @default("UPON_RECEIPT") // UPON_RECEIPT, 15_DAYS, 30_DAYS, 30_DAYS_END_OF_MONTH
   paymentInstructions String?
 
   // Official Commercial Seal & Signature
@@ -133,6 +137,8 @@ model Invoice {
   status             String    @default("DRAFT") // DRAFT, ISSUED, CANCELLED
   paymentStatus      String    @default("UNPAID") // UNPAID, PAID
   issueDate          DateTime
+  dueDate            DateTime? // Date d'échéance calculée selon paymentTerms ou personnalisée
+  paymentTerms       String?   @default("UPON_RECEIPT") // UPON_RECEIPT, 15_DAYS, 30_DAYS, 30_DAYS_END_OF_MONTH
   paidAt             DateTime?
   paymentMethod      String?   // CASH, BANK_TRANSFER, CCP_BARIDIMOB, CHEQUE
   paymentReference   String?   // Transaction or check reference
@@ -189,6 +195,7 @@ model Quote {
   status             String          @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED, CONVERTED
   issueDate          DateTime
   validUntil         DateTime?
+  paymentTerms       String?   @default("UPON_RECEIPT")
   currency           String          @default("DZD")
   exchangeRate       Float?          @default(1.0)
   total              Float           @default(0)

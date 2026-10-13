@@ -56,11 +56,16 @@ export default async function EditInvoicePage({
         <InvoiceForm
           clients={clients}
           defaultCurrency={tenant.profile.defaultCurrency}
+          defaultPaymentTerms={tenant.profile.paymentTerms || "UPON_RECEIPT"}
           vatExemptionNote={tenant.profile.vatExemptionNote}
           existingInvoice={{
             id: invoice.id,
             clientId: invoice.clientId,
+            currency: invoice.currency,
+            exchangeRate: invoice.exchangeRate,
             issueDate: invoice.issueDate,
+            dueDate: invoice.dueDate,
+            paymentTerms: invoice.paymentTerms,
             notes: invoice.notes,
             showDetailedItems: invoice.showDetailedItems,
             lineItems: invoice.lineItems.map((li) => ({

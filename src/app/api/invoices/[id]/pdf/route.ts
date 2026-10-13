@@ -42,23 +42,41 @@ export async function GET(
       return new NextResponse("Profil non configuré", { status: 400 });
     }
 
+    const sellerData = invoice.sellerSnapshot
+      ? JSON.parse(invoice.sellerSnapshot)
+      : profile;
+
+    const clientData = invoice.clientSnapshot
+      ? JSON.parse(invoice.clientSnapshot)
+      : invoice.client;
+
     const pdfBuffer = await generateInvoicePdfBuffer({
       invoice,
       seller: {
-        fullName: profile.fullName,
-        rnaeNumber: profile.rnaeNumber,
-        nif: profile.nif,
-        address: profile.address,
-        email: profile.email,
-        phone: profile.phone,
-        activityCode: profile.activityCode,
-        activityLabel: profile.activityLabel,
-        logoUrl: profile.logoUrl,
-        logoPosition: profile.logoPosition,
-        brandColor: profile.brandColor,
-        templateStyle: profile.templateStyle,
+        fullName: sellerData.fullName,
+        rnaeNumber: sellerData.rnaeNumber,
+        nif: sellerData.nif,
+        address: sellerData.address,
+        email: sellerData.email,
+        phone: sellerData.phone,
+        activityCode: sellerData.activityCode,
+        activityLabel: sellerData.activityLabel,
+        logoUrl: sellerData.logoUrl,
+        logoPosition: sellerData.logoPosition,
+        brandColor: sellerData.brandColor,
+        templateStyle: sellerData.templateStyle,
+        bankName: sellerData.bankName,
+        bankRib: sellerData.bankRib,
+        bankIban: sellerData.bankIban,
+        bankBic: sellerData.bankBic,
+        accountHolder: sellerData.accountHolder,
+        bankAgency: sellerData.bankAgency,
+        ccpNumber: sellerData.ccpNumber,
+        ccpKey: sellerData.ccpKey,
+        paymentTerms: sellerData.paymentTerms,
+        paymentInstructions: sellerData.paymentInstructions,
       },
-      client: invoice.client,
+      client: clientData,
     });
 
     const filename = `Facture-${invoice.invoiceNumber || "BROUILLON"}.pdf`;

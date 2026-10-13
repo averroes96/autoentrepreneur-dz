@@ -31,6 +31,7 @@ export default async function NewInvoicePage() {
         <InvoiceForm
           clients={clients}
           defaultCurrency={tenant.profile.defaultCurrency}
+          defaultPaymentTerms={tenant.profile.paymentTerms || "UPON_RECEIPT"}
           vatExemptionNote={tenant.profile.vatExemptionNote}
         />
       </main>

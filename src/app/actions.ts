@@ -230,12 +230,16 @@ export async function updateProfileAction(formData: FormData) {
   const brandColor = (formData.get("brandColor") as string)?.trim().toUpperCase() || "EMERALD";
   const templateStyle = (formData.get("templateStyle") as string)?.trim().toUpperCase() || "MODERN";
 
-  // Payment & Banking Coordinates
+  // Payment & Banking Coordinates (Module 2)
   const bankName = (formData.get("bankName") as string)?.trim() || null;
   const bankRib = (formData.get("bankRib") as string)?.trim() || null;
   const bankIban = (formData.get("bankIban") as string)?.trim() || null;
   const bankBic = (formData.get("bankBic") as string)?.trim() || null;
-  const paymentTerms = (formData.get("paymentTerms") as string)?.trim() || null;
+  const accountHolder = (formData.get("accountHolder") as string)?.trim() || null;
+  const bankAgency = (formData.get("bankAgency") as string)?.trim() || null;
+  const ccpNumber = (formData.get("ccpNumber") as string)?.trim() || null;
+  const ccpKey = (formData.get("ccpKey") as string)?.trim() || null;
+  const paymentTerms = (formData.get("paymentTerms") as string)?.trim() || "UPON_RECEIPT";
   const paymentInstructions = (formData.get("paymentInstructions") as string)?.trim() || null;
 
   // Commercial Stamp & Signature
@@ -275,6 +279,10 @@ export async function updateProfileAction(formData: FormData) {
       bankRib,
       bankIban,
       bankBic,
+      accountHolder,
+      bankAgency,
+      ccpNumber,
+      ccpKey,
       paymentTerms,
       paymentInstructions,
       showStampSignature,
@@ -306,6 +314,10 @@ export async function updateProfileAction(formData: FormData) {
       bankRib,
       bankIban,
       bankBic,
+      accountHolder,
+      bankAgency,
+      ccpNumber,
+      ccpKey,
       paymentTerms,
       paymentInstructions,
       showStampSignature,
@@ -456,6 +468,8 @@ export async function toggleArchiveClientAction(id: string, isArchived: boolean)
 export async function createInvoiceAction(payload: {
   clientId: string;
   issueDate: string;
+  dueDate?: string;
+  paymentTerms?: string;
   currency?: string;
   exchangeRate?: number;
   notes?: string;
@@ -480,6 +494,8 @@ export async function createInvoiceAction(payload: {
       tenantId: session.tenantId,
       clientId: payload.clientId,
       issueDate: new Date(payload.issueDate || new Date()),
+      dueDate: payload.dueDate ? new Date(payload.dueDate) : undefined,
+      paymentTerms: payload.paymentTerms,
       currency: payload.currency,
       exchangeRate: payload.exchangeRate,
       notes: payload.notes,
@@ -501,6 +517,8 @@ export async function updateInvoiceAction(
   payload: {
     clientId: string;
     issueDate: string;
+    dueDate?: string;
+    paymentTerms?: string;
     currency?: string;
     exchangeRate?: number;
     notes?: string;
@@ -520,6 +538,8 @@ export async function updateInvoiceAction(
     await updateDraftInvoice(session.tenantId, invoiceId, {
       clientId: payload.clientId,
       issueDate: new Date(payload.issueDate),
+      dueDate: payload.dueDate ? new Date(payload.dueDate) : undefined,
+      paymentTerms: payload.paymentTerms,
       currency: payload.currency,
       exchangeRate: payload.exchangeRate,
       notes: payload.notes,
@@ -646,23 +666,41 @@ export async function emailInvoiceAction(invoiceId: string, recipientEmail?: str
 
     if (!profile) return { error: "Profil d'auto-entrepreneur introuvable." };
 
+    const sellerData = invoice.sellerSnapshot
+      ? JSON.parse(invoice.sellerSnapshot)
+      : profile;
+
+    const clientData = invoice.clientSnapshot
+      ? JSON.parse(invoice.clientSnapshot)
+      : invoice.client;
+
     const pdfBuffer = await generateInvoicePdfBuffer({
       invoice,
       seller: {
-        fullName: profile.fullName,
-        rnaeNumber: profile.rnaeNumber,
-        nif: profile.nif,
-        address: profile.address,
-        email: profile.email,
-        phone: profile.phone,
-        activityCode: profile.activityCode,
-        activityLabel: profile.activityLabel,
-        logoUrl: profile.logoUrl,
-        logoPosition: profile.logoPosition,
-        brandColor: profile.brandColor,
-        templateStyle: profile.templateStyle,
+        fullName: sellerData.fullName,
+        rnaeNumber: sellerData.rnaeNumber,
+        nif: sellerData.nif,
+        address: sellerData.address,
+        email: sellerData.email,
+        phone: sellerData.phone,
+        activityCode: sellerData.activityCode,
+        activityLabel: sellerData.activityLabel,
+        logoUrl: sellerData.logoUrl,
+        logoPosition: sellerData.logoPosition,
+        brandColor: sellerData.brandColor,
+        templateStyle: sellerData.templateStyle,
+        bankName: sellerData.bankName,
+        bankRib: sellerData.bankRib,
+        bankIban: sellerData.bankIban,
+        bankBic: sellerData.bankBic,
+        accountHolder: sellerData.accountHolder,
+        bankAgency: sellerData.bankAgency,
+        ccpNumber: sellerData.ccpNumber,
+        ccpKey: sellerData.ccpKey,
+        paymentTerms: sellerData.paymentTerms,
+        paymentInstructions: sellerData.paymentInstructions,
       },
-      client: invoice.client,
+      client: clientData,
     });
 
     // Backup to cloud storage (Cloudflare R2 or Supabase Storage) asynchronously
@@ -900,23 +938,41 @@ export async function emailQuoteAction(quoteId: string, recipientEmail?: string)
 
     if (!profile) return { error: "Profil non configuré." };
 
+    const sellerData = quote.sellerSnapshot
+      ? JSON.parse(quote.sellerSnapshot)
+      : profile;
+
+    const clientData = quote.clientSnapshot
+      ? JSON.parse(quote.clientSnapshot)
+      : quote.client;
+
     const pdfBuffer = await generateQuotePdfBuffer({
       quote,
       seller: {
-        fullName: profile.fullName,
-        rnaeNumber: profile.rnaeNumber,
-        nif: profile.nif,
-        address: profile.address,
-        email: profile.email,
-        phone: profile.phone,
-        activityCode: profile.activityCode,
-        activityLabel: profile.activityLabel,
-        logoUrl: profile.logoUrl,
-        logoPosition: profile.logoPosition,
-        brandColor: profile.brandColor,
-        templateStyle: profile.templateStyle,
+        fullName: sellerData.fullName,
+        rnaeNumber: sellerData.rnaeNumber,
+        nif: sellerData.nif,
+        address: sellerData.address,
+        email: sellerData.email,
+        phone: sellerData.phone,
+        activityCode: sellerData.activityCode,
+        activityLabel: sellerData.activityLabel,
+        logoUrl: sellerData.logoUrl,
+        logoPosition: sellerData.logoPosition,
+        brandColor: sellerData.brandColor,
+        templateStyle: sellerData.templateStyle,
+        bankName: sellerData.bankName,
+        bankRib: sellerData.bankRib,
+        bankIban: sellerData.bankIban,
+        bankBic: sellerData.bankBic,
+        accountHolder: sellerData.accountHolder,
+        bankAgency: sellerData.bankAgency,
+        ccpNumber: sellerData.ccpNumber,
+        ccpKey: sellerData.ccpKey,
+        paymentTerms: sellerData.paymentTerms,
+        paymentInstructions: sellerData.paymentInstructions,
       },
-      client: quote.client,
+      client: clientData,
     });
 
     const result = await sendQuoteEmail({

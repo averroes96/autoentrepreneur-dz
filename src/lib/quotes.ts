@@ -13,6 +13,7 @@ export interface CreateQuoteInput {
   clientId: string;
   issueDate: Date;
   validUntil?: Date | null;
+  paymentTerms?: string;
   currency?: string;
   exchangeRate?: number;
   notes?: string;
@@ -74,6 +75,8 @@ export async function createDraftQuote(data: CreateQuoteInput) {
     data.validUntil ||
     new Date(data.issueDate.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+  const paymentTerms = data.paymentTerms || profile?.paymentTerms || "UPON_RECEIPT";
+
   return db.quote.create({
     data: {
       tenantId: data.tenantId,
@@ -81,6 +84,7 @@ export async function createDraftQuote(data: CreateQuoteInput) {
       fiscalYear,
       issueDate: data.issueDate,
       validUntil,
+      paymentTerms,
       status: "DRAFT",
       currency,
       exchangeRate,
@@ -276,7 +280,11 @@ export async function finalizeAndSendQuote(tenantId: string, quoteId: string) {
       bankRib: profile.bankRib,
       bankIban: profile.bankIban,
       bankBic: profile.bankBic,
-      paymentTerms: profile.paymentTerms,
+      accountHolder: profile.accountHolder || profile.fullName,
+      bankAgency: profile.bankAgency,
+      ccpNumber: profile.ccpNumber,
+      ccpKey: profile.ccpKey,
+      paymentTerms: quote.paymentTerms || profile.paymentTerms || "UPON_RECEIPT",
       paymentInstructions: profile.paymentInstructions,
       showStampSignature: profile.showStampSignature,
       signatureUrl: profile.signatureUrl,

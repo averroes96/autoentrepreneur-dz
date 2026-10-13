@@ -24,6 +24,7 @@ import {
   getBrandPalette,
   getTemplateStyle,
 } from "@/lib/invoiceDesign";
+import { formatRip } from "@/lib/banking";
 import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface DocumentDesignSectionProps {
@@ -33,6 +34,10 @@ interface DocumentDesignSectionProps {
   initialTemplateStyle?: string | null;
   sellerName?: string;
   activityLabel?: string;
+  initialBankName?: string | null;
+  initialBankRib?: string | null;
+  initialCcpNumber?: string | null;
+  initialCcpKey?: string | null;
 }
 
 export function DocumentDesignSection({
@@ -42,6 +47,10 @@ export function DocumentDesignSection({
   initialTemplateStyle = "MODERN",
   sellerName = "Auto-Entrepreneur",
   activityLabel = "Services Numériques & Conseil",
+  initialBankName,
+  initialBankRib,
+  initialCcpNumber,
+  initialCcpKey,
 }: DocumentDesignSectionProps) {
   const { t, locale, dir } = useI18n();
   const isArabic = locale === "ar";
@@ -737,6 +746,40 @@ export function DocumentDesignSection({
                     style={{ color: activePalette.darkHex }}
                   >
                     150 000,00 DZD
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Coordinates & BaridiMob Mini-Preview */}
+              <div
+                className="p-3 rounded-lg border text-[10px] space-y-1"
+                style={{
+                  backgroundColor: "#fafafa",
+                  borderColor:
+                    initialBankName?.toLowerCase().includes("poste") ||
+                    initialCcpNumber ||
+                    initialBankRib?.startsWith("007")
+                      ? "#fde047"
+                      : activePalette.borderHex,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800">
+                    {initialBankName || "Algérie Poste (CCP / BaridiMob)"}
+                  </span>
+                  {(initialBankName?.toLowerCase().includes("poste") ||
+                    initialCcpNumber ||
+                    initialBankRib?.startsWith("007") ||
+                    !initialBankName) && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                      ⚡ BaridiMob
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-medium">RIP :</span>
+                  <span className="font-mono font-bold text-slate-900 tracking-wider">
+                    {initialBankRib ? formatRip(initialBankRib) : "007 99999 0012345678 90"}
                   </span>
                 </div>
               </div>

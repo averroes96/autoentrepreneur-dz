@@ -19,6 +19,7 @@ import {
   calculateDzdEquivalent,
   formatCurrencyAmount,
 } from "@/lib/currencies";
+import { PAYMENT_TERMS_LIST, calculateDueDate } from "@/lib/banking";
 
 interface ClientOption {
   id: string;
@@ -36,6 +37,7 @@ interface LineItemState {
 interface InvoiceFormProps {
   clients: ClientOption[];
   defaultCurrency: string;
+  defaultPaymentTerms?: string;
   vatExemptionNote: string;
   existingInvoice?: {
     id: string;
@@ -43,6 +45,8 @@ interface InvoiceFormProps {
     currency?: string;
     exchangeRate?: number | null;
     issueDate: Date | string;
+    dueDate?: Date | string | null;
+    paymentTerms?: string | null;
     notes?: string | null;
     showDetailedItems?: boolean;
     lineItems: Array<{
@@ -57,6 +61,7 @@ interface InvoiceFormProps {
 export function InvoiceForm({
   clients,
   defaultCurrency,
+  defaultPaymentTerms,
   vatExemptionNote,
   existingInvoice,
 }: InvoiceFormProps) {
@@ -68,6 +73,9 @@ export function InvoiceForm({
     existingInvoice?.issueDate
       ? new Date(existingInvoice.issueDate).toISOString().split("T")[0]
       : new Date().toISOString().split("T")[0]
+  );
+  const [paymentTerms, setPaymentTerms] = useState<string>(
+    existingInvoice?.paymentTerms || defaultPaymentTerms || "UPON_RECEIPT"
   );
   const [currency, setCurrency] = useState(
     existingInvoice?.currency || defaultCurrency || "DZD"
@@ -190,11 +198,15 @@ export function InvoiceForm({
       unitPrice: isDetailed ? item.unitPrice : item.amount,
     }));
 
+    const calculatedDueDate = calculateDueDate(issueDate, paymentTerms);
+
     try {
       if (existingInvoice) {
         const res = await updateInvoiceAction(existingInvoice.id, {
           clientId,
           issueDate,
+          dueDate: calculatedDueDate.toISOString(),
+          paymentTerms,
           currency,
           exchangeRate,
           notes,
@@ -212,6 +224,8 @@ export function InvoiceForm({
         const res = await createInvoiceAction({
           clientId,
           issueDate,
+          dueDate: calculatedDueDate.toISOString(),
+          paymentTerms,
           currency,
           exchangeRate,
           notes,
@@ -311,6 +325,38 @@ export function InvoiceForm({
           <span className="text-[10px] text-slate-400 mt-1 block">
             {currency === "DZD" ? t("activeRegulatoryCurrency") : t("foreignCurrencyExportAlert")}
           </span>
+        </div>
+
+        {/* Payment Terms & Due Date */}
+        <div className="col-span-1 md:col-span-3 pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Modalités de règlement (Échéancier)
+            </label>
+            <select
+              value={paymentTerms}
+              onChange={(e) => setPaymentTerms(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              {PAYMENT_TERMS_LIST.map((term) => (
+                <option key={term.key} value={term.key}>
+                  {locale === "ar" ? term.labelAr : term.labelFr}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center">
+            <div className="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
+              <span className="text-slate-500 font-medium">Date limite de paiement :</span>
+              <span className="font-bold text-slate-900 font-mono text-sm">
+                {calculateDueDate(issueDate, paymentTerms).toLocaleDateString(
+                  locale === "ar" ? "ar-DZ" : "fr-DZ",
+                  { year: "numeric", month: "long", day: "numeric" }
+                )}
+              </span>
+            </div>
+          </div>
         </div>
 
         {currency !== "DZD" && (

@@ -24,6 +24,7 @@ import { calculateProfileCompletion } from "@/lib/profile";
 import { NifInputWithValidation } from "./NifInputWithValidation";
 import { AnaeActivitySelector } from "./AnaeActivitySelector";
 import { CasnosSchemeSelector } from "./CasnosSchemeSelector";
+import { PaymentCoordinatesSection } from "./PaymentCoordinatesSection";
 import { DocumentDesignSection } from "./DocumentDesignSection";
 import { useI18n } from "@/lib/i18n/I18nContext";
 
@@ -54,6 +55,10 @@ interface ProfileData {
   bankRib?: string | null;
   bankIban?: string | null;
   bankBic?: string | null;
+  accountHolder?: string | null;
+  bankAgency?: string | null;
+  ccpNumber?: string | null;
+  ccpKey?: string | null;
   paymentTerms?: string | null;
   paymentInstructions?: string | null;
   showStampSignature?: boolean | null;
@@ -511,7 +516,22 @@ export function ProfileFormClient({
           </div>
         </div>
 
-        {/* Section 5: Identité Visuelle & Style des Documents (Phase 4 - Module 1) */}
+        {/* Section 5: Coordonnées Bancaires, CCP & BaridiMob (Phase 4 - Module 2) */}
+        <PaymentCoordinatesSection
+          initialBankName={profile.bankName}
+          initialBankRib={profile.bankRib}
+          initialBankIban={profile.bankIban}
+          initialBankBic={profile.bankBic}
+          initialAccountHolder={profile.accountHolder}
+          initialBankAgency={profile.bankAgency}
+          initialCcpNumber={profile.ccpNumber}
+          initialCcpKey={profile.ccpKey}
+          initialPaymentTerms={profile.paymentTerms}
+          initialPaymentInstructions={profile.paymentInstructions}
+          sellerFullName={profile.fullName}
+        />
+
+        {/* Section 6: Identité Visuelle & Style des Documents (Phase 4 - Module 1) */}
         <DocumentDesignSection
           initialLogoUrl={profile.logoUrl}
           initialLogoPosition={profile.logoPosition}
@@ -519,6 +539,10 @@ export function ProfileFormClient({
           initialTemplateStyle={profile.templateStyle}
           sellerName={profile.fullName}
           activityLabel={profile.activityLabel}
+          initialBankName={profile.bankName}
+          initialBankRib={profile.bankRib}
+          initialCcpNumber={profile.ccpNumber}
+          initialCcpKey={profile.ccpKey}
         />
 
         <div className="flex justify-end">

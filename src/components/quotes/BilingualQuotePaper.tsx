@@ -15,11 +15,25 @@ import {
   getAmountInWordsWithCurrency,
   getExchangeRateNotice,
 } from "@/lib/currencies";
-import { Printer, Globe } from "lucide-react";
+import {
+  Printer,
+  Globe,
+  Copy,
+  Check,
+  Smartphone,
+  Landmark,
+  CreditCard,
+  Calendar,
+} from "lucide-react";
 import {
   getBrandPalette,
   getTemplateStyle,
 } from "@/lib/invoiceDesign";
+import {
+  formatRip,
+  formatIban,
+  PAYMENT_TERMS_CONFIG,
+} from "@/lib/banking";
 
 interface BilingualQuotePaperProps {
   quote: {
@@ -27,6 +41,7 @@ interface BilingualQuotePaperProps {
     quoteNumber: string | null;
     issueDate: Date | string;
     validUntil?: Date | string | null;
+    paymentTerms?: string | null;
     status: string;
     total: number;
     currency?: string;
@@ -60,6 +75,10 @@ interface BilingualQuotePaperProps {
     bankRib?: string | null;
     bankIban?: string | null;
     bankBic?: string | null;
+    accountHolder?: string | null;
+    bankAgency?: string | null;
+    ccpNumber?: string | null;
+    ccpKey?: string | null;
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
     showStampSignature?: boolean | null;
@@ -114,6 +133,37 @@ export function BilingualQuotePaper({
   const handlePrint = () => {
     window.print();
   };
+
+  const [copiedRip, setCopiedRip] = useState(false);
+  const handleCopyRip = (text: string) => {
+    try {
+      navigator.clipboard.writeText(text.replace(/\s/g, ""));
+      setCopiedRip(true);
+      setTimeout(() => setCopiedRip(false), 2000);
+    } catch (e) {
+      console.warn("Failed to copy RIP:", e);
+    }
+  };
+
+  const hasPaymentDetails = Boolean(
+    seller.bankRib ||
+    seller.bankName ||
+    seller.ccpNumber ||
+    quote.paymentTerms ||
+    seller.paymentTerms ||
+    seller.paymentInstructions
+  );
+
+  const isPostalOrBaridi = Boolean(
+    seller.bankName?.toLowerCase().includes("poste") ||
+    seller.bankName?.toLowerCase().includes("ccp") ||
+    seller.bankName?.toLowerCase().includes("baridi") ||
+    seller.ccpNumber ||
+    seller.bankRib?.replace(/\s/g, "").startsWith("007")
+  );
+
+  const termsKey = quote.paymentTerms || seller.paymentTerms || "UPON_RECEIPT";
+  const termsDef = PAYMENT_TERMS_CONFIG[termsKey] || PAYMENT_TERMS_CONFIG.UPON_RECEIPT;
 
   return (
     <div className="space-y-4">
@@ -615,9 +665,174 @@ export function BilingualQuotePaper({
       </div>
 
       {/* Bottom Section Anchored to Page Bottom */}
-      <div className="mt-auto pt-8 space-y-6">
-          {/* Mandatory VAT Exemption Note */}
+      <div className="mt-auto pt-6 space-y-4">
+        {/* Payment Coordinates & BaridiMob Block */}
+        {hasPaymentDetails && (
           <div
+            className="p-5 rounded-2xl border transition-all"
+            style={{
+              backgroundColor: template.key === "MINIMALIST" ? "#f8fafc" : "#fafafa",
+              borderColor: isPostalOrBaridi ? "#fde047" : palette.borderHex,
+            }}
+          >
+            {/* Card Header */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    backgroundColor: isPostalOrBaridi ? "#fef08a" : palette.lightBgHex,
+                    color: isPostalOrBaridi ? "#854d0e" : palette.darkHex,
+                  }}
+                >
+                  {isPostalOrBaridi ? (
+                    <Smartphone className="w-4 h-4 text-amber-700" />
+                  ) : (
+                    <Landmark className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900">
+                    {isArabic
+                      ? "بيانات الدفع المقترحة، الحساب البريدي / البنكي وبريدي موب"
+                      : "Modalités de Règlement & Coordonnées Bancaires / BaridiMob"}
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    {isArabic
+                      ? "شروط الدفع والتسديد عند قبول وتأكيد عرض الأسعار"
+                      : "Règlement prévu à l'acceptation de la commande ou livraison"}
+                  </p>
+                </div>
+              </div>
+
+              {isPostalOrBaridi && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  ⚡ {isArabic ? "متوافق مع تطبيق بريدي موب" : "Compatible BaridiMob (Algérie Poste)"}
+                </span>
+              )}
+            </div>
+
+            {/* Information Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+              {/* Bank & Beneficiary */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  {isArabic ? "المؤسسة المالية / البنك" : "Établissement Financier"}
+                </span>
+                <p className="font-bold text-slate-900">
+                  {seller.bankName || (isPostalOrBaridi ? "Algérie Poste (CCP)" : "Banque")}
+                </p>
+                {seller.bankAgency && (
+                  <p className="text-[11px] text-slate-600">
+                    <span className="font-medium text-slate-500">{isArabic ? "الوكالة :" : "Agence :"}</span> {seller.bankAgency}
+                  </p>
+                )}
+                <p className="text-[11px] text-slate-600">
+                  <span className="font-medium text-slate-500">{isArabic ? "المستفيد :" : "Bénéficiaire :"}</span>{" "}
+                  <strong className="text-slate-800">{seller.accountHolder || seller.fullName}</strong>
+                </p>
+              </div>
+
+              {/* RIP / CCP Account */}
+              <div className="space-y-1 sm:col-span-1 lg:col-span-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  {isArabic ? "رقم التعريف البنكي / البريدي (RIP - 20 رقماً)" : "Relevé d'Identité Postale / Bancaire (RIP - 20 chiffres)"}
+                </span>
+                {seller.bankRib ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      dir="ltr"
+                      className="font-mono text-sm font-extrabold tracking-wider px-2.5 py-1 rounded-lg bg-white border border-slate-300 text-slate-900 select-all shadow-2xs"
+                    >
+                      {formatRip(seller.bankRib)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyRip(seller.bankRib!)}
+                      className="no-print inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                      title="Copier le RIP"
+                    >
+                      {copiedRip ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-700 font-semibold">{isArabic ? "تم النسخ !" : "Copié !"}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{isArabic ? "نسخ RIP" : "Copier"}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-slate-400 font-mono">—</p>
+                )}
+
+                {isPostalOrBaridi && seller.ccpNumber && (
+                  <p className="text-[11px] text-slate-600 pt-0.5">
+                    <span className="font-medium text-slate-500">{isArabic ? "حساب CCP :" : "Compte CCP :"}</span>{" "}
+                    <span className="font-mono font-bold text-slate-800" dir="ltr">{seller.ccpNumber}</span>
+                    {seller.ccpKey && (
+                      <>
+                        {" "}
+                        <span className="font-medium text-slate-500">{isArabic ? "المفتاح :" : "Clé :"}</span>{" "}
+                        <span className="font-mono font-bold text-slate-800" dir="ltr">{seller.ccpKey}</span>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+
+              {/* Payment Terms */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  {isArabic ? "شروط وأجل الدفع" : "Conditions de Règlement"}
+                </span>
+                <p className="font-semibold text-slate-900">
+                  {isArabic ? termsDef.labelAr : termsDef.labelFr}
+                </p>
+              </div>
+
+              {/* International (IBAN / SWIFT) */}
+              {(isForeign || seller.bankIban || seller.bankBic) && (
+                <div className="space-y-1 sm:col-span-1 lg:col-span-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    {isArabic ? "التحويل الدولي (IBAN / SWIFT)" : "Virement International (IBAN & SWIFT / BIC)"}
+                  </span>
+                  <div className="text-[11px] space-y-0.5 text-slate-700">
+                    {seller.bankIban && (
+                      <p>
+                        <span className="text-slate-500 font-medium">IBAN : </span>
+                        <span className="font-mono font-bold select-all" dir="ltr">{formatIban(seller.bankIban)}</span>
+                      </p>
+                    )}
+                    {seller.bankBic && (
+                      <p>
+                        <span className="text-slate-500 font-medium">SWIFT / BIC : </span>
+                        <span className="font-mono font-bold select-all" dir="ltr">{seller.bankBic}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Custom Payment Instruction note */}
+            {seller.paymentInstructions && (
+              <div className="mt-3 pt-2.5 border-t border-slate-200/80 text-[11px] text-slate-700 flex items-start gap-1.5">
+                <span className="font-bold text-slate-900 shrink-0">
+                  {isArabic ? "ملاحظة الدفع :" : "Consigne de règlement :"}
+                </span>
+                <span className="italic">{seller.paymentInstructions}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mandatory VAT Exemption Note */}
+        <div
             className="p-4 rounded-xl border-l-4 text-xs space-y-1"
             style={{
               backgroundColor: palette.lightBgHex,

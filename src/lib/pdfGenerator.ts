@@ -15,6 +15,11 @@ import {
   type BrandPalette,
   type TemplateStyleKey,
 } from "./invoiceDesign";
+import {
+  formatRip,
+  formatIban,
+  PAYMENT_TERMS_CONFIG,
+} from "./banking";
 
 export interface SellerBrandingFields {
   logoUrl?: string | null;
@@ -76,6 +81,8 @@ export interface InvoicePdfData {
   invoice: {
     invoiceNumber: string | null;
     issueDate: Date | string;
+    dueDate?: Date | string | null;
+    paymentTerms?: string | null;
     total: number;
     currency: string;
     exchangeRate?: number | null;
@@ -104,6 +111,16 @@ export interface InvoicePdfData {
     logoPosition?: string | null;
     brandColor?: string | null;
     templateStyle?: string | null;
+    bankName?: string | null;
+    bankRib?: string | null;
+    bankIban?: string | null;
+    bankBic?: string | null;
+    accountHolder?: string | null;
+    bankAgency?: string | null;
+    ccpNumber?: string | null;
+    ccpKey?: string | null;
+    paymentTerms?: string | null;
+    paymentInstructions?: string | null;
   };
   client: {
     name: string;
@@ -397,9 +414,41 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
       const footerLineY = 766;
-      const legalBoxH = 42;
-      const notesBoxH = data.invoice.notes ? 36 : 0;
-      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 8 : 0) + 16;
+      const legalBoxH = 38;
+      const notesBoxH = data.invoice.notes ? 30 : 0;
+
+      const hasBankDetails = Boolean(
+        data.seller.bankRib ||
+        data.seller.bankName ||
+        data.seller.ccpNumber ||
+        data.invoice.dueDate ||
+        data.invoice.paymentTerms ||
+        data.seller.paymentTerms ||
+        data.seller.paymentInstructions
+      );
+
+      const isPostalOrBaridi = Boolean(
+        data.seller.bankName?.toLowerCase().includes("poste") ||
+        data.seller.bankName?.toLowerCase().includes("ccp") ||
+        data.seller.bankName?.toLowerCase().includes("baridi") ||
+        data.seller.ccpNumber ||
+        data.seller.bankRib?.replace(/\s/g, "").startsWith("007")
+      );
+
+      const hasIbanOrExtra = Boolean(
+        data.seller.bankIban ||
+        data.seller.bankBic ||
+        data.seller.paymentInstructions ||
+        curr !== "DZD"
+      );
+
+      const bankBoxH = hasBankDetails ? (hasIbanOrExtra ? 54 : 44) : 0;
+
+      const neededBottomSpace =
+        legalBoxH +
+        (bankBoxH ? bankBoxH + 6 : 0) +
+        (notesBoxH ? notesBoxH + 6 : 0) +
+        14;
 
       // If content overflows into bottom area, add new page
       if (tableY + neededBottomSpace > footerLineY) {
@@ -409,22 +458,104 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       }
 
       // Pin legal mention right above the footer line
-      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 8 : 0) + 12, footerLineY - 8 - legalBoxH);
-      const notesY = legalY - (notesBoxH ? notesBoxH + 8 : 0);
+      const legalY = Math.max(
+        tableY + (bankBoxH ? bankBoxH + 6 : 0) + (notesBoxH ? notesBoxH + 6 : 0) + 10,
+        footerLineY - 8 - legalBoxH
+      );
+      const bankY = legalY - (bankBoxH ? bankBoxH + 6 : 0);
+      const notesY = bankY - (notesBoxH ? notesBoxH + 6 : 0);
 
-      // --- NOTES / MODALITÉS DE RÈGLEMENT ---
+      // --- NOTES / REMARQUES ---
       if (data.invoice.notes) {
         doc.roundedRect(margin, notesY, contentWidth, notesBoxH, cornerRadius).fillAndStroke(lightBg, borderColor);
-        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("MODALITÉS DE RÈGLEMENT & REMARQUES :", margin + 10, notesY + 6);
-        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.invoice.notes, margin + 10, notesY + 17, { width: contentWidth - 20, lineGap: 1 });
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica-Bold").text("REMARQUES & CONDITIONS :", margin + 10, notesY + 5);
+        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.invoice.notes, margin + 10, notesY + 15, { width: contentWidth - 20, lineGap: 1 });
+      }
+
+      // --- PAYMENT DETAILS & BARIDIMOB BLOCK ---
+      if (hasBankDetails) {
+        doc.roundedRect(margin, bankY, contentWidth, bankBoxH, cornerRadius).fillAndStroke("#ffffff", borderColor);
+
+        // Accent vertical bar (golden yellow for Algérie Poste/BaridiMob, brand palette for others)
+        const accentBarColor = isPostalOrBaridi ? "#eab308" : primaryColor;
+        doc.rect(margin, bankY, 3.5, bankBoxH).fill(accentBarColor);
+
+        // Header line
+        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica-Bold");
+        doc.text(
+          isPostalOrBaridi
+            ? "MODALITÉS DE RÈGLEMENT & COORDONNÉES BARIDIMOB / CCP :"
+            : "MODALITÉS DE RÈGLEMENT & COORDONNÉES BANCAIRES :",
+          margin + 10,
+          bankY + 6
+        );
+
+        if (isPostalOrBaridi) {
+          doc.fillColor("#b45309").fontSize(6.5).font("Helvetica-Bold").text(
+            "Compatible BaridiMob (Algérie Poste)",
+            margin + contentWidth - 170,
+            bankY + 6,
+            { width: 160, align: "right" }
+          );
+        }
+
+        // Row 1: Bank & Beneficiary
+        const bankNameDisplay = data.seller.bankName || (isPostalOrBaridi ? "Algérie Poste (CCP)" : "Banque");
+        const agencyText = data.seller.bankAgency ? ` (${data.seller.bankAgency})` : "";
+        const beneficiaryDisplay = data.seller.accountHolder || data.seller.fullName;
+
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("Établissement : ", margin + 10, bankY + 18, { continued: true });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(`${bankNameDisplay}${agencyText}`);
+
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("Bénéficiaire : ", margin + 250, bankY + 18, { continued: true });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(beneficiaryDisplay);
+
+        // Row 2: RIP & Payment Terms / Due Date
+        const ripFormatted = formatRip(data.seller.bankRib) || "—";
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("RIP (20 chiffres) : ", margin + 10, bankY + 29, { continued: true });
+        doc.font("Courier-Bold").fontSize(7.5).fillColor(darkColor).text(ripFormatted);
+
+        const termsKey = data.invoice.paymentTerms || data.seller.paymentTerms || "UPON_RECEIPT";
+        const termsDef = PAYMENT_TERMS_CONFIG[termsKey] || PAYMENT_TERMS_CONFIG.UPON_RECEIPT;
+        let termsDisplay = termsDef.shortFr;
+        if (data.invoice.dueDate) {
+          const d = new Date(data.invoice.dueDate).toLocaleDateString("fr-DZ", { day: "2-digit", month: "2-digit", year: "numeric" });
+          termsDisplay += ` • Échéance : ${d}`;
+        }
+
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("Conditions : ", margin + 250, bankY + 29, { continued: true });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(termsDisplay);
+
+        // Row 3: IBAN / BIC or Custom Instructions if present
+        if (hasIbanOrExtra) {
+          let extraLineY = bankY + 40;
+          let intlText = "";
+          if (data.seller.bankIban || data.seller.bankBic || curr !== "DZD") {
+            const ibanStr = data.seller.bankIban ? `IBAN : ${formatIban(data.seller.bankIban)}` : "";
+            const bicStr = data.seller.bankBic ? `BIC/SWIFT : ${data.seller.bankBic}` : "";
+            intlText = [ibanStr, bicStr].filter(Boolean).join("   |   ");
+            if (intlText) {
+              doc.fillColor(mutedColor).fontSize(6.5).font("Helvetica").text(intlText, margin + 10, extraLineY);
+              extraLineY += 7.5;
+            }
+          }
+          if (data.seller.paymentInstructions) {
+            doc.fillColor(mutedColor).fontSize(6.5).font("Helvetica-Oblique").text(
+              `Consigne : ${data.seller.paymentInstructions}`,
+              margin + 10,
+              extraLineY,
+              { width: contentWidth - 20 }
+            );
+          }
+        }
       }
 
       // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
       doc.roundedRect(margin, legalY, contentWidth, legalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
       doc.rect(margin, legalY, 4, legalBoxH).fill(primaryColor);
 
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 7);
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, legalY + 19, {
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 6);
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, legalY + 17, {
         width: contentWidth - 24,
         lineGap: 1,
       });
@@ -457,6 +588,7 @@ export interface QuotePdfData {
     quoteNumber: string | null;
     issueDate: Date | string;
     validUntil?: Date | string | null;
+    paymentTerms?: string | null;
     total: number;
     currency: string;
     exchangeRate?: number | null;
@@ -485,6 +617,16 @@ export interface QuotePdfData {
     logoPosition?: string | null;
     brandColor?: string | null;
     templateStyle?: string | null;
+    bankName?: string | null;
+    bankRib?: string | null;
+    bankIban?: string | null;
+    bankBic?: string | null;
+    accountHolder?: string | null;
+    bankAgency?: string | null;
+    ccpNumber?: string | null;
+    ccpKey?: string | null;
+    paymentTerms?: string | null;
+    paymentInstructions?: string | null;
   };
   client: {
     name: string;
@@ -791,9 +933,28 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
       const footerLineY = 766;
-      const legalBoxH = 40;
+      const legalBoxH = 38;
       const approvalBoxH = 46;
-      const neededBottomSpace = legalBoxH + approvalBoxH + 18;
+
+      const hasBankDetails = Boolean(
+        data.seller.bankRib ||
+        data.seller.bankName ||
+        data.seller.ccpNumber ||
+        data.quote.paymentTerms ||
+        data.seller.paymentTerms ||
+        data.seller.paymentInstructions
+      );
+
+      const isPostalOrBaridi = Boolean(
+        data.seller.bankName?.toLowerCase().includes("poste") ||
+        data.seller.bankName?.toLowerCase().includes("ccp") ||
+        data.seller.bankName?.toLowerCase().includes("baridi") ||
+        data.seller.ccpNumber ||
+        data.seller.bankRib?.replace(/\s/g, "").startsWith("007")
+      );
+
+      const bankBoxH = hasBankDetails ? 44 : 0;
+      const neededBottomSpace = legalBoxH + approvalBoxH + (bankBoxH ? bankBoxH + 6 : 0) + 16;
 
       // If content overflows into bottom area, add new page
       if (tableY + neededBottomSpace > footerLineY) {
@@ -803,8 +964,55 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       }
 
       // Pin legal note right above the footer line
-      const legalY = Math.max(tableY + approvalBoxH + 12, footerLineY - 8 - legalBoxH);
+      const legalY = Math.max(
+        tableY + approvalBoxH + (bankBoxH ? bankBoxH + 6 : 0) + 12,
+        footerLineY - 8 - legalBoxH
+      );
       const approvalY = legalY - approvalBoxH - 8;
+      const bankY = approvalY - (bankBoxH ? bankBoxH + 6 : 0);
+
+      // --- PAYMENT DETAILS & BARIDIMOB BLOCK (QUOTES) ---
+      if (hasBankDetails) {
+        doc.roundedRect(margin, bankY, contentWidth, bankBoxH, cornerRadius).fillAndStroke("#ffffff", borderColor);
+        const accentBarColor = isPostalOrBaridi ? "#eab308" : accentColor;
+        doc.rect(margin, bankY, 3.5, bankBoxH).fill(accentBarColor);
+
+        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica-Bold");
+        doc.text(
+          isPostalOrBaridi
+            ? "MODALITÉS DE RÈGLEMENT PRÉVUES & BARIDIMOB / CCP :"
+            : "MODALITÉS DE RÈGLEMENT PRÉVUES & COORDONNÉES BANCAIRES :",
+          margin + 10,
+          bankY + 6
+        );
+
+        if (isPostalOrBaridi) {
+          doc.fillColor("#b45309").fontSize(6.5).font("Helvetica-Bold").text(
+            "Compatible BaridiMob (Algérie Poste)",
+            margin + contentWidth - 170,
+            bankY + 6,
+            { width: 160, align: "right" }
+          );
+        }
+
+        const bankNameDisplay = data.seller.bankName || (isPostalOrBaridi ? "Algérie Poste (CCP)" : "Banque");
+        const beneficiaryDisplay = data.seller.accountHolder || data.seller.fullName;
+
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("Établissement : ", margin + 10, bankY + 18, { continued: true });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(bankNameDisplay);
+
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("Bénéficiaire : ", margin + 250, bankY + 18, { continued: true });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(beneficiaryDisplay);
+
+        const ripFormatted = formatRip(data.seller.bankRib) || "—";
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("RIP (20 chiffres) : ", margin + 10, bankY + 29, { continued: true });
+        doc.font("Courier-Bold").fontSize(7.5).fillColor(darkColor).text(ripFormatted);
+
+        const termsKey = data.quote.paymentTerms || data.seller.paymentTerms || "UPON_RECEIPT";
+        const termsDef = PAYMENT_TERMS_CONFIG[termsKey] || PAYMENT_TERMS_CONFIG.UPON_RECEIPT;
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text("Conditions : ", margin + 250, bankY + 29, { continued: true });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(termsDef.shortFr);
+      }
 
       // --- NOTES & APPROVAL BOX ---
       if (data.quote.notes) {

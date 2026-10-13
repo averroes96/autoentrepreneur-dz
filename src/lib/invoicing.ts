@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { Prisma } from "@prisma/client";
 import { calculateDzdEquivalent, getCurrencyDef } from "./currencies";
+import { calculateDueDate } from "./banking";
 
 export interface LineItemInput {
   description: string;
@@ -13,6 +14,8 @@ export interface CreateInvoiceInput {
   tenantId: string;
   clientId: string;
   issueDate: Date;
+  dueDate?: Date;
+  paymentTerms?: string;
   currency?: string;
   exchangeRate?: number;
   notes?: string;
@@ -43,6 +46,9 @@ export async function createDraftInvoice(data: CreateInvoiceInput) {
       : typeof data.exchangeRate === "number" && data.exchangeRate > 0
       ? data.exchangeRate
       : getCurrencyDef(currency).defaultRate;
+
+  const paymentTerms = data.paymentTerms || profile?.paymentTerms || "UPON_RECEIPT";
+  const dueDate = data.dueDate || calculateDueDate(data.issueDate, paymentTerms);
 
   const normalizedItems = data.lineItems.map((item, index) => {
     const qty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
@@ -76,6 +82,8 @@ export async function createDraftInvoice(data: CreateInvoiceInput) {
       clientId: data.clientId,
       fiscalYear,
       issueDate: data.issueDate,
+      dueDate,
+      paymentTerms,
       status: "DRAFT",
       paymentStatus: "UNPAID",
       currency,
@@ -105,6 +113,8 @@ export async function updateDraftInvoice(
   data: {
     clientId?: string;
     issueDate?: Date;
+    dueDate?: Date;
+    paymentTerms?: string;
     currency?: string;
     exchangeRate?: number;
     notes?: string;
@@ -178,11 +188,22 @@ export async function updateDraftInvoice(
 
     const totalDzd = calculateDzdEquivalent(newTotal, currency, exchangeRate);
 
+    const effectiveIssueDate = data.issueDate || existing.issueDate;
+    const effectivePaymentTerms = data.paymentTerms !== undefined ? data.paymentTerms : existing.paymentTerms;
+    const effectiveDueDate =
+      data.dueDate !== undefined
+        ? data.dueDate
+        : data.paymentTerms || data.issueDate
+        ? calculateDueDate(effectiveIssueDate, effectivePaymentTerms || "UPON_RECEIPT")
+        : existing.dueDate;
+
     return tx.invoice.update({
       where: { id: invoiceId },
       data: {
         ...(data.clientId && { clientId: data.clientId }),
         ...(data.issueDate && { issueDate: data.issueDate, fiscalYear }),
+        dueDate: effectiveDueDate,
+        paymentTerms: effectivePaymentTerms,
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.showDetailedItems !== undefined && { showDetailedItems: data.showDetailedItems }),
         currency,
@@ -282,7 +303,11 @@ export async function issueInvoice(tenantId: string, invoiceId: string) {
       bankRib: profile.bankRib,
       bankIban: profile.bankIban,
       bankBic: profile.bankBic,
-      paymentTerms: profile.paymentTerms,
+      accountHolder: profile.accountHolder || profile.fullName,
+      bankAgency: profile.bankAgency,
+      ccpNumber: profile.ccpNumber,
+      ccpKey: profile.ccpKey,
+      paymentTerms: invoice.paymentTerms || profile.paymentTerms || "UPON_RECEIPT",
       paymentInstructions: profile.paymentInstructions,
       showStampSignature: profile.showStampSignature,
       signatureUrl: profile.signatureUrl,
