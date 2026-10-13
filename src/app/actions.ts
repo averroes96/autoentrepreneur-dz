@@ -224,6 +224,24 @@ export async function updateProfileAction(formData: FormData) {
   const casnosStatus = (formData.get("casnosStatus") as string) || "AFFILIATED";
   const casnosScheme = (formData.get("casnosScheme") as string) || "FLAT_24000";
 
+  // Visual Identity & Styling Engine (Phase 4)
+  const logoUrl = (formData.get("logoUrl") as string)?.trim() || null;
+  const logoPosition = (formData.get("logoPosition") as string)?.trim() || "LEFT";
+  const brandColor = (formData.get("brandColor") as string)?.trim().toUpperCase() || "EMERALD";
+  const templateStyle = (formData.get("templateStyle") as string)?.trim().toUpperCase() || "MODERN";
+
+  // Payment & Banking Coordinates
+  const bankName = (formData.get("bankName") as string)?.trim() || null;
+  const bankRib = (formData.get("bankRib") as string)?.trim() || null;
+  const bankIban = (formData.get("bankIban") as string)?.trim() || null;
+  const bankBic = (formData.get("bankBic") as string)?.trim() || null;
+  const paymentTerms = (formData.get("paymentTerms") as string)?.trim() || null;
+  const paymentInstructions = (formData.get("paymentInstructions") as string)?.trim() || null;
+
+  // Commercial Stamp & Signature
+  const showStampSignature = formData.get("showStampSignature") === "true" || formData.get("showStampSignature") === "on";
+  const signatureUrl = (formData.get("signatureUrl") as string)?.trim() || null;
+
   const cardIssueDateRaw = formData.get("cardIssueDate") as string;
   const cardIssueDate = cardIssueDateRaw ? new Date(cardIssueDateRaw) : null;
 
@@ -249,6 +267,18 @@ export async function updateProfileAction(formData: FormData) {
       casnosScheme,
       cardIssueDate,
       activityStartDate,
+      logoUrl,
+      logoPosition,
+      brandColor,
+      templateStyle,
+      bankName,
+      bankRib,
+      bankIban,
+      bankBic,
+      paymentTerms,
+      paymentInstructions,
+      showStampSignature,
+      signatureUrl,
     },
     create: {
       tenantId: session.tenantId,
@@ -268,6 +298,18 @@ export async function updateProfileAction(formData: FormData) {
       casnosScheme,
       cardIssueDate,
       activityStartDate,
+      logoUrl,
+      logoPosition,
+      brandColor,
+      templateStyle,
+      bankName,
+      bankRib,
+      bankIban,
+      bankBic,
+      paymentTerms,
+      paymentInstructions,
+      showStampSignature,
+      signatureUrl,
     },
   });
 
@@ -615,6 +657,10 @@ export async function emailInvoiceAction(invoiceId: string, recipientEmail?: str
         phone: profile.phone,
         activityCode: profile.activityCode,
         activityLabel: profile.activityLabel,
+        logoUrl: profile.logoUrl,
+        logoPosition: profile.logoPosition,
+        brandColor: profile.brandColor,
+        templateStyle: profile.templateStyle,
       },
       client: invoice.client,
     });
@@ -865,6 +911,10 @@ export async function emailQuoteAction(quoteId: string, recipientEmail?: string)
         phone: profile.phone,
         activityCode: profile.activityCode,
         activityLabel: profile.activityLabel,
+        logoUrl: profile.logoUrl,
+        logoPosition: profile.logoPosition,
+        brandColor: profile.brandColor,
+        templateStyle: profile.templateStyle,
       },
       client: quote.client,
     });
@@ -1011,6 +1061,10 @@ export async function emailCreditNoteAction(
         phone: profile.phone,
         activityCode: profile.activityCode,
         activityLabel: profile.activityLabel,
+        logoUrl: profile.logoUrl,
+        logoPosition: profile.logoPosition,
+        brandColor: profile.brandColor,
+        templateStyle: profile.templateStyle,
       },
       client: creditNote.client,
     });

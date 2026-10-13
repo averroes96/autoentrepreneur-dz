@@ -16,6 +16,10 @@ import {
   getExchangeRateNotice,
 } from "@/lib/currencies";
 import { Printer, Globe } from "lucide-react";
+import {
+  getBrandPalette,
+  getTemplateStyle,
+} from "@/lib/invoiceDesign";
 
 interface BilingualQuotePaperProps {
   quote: {
@@ -48,6 +52,18 @@ interface BilingualQuotePaperProps {
     email?: string | null;
     activityCode?: string | null;
     activityLabel?: string | null;
+    logoUrl?: string | null;
+    logoPosition?: string | null;
+    brandColor?: string | null;
+    templateStyle?: string | null;
+    bankName?: string | null;
+    bankRib?: string | null;
+    bankIban?: string | null;
+    bankBic?: string | null;
+    paymentTerms?: string | null;
+    paymentInstructions?: string | null;
+    showStampSignature?: boolean | null;
+    signatureUrl?: string | null;
   };
   client: {
     name: string;
@@ -71,6 +87,10 @@ export function BilingualQuotePaper({
   const [lang, setLang] = useState<"fr" | "ar">(defaultLanguage);
   const isArabic = lang === "ar";
   const ar = ARABIC_NOMENCLATURE;
+
+  const palette = getBrandPalette(seller.brandColor);
+  const template = getTemplateStyle(seller.templateStyle);
+  const logoPos = (seller.logoPosition?.toUpperCase() || "LEFT") as "LEFT" | "CENTER" | "RIGHT";
 
   const quoteCurrency = quote.currency || "DZD";
   const isForeign = quoteCurrency !== "DZD";
@@ -143,35 +163,96 @@ export function BilingualQuotePaper({
       {/* Quote Paper Card */}
       <div
         dir={isArabic ? "rtl" : "ltr"}
-        className={`bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 shadow-md space-y-8 print:shadow-none print:border-none print:p-0 ${
+        className={`bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden print:shadow-none print:border-none ${
           isArabic ? "font-arabic" : ""
         }`}
       >
-        {isArabic && (
-          <div className="text-center pb-6 border-b border-slate-100 space-y-1">
-            <h3 className="text-sm font-bold text-slate-900 tracking-wide">
-              {ar.republicTitle}
-            </h3>
-            <p className="text-xs font-semibold text-emerald-800">
-              {ar.autoEntrepreneurRegime}
-            </p>
-          </div>
+        {/* Top Decorative Brand Accent Strip */}
+        {template.key === "MODERN" && (
+          <div
+            className="h-2.5 w-full"
+            style={{
+              background: `linear-gradient(90deg, ${palette.hex}, ${palette.darkHex})`,
+            }}
+          />
+        )}
+        {template.key === "CLASSIC" && (
+          <div
+            className="h-2 w-full"
+            style={{ backgroundColor: palette.darkHex }}
+          />
+        )}
+        {template.key === "MINIMALIST" && (
+          <div
+            className="h-0.5 w-full"
+            style={{ backgroundColor: palette.borderHex }}
+          />
+        )}
+        {template.key === "COMPACT" && (
+          <div
+            className="h-1.5 w-full"
+            style={{ backgroundColor: palette.hex }}
+          />
         )}
 
-        {/* Main Document Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-8 border-b-2 border-slate-100 gap-4">
-          <div>
-            <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {isArabic ? ar.quoteTitle : "DEVIS COMMERCIAL"}
-            </span>
-            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider mt-1">
-              {isArabic
-                ? "عرض أسعار تقديري — معفى من الرسم على القيمة المضافة (TVA)"
-                : "Proposition Tarifaire — Régime Auto-Entrepreneur (Loi 22-23)"}
-            </p>
-          </div>
+        <div className="p-8 sm:p-12 space-y-8 print:p-0">
+          {isArabic && (
+            <div className="text-center pb-6 border-b border-slate-100 space-y-1">
+              <h3 className="text-sm font-bold text-slate-900 tracking-wide">
+                {ar.republicTitle}
+              </h3>
+              <p className="text-xs font-semibold" style={{ color: palette.darkHex }}>
+                {ar.autoEntrepreneurRegime}
+              </p>
+            </div>
+          )}
 
-          <div className={`space-y-1 text-xs ${isArabic ? "text-right sm:text-left" : "text-left sm:text-right"}`}>
+          {/* Centered Logo if position is CENTER */}
+          {seller.logoUrl && logoPos === "CENTER" && (
+            <div className="flex justify-center pb-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={seller.logoUrl}
+                alt={seller.fullName || "Logo"}
+                className="max-h-16 max-w-[220px] object-contain"
+              />
+            </div>
+          )}
+
+          {/* Main Document Header */}
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between pb-8 border-b-2 border-slate-100 gap-4">
+            <div className="flex items-center gap-4">
+              {seller.logoUrl && logoPos === "LEFT" && (
+                <div className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={seller.logoUrl}
+                    alt={seller.fullName || "Logo"}
+                    className="max-h-14 max-w-[180px] object-contain"
+                  />
+                </div>
+              )}
+
+              <div>
+                <span
+                  className="text-3xl font-extrabold tracking-tight"
+                  style={{ color: palette.darkHex }}
+                >
+                  {isArabic ? ar.quoteTitle : "DEVIS COMMERCIAL"}
+                </span>
+                <p
+                  className="text-xs font-bold uppercase tracking-wider mt-1"
+                  style={{ color: palette.hex }}
+                >
+                  {isArabic
+                    ? "عرض أسعار تقديري — معفى من الرسم على القيمة المضافة (TVA)"
+                    : "Proposition Tarifaire — Régime Auto-Entrepreneur (Loi 22-23)"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className={`space-y-1 text-xs ${isArabic ? "text-right sm:text-left" : "text-left sm:text-right"}`}>
             <div>
               <span className="text-slate-400 font-medium">
                 {isArabic ? `${ar.quoteNumberLabel} : ` : "N° de devis : "}
@@ -199,7 +280,7 @@ export function BilingualQuotePaper({
                 <span className="text-slate-400 font-medium">
                   {isArabic ? `${ar.validUntilLabel} : ` : "Valable jusqu'au : "}
                 </span>
-                <span className="font-semibold text-emerald-700">
+                <span className="font-semibold" style={{ color: palette.hex }}>
                   {isArabic
                     ? formatArabicDate(quote.validUntil)
                     : new Date(quote.validUntil).toLocaleDateString("fr-DZ", {
@@ -211,7 +292,19 @@ export function BilingualQuotePaper({
               </div>
             )}
           </div>
+
+          {seller.logoUrl && logoPos === "RIGHT" && (
+            <div className="shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={seller.logoUrl}
+                alt={seller.fullName || "Logo"}
+                className="max-h-14 max-w-[180px] object-contain"
+              />
+            </div>
+          )}
         </div>
+      </div>
 
         {/* Seller and Client Blocks */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -300,28 +393,53 @@ export function BilingualQuotePaper({
         {/* Line Items Table */}
         <div className="border border-slate-200 rounded-2xl overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+            <thead
+              style={{
+                backgroundColor:
+                  template.key === "MINIMALIST" ? "#ffffff" : palette.lightBgHex,
+                borderBottom: `2px solid ${palette.borderHex}`,
+              }}
+              className="text-slate-500 font-semibold uppercase tracking-wider"
+            >
               {quote.showDetailedItems ? (
                 <tr>
-                  <th className={`py-3 px-5 ${isArabic ? "text-right" : "text-left"}`}>
+                  <th
+                    className={`py-3 px-5 ${isArabic ? "text-right" : "text-left"}`}
+                    style={{ color: palette.darkHex }}
+                  >
                     {isArabic ? ar.descriptionHeader : "Désignation des prestations"}
                   </th>
-                  <th className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}>
+                  <th
+                    className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}
+                    style={{ color: palette.darkHex }}
+                  >
                     {isArabic ? ar.quantityHeader : "Quantité"}
                   </th>
-                  <th className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}>
+                  <th
+                    className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}
+                    style={{ color: palette.darkHex }}
+                  >
                     {isArabic ? `${ar.unitPriceHeader} (${quoteCurrency})` : `Prix Unitaire (${quoteCurrency})`}
                   </th>
-                  <th className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}>
+                  <th
+                    className={`py-3 px-5 ${isArabic ? "text-left" : "text-right"}`}
+                    style={{ color: palette.darkHex }}
+                  >
                     {isArabic ? `${ar.totalHeader} (${quoteCurrency})` : `Montant Total (${quoteCurrency})`}
                   </th>
                 </tr>
               ) : (
                 <tr>
-                  <th className={`py-3.5 px-6 ${isArabic ? "text-right" : "text-left"}`}>
+                  <th
+                    className={`py-3.5 px-6 ${isArabic ? "text-right" : "text-left"}`}
+                    style={{ color: palette.darkHex }}
+                  >
                     {isArabic ? ar.descriptionHeader : "Désignation de la prestation / tâche"}
                   </th>
-                  <th className={`py-3.5 px-6 ${isArabic ? "text-left" : "text-right"}`}>
+                  <th
+                    className={`py-3.5 px-6 ${isArabic ? "text-left" : "text-right"}`}
+                    style={{ color: palette.darkHex }}
+                  >
                     {isArabic ? `${ar.totalHeader} (${quoteCurrency})` : `Montant (${quoteCurrency})`}
                   </th>
                 </tr>
@@ -372,7 +490,7 @@ export function BilingualQuotePaper({
             </div>
             <div className="flex justify-between items-center text-xs text-slate-600">
               <span>{isArabic ? ar.vatRateLabel : "Taux de TVA :"}</span>
-              <span className="font-semibold text-emerald-700">
+              <span className="font-semibold" style={{ color: palette.hex }}>
                 {isArabic ? ar.vatExemptValue : "0% (Non applicable)"}
               </span>
             </div>
@@ -380,7 +498,10 @@ export function BilingualQuotePaper({
               <span className="text-xs font-bold text-slate-900 uppercase">
                 {isArabic ? ar.netPayableLabel : "Total Net Estimé :"}
               </span>
-              <span className="text-lg font-extrabold text-emerald-700 font-mono">
+              <span
+                className="text-lg font-extrabold font-mono"
+                style={{ color: palette.darkHex }}
+              >
                 {formatCurrencyAmount(quote.total, quoteCurrency, lang)}
               </span>
             </div>
@@ -394,11 +515,17 @@ export function BilingualQuotePaper({
                     1 {quoteCurrency} = {exchangeRate.toFixed(2)} DZD
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-slate-900 bg-emerald-50/80 p-2 rounded-lg border border-emerald-200">
-                  <span className="font-bold text-emerald-950 text-[11px]">
+                <div
+                  className="flex justify-between items-center p-2 rounded-lg border"
+                  style={{
+                    backgroundColor: palette.lightBgHex,
+                    borderColor: palette.borderHex,
+                  }}
+                >
+                  <span className="font-bold text-[11px]" style={{ color: palette.darkHex }}>
                     {isArabic ? "المقابل الجبائي (IFU) :" : "Contre-valeur (IFU) :"}
                   </span>
-                  <span className="font-extrabold text-emerald-800 font-mono">
+                  <span className="font-extrabold font-mono" style={{ color: palette.darkHex }}>
                     {formatCurrencyAmount(totalDzd, "DZD", lang)}
                   </span>
                 </div>
@@ -416,20 +543,29 @@ export function BilingualQuotePaper({
             {getAmountInWordsWithCurrency(quote.total, quoteCurrency, lang)}
           </p>
           {isForeign && (
-            <p className="text-emerald-800 text-[11px] font-semibold mt-1">
+            <p className="text-[11px] font-semibold mt-1" style={{ color: palette.darkHex }}>
               {getExchangeRateNotice(quoteCurrency, exchangeRate, totalDzd, lang)}
             </p>
           )}
         </div>
 
         {/* Mandatory VAT Exemption Note */}
-        <div className="p-4 rounded-xl bg-emerald-50/80 border-l-4 border-emerald-600 text-xs text-emerald-950 space-y-1">
-          <span className="font-bold block text-emerald-900 uppercase tracking-wider text-[11px]">
+        <div
+          className="p-4 rounded-xl border-l-4 text-xs space-y-1"
+          style={{
+            backgroundColor: palette.lightBgHex,
+            borderLeftColor: palette.hex,
+          }}
+        >
+          <span
+            className="font-bold block uppercase tracking-wider text-[11px]"
+            style={{ color: palette.darkHex }}
+          >
             {isArabic
               ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
               : "Mention légale d'exonération de TVA :"}
           </span>
-          <p className="italic text-emerald-800 leading-relaxed">
+          <p className="italic leading-relaxed" style={{ color: palette.darkHex }}>
             « {isArabic ? ar.vatExemptionClause : quote.vatExemptionNote} »
           </p>
         </div>
@@ -455,8 +591,14 @@ export function BilingualQuotePaper({
             </span>
           </div>
 
-          <div className="border border-dashed border-emerald-200 bg-emerald-50/20 rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between">
-            <span className="text-[11px] font-bold text-emerald-800 uppercase">
+          <div
+            className="border border-dashed rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between"
+            style={{
+              borderColor: palette.borderHex,
+              backgroundColor: `${palette.lightBgHex}66`,
+            }}
+          >
+            <span className="text-[11px] font-bold uppercase" style={{ color: palette.darkHex }}>
               {isArabic ? "توقيع وخاتم المقاول الذاتي" : "Signature & Cachet du Prestataire"}
             </span>
             <div className="text-[10px] text-slate-500">
@@ -467,6 +609,7 @@ export function BilingualQuotePaper({
         </div>
       </div>
     </div>
+  </div>
   );
 }
 

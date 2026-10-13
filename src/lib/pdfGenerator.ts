@@ -9,6 +9,68 @@ import {
   getCurrencyDef,
   calculateDzdEquivalent,
 } from "./currencies";
+import {
+  getBrandPalette,
+  getTemplateStyle,
+  type BrandPalette,
+  type TemplateStyleKey,
+} from "./invoiceDesign";
+
+export interface SellerBrandingFields {
+  logoUrl?: string | null;
+  logoPosition?: string | null;
+  brandColor?: string | null;
+  templateStyle?: string | null;
+}
+
+function getLogoBuffer(logoUrl?: string | null): Buffer | null {
+  if (!logoUrl || typeof logoUrl !== "string") return null;
+  try {
+    const base64Data = logoUrl.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, "").trim();
+    if (!base64Data) return null;
+    const buf = Buffer.from(base64Data, "base64");
+    if (buf.length < 10) return null;
+    return buf;
+  } catch {
+    return null;
+  }
+}
+
+function tryDrawImage(
+  doc: PDFKit.PDFDocument,
+  buf: Buffer,
+  x: number,
+  y: number,
+  options?: any
+): boolean {
+  try {
+    doc.image(buf, x, y, options);
+    return true;
+  } catch (err) {
+    console.warn("Failed to render logo in PDFKit:", err);
+    return false;
+  }
+}
+
+function drawTemplateAccentBar(
+  doc: PDFKit.PDFDocument,
+  templateKey: TemplateStyleKey,
+  palette: BrandPalette,
+  margin: number,
+  contentWidth: number
+): void {
+  if (templateKey === "MODERN") {
+    doc.rect(margin, margin, contentWidth, 3.5).fill(palette.hex);
+  } else if (templateKey === "CLASSIC") {
+    doc.rect(margin, margin, contentWidth, 4).fill(palette.darkHex);
+  } else if (templateKey === "MINIMALIST") {
+    doc.rect(margin, margin, contentWidth, 1).fill(palette.borderHex);
+  } else if (templateKey === "COMPACT") {
+    doc.rect(margin, margin, contentWidth, 2).fill(palette.hex);
+  } else {
+    doc.rect(margin, margin, contentWidth, 3).fill(palette.hex);
+  }
+}
 
 export interface InvoicePdfData {
   invoice: {
@@ -38,6 +100,10 @@ export interface InvoicePdfData {
     phone: string;
     activityCode: string;
     activityLabel: string;
+    logoUrl?: string | null;
+    logoPosition?: string | null;
+    brandColor?: string | null;
+    templateStyle?: string | null;
   };
   client: {
     name: string;
@@ -69,9 +135,18 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", (err) => reject(err));
 
-      const seller = data.invoice.sellerSnapshot
+      const rawSeller = data.invoice.sellerSnapshot
         ? JSON.parse(data.invoice.sellerSnapshot)
         : data.seller;
+
+      const seller = {
+        ...data.seller,
+        ...rawSeller,
+        logoUrl: rawSeller.logoUrl ?? data.seller?.logoUrl,
+        logoPosition: rawSeller.logoPosition ?? data.seller?.logoPosition,
+        brandColor: rawSeller.brandColor ?? data.seller?.brandColor,
+        templateStyle: rawSeller.templateStyle ?? data.seller?.templateStyle,
+      };
 
       const client = data.invoice.clientSnapshot
         ? JSON.parse(data.invoice.clientSnapshot)
@@ -81,52 +156,108 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       const margin = 40;
       const contentWidth = pageWidth - margin * 2;
 
-      // Primary Brand Colors
-      const primaryColor = "#059669"; // Emerald 600
-      const darkColor = "#0f172a";    // Slate 900
-      const mutedColor = "#64748b";   // Slate 500
-      const lightBg = "#f8fafc";      // Slate 50
-      const borderColor = "#e2e8f0";  // Slate 200
+      // Brand Styling Engine (Phase 4 Module 1)
+      const palette = getBrandPalette(seller.brandColor);
+      const template = getTemplateStyle(seller.templateStyle);
+      const primaryColor = palette.hex;
+      const darkColor = palette.darkHex;
+      const mutedColor = "#64748b";
+      const lightBg = template.key === "MINIMALIST" ? "#ffffff" : palette.lightBgHex;
+      const borderColor = palette.borderHex;
+      const cornerRadius = template.key === "CLASSIC" ? 2 : template.key === "MINIMALIST" ? 3 : 6;
 
-      // --- HEADER ---
-      doc.rect(margin, margin, contentWidth, 3).fill(primaryColor);
+      const logoBuf = getLogoBuffer(seller.logoUrl);
+      const logoPos = ((seller.logoPosition || "LEFT").toUpperCase()) as "LEFT" | "CENTER" | "RIGHT";
 
-      doc.y = margin + 15;
-      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE", margin, doc.y);
+      // --- HEADER ACCENT BAR ---
+      drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
+
+      const headerTopY = margin + 12;
+      let leftTitleX = margin;
+
+      // Center logo option
+      if (logoBuf && logoPos === "CENTER") {
+        const centerW = 100;
+        const centerH = 34;
+        const centerLogoX = (pageWidth - centerW) / 2;
+        tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
+          fit: [centerW, centerH],
+          align: "center",
+          valign: "center",
+        });
+      }
+
+      // Left logo option
+      if (logoBuf && logoPos === "LEFT") {
+        const leftW = 75;
+        const leftH = 38;
+        const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
+          fit: [leftW, leftH],
+          valign: "center",
+        });
+        if (drawn) {
+          leftTitleX = margin + leftW + 12;
+        }
+      }
+
+      // Invoice Title
+      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE", leftTitleX, headerTopY);
       doc
-        .fontSize(8.5)
+        .fontSize(8)
         .font("Helvetica-Bold")
         .fillColor(primaryColor)
-        .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / IFU)");
+        .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / IFU)", leftTitleX, headerTopY + 24);
 
       // Invoice metadata on the right
-      const metaY = margin + 15;
+      const metaY = headerTopY;
       const dateStr = new Date(data.invoice.issueDate).toLocaleDateString("fr-DZ", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
 
-      doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
-      doc.text("N° de Facture :", 360, metaY, { width: 90, align: "right" });
-      doc
-        .font("Helvetica-Bold")
-        .fillColor(darkColor)
-        .text(data.invoice.invoiceNumber || "BROUILLON", 455, metaY, { width: 100 });
+      if (logoBuf && logoPos === "RIGHT") {
+        const rightW = 75;
+        const rightH = 38;
+        const rightLogoX = margin + contentWidth - rightW;
+        tryDrawImage(doc, logoBuf, rightLogoX, headerTopY, {
+          fit: [rightW, rightH],
+          align: "right",
+          valign: "center",
+        });
 
-      doc.font("Helvetica").fillColor(mutedColor);
-      doc.text("Date d'émission :", 360, metaY + 16, { width: 90, align: "right" });
-      doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 16, { width: 100 });
+        doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° de Facture :", 270, metaY, { width: 90, align: "right" });
+        doc
+          .font("Helvetica-Bold")
+          .fillColor(darkColor)
+          .text(data.invoice.invoiceNumber || "BROUILLON", 365, metaY, { width: 95 });
+
+        doc.font("Helvetica").fillColor(mutedColor);
+        doc.text("Date d'émission :", 270, metaY + 16, { width: 90, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 365, metaY + 16, { width: 95 });
+      } else {
+        doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° de Facture :", 360, metaY, { width: 90, align: "right" });
+        doc
+          .font("Helvetica-Bold")
+          .fillColor(darkColor)
+          .text(data.invoice.invoiceNumber || "BROUILLON", 455, metaY, { width: 100 });
+
+        doc.font("Helvetica").fillColor(mutedColor);
+        doc.text("Date d'émission :", 360, metaY + 16, { width: 90, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 16, { width: 100 });
+      }
 
       doc.moveDown(2);
 
       // --- SELLER & CLIENT BOXES ---
       const boxesY = 120;
       const boxWidth = (contentWidth - 16) / 2;
-      const boxHeight = 120;
+      const boxHeight = template.key === "COMPACT" ? 108 : 120;
 
       // Seller Box
-      doc.roundedRect(margin, boxesY, boxWidth, boxHeight, 6).fillAndStroke(lightBg, borderColor);
+      doc.roundedRect(margin, boxesY, boxWidth, boxHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
       doc.fillColor(primaryColor).fontSize(8).font("Helvetica-Bold").text("ÉMETTEUR (AUTO-ENTREPRENEUR)", margin + 12, boxesY + 10);
       doc.fillColor(darkColor).fontSize(11).font("Helvetica-Bold").text(seller.fullName || "Auto-Entrepreneur", margin + 12, boxesY + 24);
 
@@ -139,7 +270,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
 
       // Client Box
       const clientX = margin + boxWidth + 16;
-      doc.roundedRect(clientX, boxesY, boxWidth, boxHeight, 6).fillAndStroke(lightBg, borderColor);
+      doc.roundedRect(clientX, boxesY, boxWidth, boxHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
       doc.fillColor(mutedColor).fontSize(8).font("Helvetica-Bold").text("CLIENT (DESTINATAIRE)", clientX + 12, boxesY + 10);
       doc.fillColor(darkColor).fontSize(11).font("Helvetica-Bold").text(client.name || "Client", clientX + 12, boxesY + 24);
 
@@ -160,7 +291,8 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       const col4 = 475;
 
       // Table Header
-      doc.roundedRect(margin, tableY, contentWidth, 24, 4).fillAndStroke("#f1f5f9", borderColor);
+      const tableHeaderBg = template.key === "MINIMALIST" ? "#f8fafc" : palette.lightBgHex;
+      doc.roundedRect(margin, tableY, contentWidth, 24, cornerRadius).fillAndStroke(tableHeaderBg, borderColor);
       doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold");
 
       if (isDetailed) {
@@ -178,12 +310,12 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       // Table Rows
       data.invoice.lineItems.forEach((item, index) => {
         const curr = data.invoice.currency || "DZD";
-        const rowHeight = 24;
-        if (index % 2 === 1) {
+        const rowHeight = template.key === "COMPACT" ? 20 : 24;
+        if (index % 2 === 1 && template.key !== "MINIMALIST") {
           doc.rect(margin, tableY - 4, contentWidth, rowHeight).fill("#fafafa");
         }
 
-        doc.fillColor(darkColor).fontSize(8.5).font("Helvetica");
+        doc.fillColor(darkColor).fontSize(template.key === "COMPACT" ? 8 : 8.5).font("Helvetica");
 
         if (isDetailed) {
           doc.text(item.description, col1, tableY, { width: 260 });
@@ -210,7 +342,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       const totalBoxWidth = 230;
       const totalBoxX = margin + contentWidth - totalBoxWidth;
       const totalBoxHeight = isForeign ? 62 : 42;
-      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, 6).fillAndStroke(lightBg, borderColor);
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
 
       doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL NET À PAYER :", totalBoxX + 12, tableY + 14);
       doc.fillColor(primaryColor).fontSize(12).font("Helvetica-Bold").text(formatCurrencyAmount(data.invoice.total, curr, "fr"), totalBoxX + 110, tableY + 13, {
@@ -222,17 +354,17 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
         const rate = data.invoice.exchangeRate || getCurrencyDef(curr).defaultRate;
         const totalDzd = data.invoice.totalDzd || calculateDzdEquivalent(data.invoice.total, curr, rate);
         doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica").text(`1 ${curr} = ${rate.toFixed(2)} DZD (Banque d'Algérie)`, totalBoxX + 12, tableY + 33);
-        doc.fillColor("#0f766e").fontSize(8.5).font("Helvetica-Bold").text(`Contre-valeur : ${formatDZD(totalDzd)}`, totalBoxX + 12, tableY + 45);
+        doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text(`Contre-valeur : ${formatDZD(totalDzd)}`, totalBoxX + 12, tableY + 45);
       }
 
       tableY += isForeign ? 76 : 56;
 
       // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
-      doc.roundedRect(margin, tableY, contentWidth, 44, 4).fillAndStroke("#f0fdf4", "#bbf7d0");
+      doc.roundedRect(margin, tableY, contentWidth, 44, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
       doc.rect(margin, tableY, 4, 44).fill(primaryColor);
 
-      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 8);
-      doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, tableY + 20, {
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 8);
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, tableY + 20, {
         width: contentWidth - 24,
       });
 
@@ -298,6 +430,10 @@ export interface QuotePdfData {
     phone: string;
     activityCode: string;
     activityLabel: string;
+    logoUrl?: string | null;
+    logoPosition?: string | null;
+    brandColor?: string | null;
+    templateStyle?: string | null;
   };
   client: {
     name: string;
@@ -329,9 +465,18 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", (err) => reject(err));
 
-      const seller = data.quote.sellerSnapshot
+      const rawSeller = data.quote.sellerSnapshot
         ? JSON.parse(data.quote.sellerSnapshot)
         : data.seller;
+
+      const seller = {
+        ...data.seller,
+        ...rawSeller,
+        logoUrl: rawSeller.logoUrl ?? data.seller?.logoUrl,
+        logoPosition: rawSeller.logoPosition ?? data.seller?.logoPosition,
+        brandColor: rawSeller.brandColor ?? data.seller?.brandColor,
+        templateStyle: rawSeller.templateStyle ?? data.seller?.templateStyle,
+      };
 
       const client = data.quote.clientSnapshot
         ? JSON.parse(data.quote.clientSnapshot)
@@ -341,61 +486,125 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       const margin = 40;
       const contentWidth = pageWidth - margin * 2;
 
-      // Theme colors for Devis: Classic slate & sky accent
-      const accentColor = "#0284c7"; // Sky 600
-      const darkColor = "#0f172a";   // Slate 900
-      const mutedColor = "#64748b";  // Slate 500
-      const lightBg = "#f8fafc";     // Slate 50
-      const borderColor = "#e2e8f0"; // Slate 200
+      // Brand Styling Engine (Phase 4 Module 1)
+      const palette = getBrandPalette(seller.brandColor);
+      const template = getTemplateStyle(seller.templateStyle);
+      const accentColor = palette.hex;
+      const darkColor = palette.darkHex;
+      const mutedColor = "#64748b";
+      const lightBg = template.key === "MINIMALIST" ? "#ffffff" : palette.lightBgHex;
+      const borderColor = palette.borderHex;
+      const cornerRadius = template.key === "CLASSIC" ? 2 : template.key === "MINIMALIST" ? 3 : 6;
+
+      const logoBuf = getLogoBuffer(seller.logoUrl);
+      const logoPos = ((seller.logoPosition || "LEFT").toUpperCase()) as "LEFT" | "CENTER" | "RIGHT";
 
       // Top colored bar
-      doc.rect(margin, margin, contentWidth, 3).fill(accentColor);
+      drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
 
-      doc.y = margin + 15;
-      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("DEVIS", margin, doc.y);
+      const headerTopY = margin + 12;
+      let leftTitleX = margin;
+
+      if (logoBuf && logoPos === "CENTER") {
+        const centerW = 100;
+        const centerH = 34;
+        const centerLogoX = (pageWidth - centerW) / 2;
+        tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
+          fit: [centerW, centerH],
+          align: "center",
+          valign: "center",
+        });
+      }
+
+      if (logoBuf && logoPos === "LEFT") {
+        const leftW = 75;
+        const leftH = 38;
+        const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
+          fit: [leftW, leftH],
+          valign: "center",
+        });
+        if (drawn) {
+          leftTitleX = margin + leftW + 12;
+        }
+      }
+
+      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("DEVIS", leftTitleX, headerTopY);
       doc
-        .fontSize(8.5)
+        .fontSize(8)
         .font("Helvetica-Bold")
         .fillColor(accentColor)
-        .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / PROFORMA)");
+        .text("RÉGIME DE L'AUTO-ENTREPRENEUR — ALGÉRIE (LOI 22-23 / PROFORMA)", leftTitleX, headerTopY + 24);
 
       // Metadata on the right
-      const metaY = margin + 15;
+      const metaY = headerTopY;
       const dateStr = new Date(data.quote.issueDate).toLocaleDateString("fr-DZ", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
 
-      doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
-      doc.text("N° de Devis :", 360, metaY, { width: 90, align: "right" });
-      doc
-        .font("Helvetica-Bold")
-        .fillColor(darkColor)
-        .text(data.quote.quoteNumber || "PROJET BROUILLON", 455, metaY, { width: 100, align: "right" });
-
-      doc.font("Helvetica").fillColor(mutedColor);
-      doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
-      doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
-
-      if (data.quote.validUntil) {
-        const validStr = new Date(data.quote.validUntil).toLocaleDateString("fr-DZ", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
+      if (logoBuf && logoPos === "RIGHT") {
+        const rightW = 75;
+        const rightH = 38;
+        const rightLogoX = margin + contentWidth - rightW;
+        tryDrawImage(doc, logoBuf, rightLogoX, headerTopY, {
+          fit: [rightW, rightH],
+          align: "right",
+          valign: "center",
         });
+
+        doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° de Devis :", 270, metaY, { width: 90, align: "right" });
+        doc
+          .font("Helvetica-Bold")
+          .fillColor(darkColor)
+          .text(data.quote.quoteNumber || "PROJET BROUILLON", 365, metaY, { width: 95, align: "right" });
+
         doc.font("Helvetica").fillColor(mutedColor);
-        doc.text("Valable jusqu'au :", 350, metaY + 28, { width: 100, align: "right" });
-        doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 455, metaY + 28, { width: 100, align: "right" });
+        doc.text("Date d'émission :", 270, metaY + 14, { width: 90, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 365, metaY + 14, { width: 95, align: "right" });
+
+        if (data.quote.validUntil) {
+          const validStr = new Date(data.quote.validUntil).toLocaleDateString("fr-DZ", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          doc.font("Helvetica").fillColor(mutedColor);
+          doc.text("Valable jusqu'au :", 260, metaY + 28, { width: 100, align: "right" });
+          doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 365, metaY + 28, { width: 95, align: "right" });
+        }
+      } else {
+        doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° de Devis :", 360, metaY, { width: 90, align: "right" });
+        doc
+          .font("Helvetica-Bold")
+          .fillColor(darkColor)
+          .text(data.quote.quoteNumber || "PROJET BROUILLON", 455, metaY, { width: 100, align: "right" });
+
+        doc.font("Helvetica").fillColor(mutedColor);
+        doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
+
+        if (data.quote.validUntil) {
+          const validStr = new Date(data.quote.validUntil).toLocaleDateString("fr-DZ", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+          doc.font("Helvetica").fillColor(mutedColor);
+          doc.text("Valable jusqu'au :", 350, metaY + 28, { width: 100, align: "right" });
+          doc.font("Helvetica-Bold").fillColor(accentColor).text(validStr, 455, metaY + 28, { width: 100, align: "right" });
+        }
       }
 
       // --- SENDER & CLIENT CARDS ---
       const cardY = margin + 65;
       const cardWidth = (contentWidth - 16) / 2;
-      const cardHeight = 110;
+      const cardHeight = template.key === "COMPACT" ? 100 : 110;
 
       // Prestataire
-      doc.roundedRect(margin, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.roundedRect(margin, cardY, cardWidth, cardHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
       doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("PRESTATAIRE (AUTO-ENTREPRENEUR)", margin + 10, cardY + 8);
       doc.fontSize(9).font("Helvetica-Bold").text(seller.fullName || "—", margin + 10, cardY + 22);
 
@@ -413,7 +622,7 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
       // Client
       const clientX = margin + cardWidth + 16;
-      doc.roundedRect(clientX, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.roundedRect(clientX, cardY, cardWidth, cardHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
       doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("CLIENT DESTINATAIRE", clientX + 10, cardY + 8);
       doc.fontSize(9).font("Helvetica-Bold").text(client.name, clientX + 10, cardY + 22);
 
@@ -440,8 +649,10 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       const quoteCurr = data.quote.currency || "DZD";
       const isQuoteForeign = quoteCurr !== "DZD";
 
-      doc.rect(margin, tableY, contentWidth, 22).fill("#0f172a");
-      doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold");
+      const tableHeaderBg = template.key === "MINIMALIST" ? "#f8fafc" : darkColor;
+      const tableHeaderTextColor = template.key === "MINIMALIST" ? darkColor : "#ffffff";
+      doc.roundedRect(margin, tableY, contentWidth, 22, cornerRadius).fillAndStroke(tableHeaderBg, borderColor);
+      doc.fillColor(tableHeaderTextColor).fontSize(8).font("Helvetica-Bold");
       doc.text("DESCRIPTION DES PRESTATIONS", margin + 10, tableY + 7);
       doc.text("QTÉ", margin + 300, tableY + 7, { width: 40, align: "center" });
       doc.text(`P.U (${quoteCurr})`, margin + 345, tableY + 7, { width: 75, align: "right" });
@@ -450,19 +661,20 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       tableY += 22;
 
       // Rows
-      doc.font("Helvetica").fontSize(8);
+      doc.font("Helvetica").fontSize(template.key === "COMPACT" ? 7.5 : 8);
       data.quote.lineItems.forEach((item, idx) => {
-        const rowBg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
-        doc.rect(margin, tableY, contentWidth, 24).fill(rowBg);
-        doc.rect(margin, tableY + 23, contentWidth, 1).fill("#f1f5f9");
+        const rowHeight = template.key === "COMPACT" ? 20 : 24;
+        const rowBg = idx % 2 === 0 || template.key === "MINIMALIST" ? "#ffffff" : "#f8fafc";
+        doc.rect(margin, tableY, contentWidth, rowHeight).fill(rowBg);
+        doc.rect(margin, tableY + rowHeight - 1, contentWidth, 1).fill("#f1f5f9");
 
-        doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 7, { width: 285 });
-        doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 7, { width: 40, align: "center" });
-        doc.text(formatCurrencyAmount(item.unitPrice, quoteCurr, "fr"), margin + 345, tableY + 7, { width: 75, align: "right" });
-        doc.fillColor(darkColor).font("Helvetica-Bold").text(formatCurrencyAmount(item.totalPrice, quoteCurr, "fr"), margin + 425, tableY + 7, { width: 80, align: "right" });
+        doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 6, { width: 285 });
+        doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 6, { width: 40, align: "center" });
+        doc.text(formatCurrencyAmount(item.unitPrice, quoteCurr, "fr"), margin + 345, tableY + 6, { width: 75, align: "right" });
+        doc.fillColor(darkColor).font("Helvetica-Bold").text(formatCurrencyAmount(item.totalPrice, quoteCurr, "fr"), margin + 425, tableY + 6, { width: 80, align: "right" });
 
         doc.font("Helvetica");
-        tableY += 24;
+        tableY += rowHeight;
       });
 
       // --- TOTAL BOX ---
@@ -471,7 +683,7 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       const totalBoxHeight = isQuoteForeign ? 62 : 42;
       tableY += 12;
 
-      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, 4).fillAndStroke("#f0f9ff", "#bae6fd");
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
       doc.rect(totalBoxX, tableY, 4, totalBoxHeight).fill(accentColor);
       doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL ESTIMÉ (NET) :", totalBoxX + 12, tableY + 14);
       doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(formatCurrencyAmount(data.quote.total, quoteCurr, "fr"), totalBoxX + 110, tableY + 13, {
@@ -483,16 +695,16 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
         const rate = data.quote.exchangeRate || getCurrencyDef(quoteCurr).defaultRate;
         const totalDzd = data.quote.totalDzd || calculateDzdEquivalent(data.quote.total, quoteCurr, rate);
         doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica").text(`1 ${quoteCurr} = ${rate.toFixed(2)} DZD (Banque d'Algérie)`, totalBoxX + 12, tableY + 33);
-        doc.fillColor("#0284c7").fontSize(8.5).font("Helvetica-Bold").text(`Contre-valeur : ${formatDZD(totalDzd)}`, totalBoxX + 12, tableY + 45);
+        doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text(`Contre-valeur : ${formatDZD(totalDzd)}`, totalBoxX + 12, tableY + 45);
       }
 
       tableY += isQuoteForeign ? 74 : 54;
 
       // --- LEGAL NOTE ---
-      doc.roundedRect(margin, tableY, contentWidth, 38, 4).fillAndStroke("#f0fdf4", "#bbf7d0");
-      doc.rect(margin, tableY, 4, 38).fill("#059669");
-      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 6);
-      doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.quote.vatExemptionNote, margin + 12, tableY + 18, {
+      doc.roundedRect(margin, tableY, contentWidth, 38, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
+      doc.rect(margin, tableY, 4, 38).fill(accentColor);
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, tableY + 6);
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.quote.vatExemptionNote, margin + 12, tableY + 18, {
         width: contentWidth - 24,
       });
 
@@ -565,6 +777,10 @@ export interface CreditNotePdfData {
     phone: string;
     activityCode: string;
     activityLabel: string;
+    logoUrl?: string | null;
+    logoPosition?: string | null;
+    brandColor?: string | null;
+    templateStyle?: string | null;
   };
   client: {
     name: string;
@@ -596,9 +812,18 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       doc.on("end", () => resolve(Buffer.concat(chunks)));
       doc.on("error", (err) => reject(err));
 
-      const seller = data.creditNote.sellerSnapshot
+      const rawSeller = data.creditNote.sellerSnapshot
         ? JSON.parse(data.creditNote.sellerSnapshot)
         : data.seller;
+
+      const seller = {
+        ...data.seller,
+        ...rawSeller,
+        logoUrl: rawSeller.logoUrl ?? data.seller?.logoUrl,
+        logoPosition: rawSeller.logoPosition ?? data.seller?.logoPosition,
+        brandColor: rawSeller.brandColor ?? data.seller?.brandColor,
+        templateStyle: rawSeller.templateStyle ?? data.seller?.templateStyle,
+      };
 
       const client = data.creditNote.clientSnapshot
         ? JSON.parse(data.creditNote.clientSnapshot)
@@ -608,46 +833,99 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       const margin = 40;
       const contentWidth = pageWidth - margin * 2;
 
-      // Theme colors for Avoir: Slate & Rose/Crimson accent
-      const accentColor = "#e11d48"; // Rose 600
+      // Brand Styling Engine (Phase 4 Module 1)
+      const palette = getBrandPalette(seller.brandColor);
+      const template = getTemplateStyle(seller.templateStyle);
+      const accentColor = "#e11d48"; // Rose 600 for credit note identity
       const darkColor = "#0f172a";   // Slate 900
       const mutedColor = "#64748b";  // Slate 500
-      const lightBg = "#f8fafc";     // Slate 50
+      const lightBg = template.key === "MINIMALIST" ? "#ffffff" : "#f8fafc";
       const borderColor = "#e2e8f0"; // Slate 200
+      const cornerRadius = template.key === "CLASSIC" ? 2 : template.key === "MINIMALIST" ? 3 : 6;
+
+      const logoBuf = getLogoBuffer(seller.logoUrl);
+      const logoPos = ((seller.logoPosition || "LEFT").toUpperCase()) as "LEFT" | "CENTER" | "RIGHT";
 
       // Top colored bar
-      doc.rect(margin, margin, contentWidth, 3).fill(accentColor);
+      drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
 
-      doc.y = margin + 15;
-      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE D'AVOIR", margin, doc.y);
+      const headerTopY = margin + 12;
+      let leftTitleX = margin;
+
+      if (logoBuf && logoPos === "CENTER") {
+        const centerW = 100;
+        const centerH = 34;
+        const centerLogoX = (pageWidth - centerW) / 2;
+        tryDrawImage(doc, logoBuf, centerLogoX, headerTopY, {
+          fit: [centerW, centerH],
+          align: "center",
+          valign: "center",
+        });
+      }
+
+      if (logoBuf && logoPos === "LEFT") {
+        const leftW = 75;
+        const leftH = 38;
+        const drawn = tryDrawImage(doc, logoBuf, margin, headerTopY, {
+          fit: [leftW, leftH],
+          valign: "center",
+        });
+        if (drawn) {
+          leftTitleX = margin + leftW + 12;
+        }
+      }
+
+      doc.fontSize(22).font("Helvetica-Bold").fillColor(darkColor).text("FACTURE D'AVOIR", leftTitleX, headerTopY);
       doc
-        .fontSize(8.5)
+        .fontSize(8)
         .font("Helvetica-Bold")
         .fillColor(accentColor)
-        .text("NOTE DE CRÉDIT COMPTABLE — ALGÉRIE (LOI 22-23 / IFU)");
+        .text("NOTE DE CRÉDIT COMPTABLE — ALGÉRIE (LOI 22-23 / IFU)", leftTitleX, headerTopY + 24);
 
       // Metadata on the right
-      const metaY = margin + 15;
+      const metaY = headerTopY;
       const dateStr = new Date(data.creditNote.issueDate).toLocaleDateString("fr-DZ", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
 
-      doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
-      doc.text("N° d'Avoir :", 360, metaY, { width: 90, align: "right" });
-      doc
-        .font("Helvetica-Bold")
-        .fillColor(darkColor)
-        .text(data.creditNote.creditNoteNumber || "BROUILLON", 455, metaY, { width: 100, align: "right" });
+      if (logoBuf && logoPos === "RIGHT") {
+        const rightW = 75;
+        const rightH = 38;
+        const rightLogoX = margin + contentWidth - rightW;
+        tryDrawImage(doc, logoBuf, rightLogoX, headerTopY, {
+          fit: [rightW, rightH],
+          align: "right",
+          valign: "center",
+        });
 
-      doc.font("Helvetica").fillColor(mutedColor);
-      doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
-      doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
+        doc.fontSize(8.5).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° d'Avoir :", 270, metaY, { width: 90, align: "right" });
+        doc
+          .font("Helvetica-Bold")
+          .fillColor(darkColor)
+          .text(data.creditNote.creditNoteNumber || "BROUILLON", 365, metaY, { width: 95, align: "right" });
+
+        doc.font("Helvetica").fillColor(mutedColor);
+        doc.text("Date d'émission :", 270, metaY + 14, { width: 90, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 365, metaY + 14, { width: 95, align: "right" });
+      } else {
+        doc.fontSize(9).font("Helvetica").fillColor(mutedColor);
+        doc.text("N° d'Avoir :", 360, metaY, { width: 90, align: "right" });
+        doc
+          .font("Helvetica-Bold")
+          .fillColor(darkColor)
+          .text(data.creditNote.creditNoteNumber || "BROUILLON", 455, metaY, { width: 100, align: "right" });
+
+        doc.font("Helvetica").fillColor(mutedColor);
+        doc.text("Date d'émission :", 360, metaY + 14, { width: 90, align: "right" });
+        doc.font("Helvetica-Bold").fillColor(darkColor).text(dateStr, 455, metaY + 14, { width: 100, align: "right" });
+      }
 
       // Referenced invoice badge
       const refY = margin + 50;
-      doc.roundedRect(margin, refY, contentWidth, 24, 4).fillAndStroke("#fff1f2", "#fecdd3");
+      doc.roundedRect(margin, refY, contentWidth, 24, cornerRadius).fillAndStroke("#fff1f2", "#fecdd3");
       doc.rect(margin, refY, 4, 24).fill(accentColor);
       doc.fillColor("#9f1239").fontSize(8).font("Helvetica-Bold").text("RÉFÉRENCE FACTURE D'ORIGINE :", margin + 12, refY + 7);
       doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text(data.creditNote.originalInvoiceNumber || "—", margin + 165, refY + 6.5);
@@ -656,10 +934,10 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       // --- SENDER & CLIENT CARDS ---
       const cardY = refY + 34;
       const cardWidth = (contentWidth - 16) / 2;
-      const cardHeight = 105;
+      const cardHeight = template.key === "COMPACT" ? 95 : 105;
 
       // Prestataire
-      doc.roundedRect(margin, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.roundedRect(margin, cardY, cardWidth, cardHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
       doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("ÉMETTEUR (AUTO-ENTREPRENEUR)", margin + 10, cardY + 8);
       doc.fontSize(9).font("Helvetica-Bold").text(seller.fullName || "—", margin + 10, cardY + 22);
 
@@ -677,7 +955,7 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
 
       // Client
       const clientX = margin + cardWidth + 16;
-      doc.roundedRect(clientX, cardY, cardWidth, cardHeight, 4).fillAndStroke(lightBg, borderColor);
+      doc.roundedRect(clientX, cardY, cardWidth, cardHeight, cornerRadius).fillAndStroke(lightBg, borderColor);
       doc.fillColor(darkColor).fontSize(8.5).font("Helvetica-Bold").text("BÉNÉFICIAIRE (CLIENT)", clientX + 10, cardY + 8);
       doc.fontSize(9).font("Helvetica-Bold").text(client.name, clientX + 10, cardY + 22);
 
@@ -704,8 +982,10 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       const creditCurr = data.creditNote.currency || "DZD";
       const isCreditForeign = creditCurr !== "DZD";
 
-      doc.rect(margin, tableY, contentWidth, 22).fill("#0f172a");
-      doc.fillColor("#ffffff").fontSize(8).font("Helvetica-Bold");
+      const tableHeaderBg = template.key === "MINIMALIST" ? "#f8fafc" : darkColor;
+      const tableHeaderTextColor = template.key === "MINIMALIST" ? darkColor : "#ffffff";
+      doc.roundedRect(margin, tableY, contentWidth, 22, cornerRadius).fillAndStroke(tableHeaderBg, borderColor);
+      doc.fillColor(tableHeaderTextColor).fontSize(8).font("Helvetica-Bold");
       doc.text("LIGNES CRÉDITÉES / ANNULÉES", margin + 10, tableY + 7);
       doc.text("QTÉ", margin + 300, tableY + 7, { width: 40, align: "center" });
       doc.text(`P.U (${creditCurr})`, margin + 345, tableY + 7, { width: 75, align: "right" });
@@ -714,19 +994,20 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       tableY += 22;
 
       // Rows
-      doc.font("Helvetica").fontSize(8);
+      doc.font("Helvetica").fontSize(template.key === "COMPACT" ? 7.5 : 8);
       data.creditNote.lineItems.forEach((item, idx) => {
-        const rowBg = idx % 2 === 0 ? "#ffffff" : "#fff1f2";
-        doc.rect(margin, tableY, contentWidth, 24).fill(rowBg);
-        doc.rect(margin, tableY + 23, contentWidth, 1).fill("#f1f5f9");
+        const rowHeight = template.key === "COMPACT" ? 20 : 24;
+        const rowBg = idx % 2 === 0 || template.key === "MINIMALIST" ? "#ffffff" : "#fff1f2";
+        doc.rect(margin, tableY, contentWidth, rowHeight).fill(rowBg);
+        doc.rect(margin, tableY + rowHeight - 1, contentWidth, 1).fill("#f1f5f9");
 
-        doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 7, { width: 285 });
-        doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 7, { width: 40, align: "center" });
-        doc.text(formatCurrencyAmount(item.unitPrice, creditCurr, "fr"), margin + 345, tableY + 7, { width: 75, align: "right" });
-        doc.fillColor(accentColor).font("Helvetica-Bold").text(`- ${formatCurrencyAmount(item.totalPrice, creditCurr, "fr")}`, margin + 425, tableY + 7, { width: 80, align: "right" });
+        doc.fillColor(darkColor).text(item.description, margin + 10, tableY + 6, { width: 285 });
+        doc.fillColor(mutedColor).text(String(item.quantity), margin + 300, tableY + 6, { width: 40, align: "center" });
+        doc.text(formatCurrencyAmount(item.unitPrice, creditCurr, "fr"), margin + 345, tableY + 6, { width: 75, align: "right" });
+        doc.fillColor(accentColor).font("Helvetica-Bold").text(`- ${formatCurrencyAmount(item.totalPrice, creditCurr, "fr")}`, margin + 425, tableY + 6, { width: 80, align: "right" });
 
         doc.font("Helvetica");
-        tableY += 24;
+        tableY += rowHeight;
       });
 
       // --- TOTAL BOX ---
@@ -735,7 +1016,7 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       const totalBoxHeight = isCreditForeign ? 62 : 42;
       tableY += 12;
 
-      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, 4).fillAndStroke("#fff1f2", "#fecdd3");
+      doc.roundedRect(totalBoxX, tableY, totalBoxWidth, totalBoxHeight, cornerRadius).fillAndStroke("#fff1f2", "#fecdd3");
       doc.rect(totalBoxX, tableY, 4, totalBoxHeight).fill(accentColor);
       doc.fillColor(darkColor).fontSize(9.5).font("Helvetica-Bold").text("TOTAL CRÉDIT NET :", totalBoxX + 12, tableY + 14);
       doc.fillColor(accentColor).fontSize(12).font("Helvetica-Bold").text(`- ${formatCurrencyAmount(data.creditNote.total, creditCurr, "fr")}`, totalBoxX + 100, tableY + 13, {
@@ -1069,6 +1350,10 @@ export interface PaymentReceiptPdfData {
     phone: string;
     activityCode: string;
     activityLabel: string;
+    logoUrl?: string | null;
+    logoPosition?: string | null;
+    brandColor?: string | null;
+    templateStyle?: string | null;
   };
   client: {
     name: string;
@@ -1105,41 +1390,77 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
 
       const margin = 40;
       const contentWidth = 595.28 - margin * 2;
-      const primaryColor = "#059669";
-      const darkColor = "#0f172a";
-      const mutedColor = "#64748b";
-      const borderColor = "#e2e8f0";
 
-      // 1. En-tête officiel
+      // Brand Styling Engine (Phase 4 Module 1)
+      const palette = getBrandPalette(data.seller.brandColor);
+      const template = getTemplateStyle(data.seller.templateStyle);
+      const primaryColor = palette.hex;
+      const darkColor = palette.darkHex;
+      const mutedColor = "#64748b";
+      const lightBg = template.key === "MINIMALIST" ? "#ffffff" : palette.lightBgHex;
+      const borderColor = palette.borderHex;
+      const cornerRadius = template.key === "CLASSIC" ? 2 : template.key === "MINIMALIST" ? 3 : 6;
+
+      const logoBuf = getLogoBuffer(data.seller.logoUrl);
+      const logoPos = ((data.seller.logoPosition || "LEFT").toUpperCase()) as "LEFT" | "CENTER" | "RIGHT";
+
+      // Top colored bar
+      drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
+
+      // 1. En-tête officiel & Logo
+      if (logoBuf && logoPos === "CENTER") {
+        const centerW = 80;
+        const centerH = 26;
+        const centerLogoX = (595.28 - centerW) / 2;
+        tryDrawImage(doc, logoBuf, centerLogoX, 36, {
+          fit: [centerW, centerH],
+          align: "center",
+          valign: "center",
+        });
+      } else if (logoBuf && logoPos === "LEFT") {
+        tryDrawImage(doc, logoBuf, margin, 38, {
+          fit: [70, 26],
+          valign: "center",
+        });
+      } else if (logoBuf && logoPos === "RIGHT") {
+        tryDrawImage(doc, logoBuf, margin + contentWidth - 70, 38, {
+          fit: [70, 26],
+          align: "right",
+          valign: "center",
+        });
+      }
+
+      const republicY = (logoBuf && logoPos === "CENTER") ? 64 : 40;
+
       doc.fontSize(8).font("Helvetica-Bold").fillColor(darkColor);
-      doc.text("RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE", margin, 40, {
+      doc.text("RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE", margin, republicY, {
         align: "center",
         width: contentWidth,
       });
       doc.fontSize(7).font("Helvetica").fillColor(mutedColor);
-      doc.text("Statut de l'Auto-Entrepreneur (Loi n° 22-23 du 18 décembre 2022) • Franchise de TVA", margin, 52, {
+      doc.text("Statut de l'Auto-Entrepreneur (Loi n° 22-23 du 18 décembre 2022) • Franchise de TVA", margin, republicY + 12, {
         align: "center",
         width: contentWidth,
       });
 
       // 2. Bannière titre Quittance
-      const bannerY = 68;
-      doc.roundedRect(margin, bannerY, contentWidth, 34, 6).fill(primaryColor);
+      const bannerY = republicY + 28;
+      doc.roundedRect(margin, bannerY, contentWidth, 34, cornerRadius).fill(primaryColor);
       doc.fontSize(14).font("Helvetica-Bold").fillColor("#ffffff");
       doc.text("QUITTANCE & REÇU DE PAIEMENT", margin, bannerY + 6, {
         align: "center",
         width: contentWidth,
       });
-      doc.fontSize(7.5).font("Helvetica").fillColor("#d1fae5");
+      doc.fontSize(7.5).font("Helvetica").fillColor(palette.lightBgHex);
       doc.text("ATTESTATION DE RÈGLEMENT POUR SOLDE DE TOUT COMPTE", margin, bannerY + 22, {
         align: "center",
         width: contentWidth,
       });
 
       // 3. Cadre Métadonnées du Reçu
-      const metaY = 112;
-      doc.roundedRect(margin, metaY, contentWidth, 40, 4).fill("#f8fafc");
-      doc.roundedRect(margin, metaY, contentWidth, 40, 4).strokeColor(borderColor).stroke();
+      const metaY = bannerY + 44;
+      doc.roundedRect(margin, metaY, contentWidth, 40, cornerRadius).fill(lightBg);
+      doc.roundedRect(margin, metaY, contentWidth, 40, cornerRadius).strokeColor(borderColor).stroke();
 
       const colW = contentWidth / 4;
       const paymentDate = typeof data.paymentDate === "string" ? new Date(data.paymentDate) : data.paymentDate;
@@ -1162,13 +1483,13 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
       doc.font("Helvetica-Bold").fontSize(8.5).fillColor(darkColor).text(methodLabel, margin + colW * 3 + 10, metaY + 20);
 
       // 4. Cadre Parties (Créancier & Débiteur)
-      const partiesY = 162;
+      const partiesY = metaY + 50;
       const boxWidth = (contentWidth - 12) / 2;
-      const boxHeight = 100;
+      const boxHeight = template.key === "COMPACT" ? 90 : 100;
 
       // Box Créancier
-      doc.roundedRect(margin, partiesY, boxWidth, boxHeight, 4).strokeColor(borderColor).stroke();
-      doc.rect(margin, partiesY, boxWidth, 16).fill("#f1f5f9");
+      doc.roundedRect(margin, partiesY, boxWidth, boxHeight, cornerRadius).strokeColor(borderColor).stroke();
+      doc.rect(margin, partiesY, boxWidth, 16).fill(palette.lightBgHex);
       doc.fontSize(7.5).font("Helvetica-Bold").fillColor(primaryColor).text("CRÉANCIER (BÉNÉFICIAIRE)", margin + 8, partiesY + 4);
 
       let textY = partiesY + 22;
@@ -1185,7 +1506,7 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
 
       // Box Débiteur
       const clientBoxX = margin + boxWidth + 12;
-      doc.roundedRect(clientBoxX, partiesY, boxWidth, boxHeight, 4).strokeColor(borderColor).stroke();
+      doc.roundedRect(clientBoxX, partiesY, boxWidth, boxHeight, cornerRadius).strokeColor(borderColor).stroke();
       doc.rect(clientBoxX, partiesY, boxWidth, 16).fill("#f1f5f9");
       doc.fontSize(7.5).font("Helvetica-Bold").fillColor(darkColor).text("DÉBITEUR (CLIENT PAYEUR)", clientBoxX + 8, partiesY + 4);
 
@@ -1206,9 +1527,9 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
       doc.text(`Adresse : ${data.client.address}`, clientBoxX + 8, textY, { width: boxWidth - 16 });
 
       // 5. Cadre Montant Acquitté & Transcription en Lettres
-      const amountY = 274;
-      doc.roundedRect(margin, amountY, contentWidth, 90, 4).fill("#f0fdf4");
-      doc.roundedRect(margin, amountY, contentWidth, 90, 4).strokeColor("#bbf7d0").stroke();
+      const amountY = partiesY + boxHeight + 12;
+      doc.roundedRect(margin, amountY, contentWidth, 90, cornerRadius).fill(palette.lightBgHex);
+      doc.roundedRect(margin, amountY, contentWidth, 90, cornerRadius).strokeColor(palette.borderHex).stroke();
 
       doc.fontSize(8).font("Helvetica-Bold").fillColor(primaryColor).text("MONTANT INTÉGRAL ENCAISSÉ ET ACQUITTÉ", margin + 14, amountY + 12);
       doc.fontSize(22).font("Helvetica-Bold").fillColor(primaryColor).text(formatDZD(data.total), margin + 14, amountY + 26);
@@ -1226,9 +1547,9 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
       }
 
       // 6. Mention Légale Libératoire
-      const legalY = 376;
-      doc.roundedRect(margin, legalY, contentWidth, 54, 4).fill("#f8fafc");
-      doc.roundedRect(margin, legalY, contentWidth, 54, 4).strokeColor(borderColor).stroke();
+      const legalY = amountY + 102;
+      doc.roundedRect(margin, legalY, contentWidth, 54, cornerRadius).fill("#f8fafc");
+      doc.roundedRect(margin, legalY, contentWidth, 54, cornerRadius).strokeColor(borderColor).stroke();
 
       doc.fontSize(7.5).font("Helvetica-Bold").fillColor(darkColor).text("DÉCHARGE & QUITTANCE LIBÉRATOIRE :", margin + 10, legalY + 8);
       doc.fontSize(7).font("Helvetica").fillColor(mutedColor).text(
@@ -1239,10 +1560,10 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
       );
 
       // 7. Cadre Signature et Sceau Administratif
-      const sigY = 442;
+      const sigY = legalY + 66;
       const sigBoxWidth = contentWidth;
       const sigBoxHeight = 120;
-      doc.roundedRect(margin, sigY, sigBoxWidth, sigBoxHeight, 4).strokeColor(borderColor).stroke();
+      doc.roundedRect(margin, sigY, sigBoxWidth, sigBoxHeight, cornerRadius).strokeColor(borderColor).stroke();
 
       doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor).text(
         `Fait à Alger, le ${paymentDate.toLocaleDateString("fr-DZ")}`,
@@ -1311,10 +1632,17 @@ export function generateClientStatementPdfBuffer(data: ClientLedgerData): Promis
 
       const margin = 40;
       const contentWidth = 595.28 - margin * 2;
-      const primaryColor = "#059669";
-      const darkColor = "#0f172a";
+      const sellerBranding = data.seller as any;
+      const palette = getBrandPalette(sellerBranding?.brandColor);
+      const template = getTemplateStyle(sellerBranding?.templateStyle);
+      const primaryColor = palette.hex;
+      const darkColor = palette.darkHex;
       const mutedColor = "#64748b";
-      const borderColor = "#e2e8f0";
+      const borderColor = palette.borderHex;
+      const cornerRadius = template.key === "CLASSIC" ? 2 : template.key === "MINIMALIST" ? 3 : 6;
+
+      // Top colored bar
+      drawTemplateAccentBar(doc, template.key, palette, margin, contentWidth);
 
       // 1. En-tête
       doc.fontSize(8).font("Helvetica-Bold").fillColor(darkColor);
@@ -1330,7 +1658,7 @@ export function generateClientStatementPdfBuffer(data: ClientLedgerData): Promis
 
       // 2. Bannière Titre
       const bannerY = 64;
-      doc.roundedRect(margin, bannerY, contentWidth, 34, 6).fill(darkColor);
+      doc.roundedRect(margin, bannerY, contentWidth, 34, cornerRadius).fill(darkColor);
       doc.fontSize(13).font("Helvetica-Bold").fillColor("#ffffff");
       doc.text("RELEVÉ DE COMPTE & GRAND LIVRE CLIENT", margin, bannerY + 6, {
         align: "center",
@@ -1348,7 +1676,7 @@ export function generateClientStatementPdfBuffer(data: ClientLedgerData): Promis
       const boxHeight = 74;
 
       // Prestataire
-      doc.roundedRect(margin, partiesY, boxWidth, boxHeight, 4).strokeColor(borderColor).stroke();
+      doc.roundedRect(margin, partiesY, boxWidth, boxHeight, cornerRadius).strokeColor(borderColor).stroke();
       doc.rect(margin, partiesY, boxWidth, 14).fill("#f8fafc");
       doc.fontSize(7).font("Helvetica-Bold").fillColor(primaryColor).text("CRÉANCIER (AUTO-ENTREPRENEUR)", margin + 6, partiesY + 3);
 

@@ -53,6 +53,10 @@ export async function GET(
         phone: profile.phone,
         activityCode: profile.activityCode,
         activityLabel: profile.activityLabel,
+        logoUrl: profile.logoUrl,
+        logoPosition: profile.logoPosition,
+        brandColor: profile.brandColor,
+        templateStyle: profile.templateStyle,
       },
       client: quote.client,
     });

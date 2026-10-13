@@ -195,7 +195,7 @@ export async function updateDraftInvoice(
         lineItems: true,
       },
     });
-  });
+  }, { maxWait: 15000, timeout: 30000 });
 }
 
 /**
@@ -274,6 +274,18 @@ export async function issueInvoice(tenantId: string, invoiceId: string) {
       phone: profile.phone,
       activityCode: profile.activityCode,
       activityLabel: profile.activityLabel,
+      logoUrl: profile.logoUrl,
+      logoPosition: profile.logoPosition,
+      brandColor: profile.brandColor,
+      templateStyle: profile.templateStyle,
+      bankName: profile.bankName,
+      bankRib: profile.bankRib,
+      bankIban: profile.bankIban,
+      bankBic: profile.bankBic,
+      paymentTerms: profile.paymentTerms,
+      paymentInstructions: profile.paymentInstructions,
+      showStampSignature: profile.showStampSignature,
+      signatureUrl: profile.signatureUrl,
     };
 
     const clientSnapshot = {
@@ -305,7 +317,7 @@ export async function issueInvoice(tenantId: string, invoiceId: string) {
         },
       },
     });
-  });
+  }, { maxWait: 15000, timeout: 30000 });
 }
 
 export interface PaymentDetailsInput {

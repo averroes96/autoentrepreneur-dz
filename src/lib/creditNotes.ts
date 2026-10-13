@@ -125,6 +125,18 @@ export async function createCreditNoteFromInvoice(data: CreateCreditNoteInput) {
       phone: profile.phone,
       activityCode: profile.activityCode,
       activityLabel: profile.activityLabel,
+      logoUrl: profile.logoUrl,
+      logoPosition: profile.logoPosition,
+      brandColor: profile.brandColor,
+      templateStyle: profile.templateStyle,
+      bankName: profile.bankName,
+      bankRib: profile.bankRib,
+      bankIban: profile.bankIban,
+      bankBic: profile.bankBic,
+      paymentTerms: profile.paymentTerms,
+      paymentInstructions: profile.paymentInstructions,
+      showStampSignature: profile.showStampSignature,
+      signatureUrl: profile.signatureUrl,
     };
 
     const clientSnapshot = {
@@ -177,7 +189,7 @@ export async function createCreditNoteFromInvoice(data: CreateCreditNoteInput) {
     });
 
     return creditNote;
-  });
+  }, { timeout: 30000, maxWait: 15000 });
 }
 
 /**

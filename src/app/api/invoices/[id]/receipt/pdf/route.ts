@@ -78,6 +78,10 @@ export async function GET(
         phone: sellerData.phone || profile.phone,
         activityCode: sellerData.activityCode || profile.activityCode,
         activityLabel: sellerData.activityLabel || profile.activityLabel,
+        logoUrl: sellerData.logoUrl || profile.logoUrl,
+        logoPosition: sellerData.logoPosition || profile.logoPosition,
+        brandColor: sellerData.brandColor || profile.brandColor,
+        templateStyle: sellerData.templateStyle || profile.templateStyle,
       },
       client: {
         name: clientData.name,

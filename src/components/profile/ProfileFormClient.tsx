@@ -24,6 +24,7 @@ import { calculateProfileCompletion } from "@/lib/profile";
 import { NifInputWithValidation } from "./NifInputWithValidation";
 import { AnaeActivitySelector } from "./AnaeActivitySelector";
 import { CasnosSchemeSelector } from "./CasnosSchemeSelector";
+import { DocumentDesignSection } from "./DocumentDesignSection";
 import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface ProfileData {
@@ -45,6 +46,18 @@ interface ProfileData {
   invoicePrefix: string;
   quotePrefix?: string | null;
   creditNotePrefix?: string | null;
+  logoUrl?: string | null;
+  logoPosition?: string | null;
+  brandColor?: string | null;
+  templateStyle?: string | null;
+  bankName?: string | null;
+  bankRib?: string | null;
+  bankIban?: string | null;
+  bankBic?: string | null;
+  paymentTerms?: string | null;
+  paymentInstructions?: string | null;
+  showStampSignature?: boolean | null;
+  signatureUrl?: string | null;
 }
 
 interface PastTurnoverData {
@@ -497,6 +510,16 @@ export function ProfileFormClient({
             </span>
           </div>
         </div>
+
+        {/* Section 5: Identité Visuelle & Style des Documents (Phase 4 - Module 1) */}
+        <DocumentDesignSection
+          initialLogoUrl={profile.logoUrl}
+          initialLogoPosition={profile.logoPosition}
+          initialBrandColor={profile.brandColor}
+          initialTemplateStyle={profile.templateStyle}
+          sellerName={profile.fullName}
+          activityLabel={profile.activityLabel}
+        />
 
         <div className="flex justify-end">
           <button

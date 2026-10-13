@@ -24,6 +24,10 @@ import {
   ShieldCheck,
   Globe,
 } from "lucide-react";
+import {
+  getBrandPalette,
+  getTemplateStyle,
+} from "@/lib/invoiceDesign";
 
 export interface BilingualPaymentReceiptPaperProps {
   receipt: {
@@ -47,6 +51,18 @@ export interface BilingualPaymentReceiptPaperProps {
     email?: string | null;
     activityCode?: string | null;
     activityLabel?: string | null;
+    logoUrl?: string | null;
+    logoPosition?: string | null;
+    brandColor?: string | null;
+    templateStyle?: string | null;
+    bankName?: string | null;
+    bankRib?: string | null;
+    bankIban?: string | null;
+    bankBic?: string | null;
+    paymentTerms?: string | null;
+    paymentInstructions?: string | null;
+    showStampSignature?: boolean | null;
+    signatureUrl?: string | null;
   };
   client: {
     name: string;
@@ -69,6 +85,10 @@ export function BilingualPaymentReceiptPaper({
 }: BilingualPaymentReceiptPaperProps) {
   const [lang, setLang] = useState<"fr" | "ar">(defaultLanguage);
   const isArabic = lang === "ar";
+
+  const palette = getBrandPalette(seller.brandColor);
+  const template = getTemplateStyle(seller.templateStyle);
+  const logoPos = (seller.logoPosition?.toUpperCase() || "LEFT") as "LEFT" | "CENTER" | "RIGHT";
 
   const handlePrint = () => {
     window.print();
@@ -158,39 +178,100 @@ export function BilingualPaymentReceiptPaper({
       <div
         id="payment-receipt-paper"
         dir={isArabic ? "rtl" : "ltr"}
-        className={`bg-white rounded-3xl border border-slate-200 shadow-sm p-8 sm:p-12 print:p-0 print:border-none print:shadow-none space-y-8 ${
+        className={`bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden print:p-0 print:border-none print:shadow-none ${
           isArabic ? "font-sans text-right" : "text-left"
         }`}
       >
-        {/* National Legal Header */}
-        <div className="text-center border-b border-slate-100 pb-5 space-y-1">
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-            الجمهورية الجزائرية الديمقراطية الشعبية
-          </p>
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-            République Algérienne Démocratique et Populaire
-          </p>
-          <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-widest mt-1">
-            {isArabic
-              ? "الوكالة الوطنية للمقاول الذاتي (ANAE) • القانون رقم 22-23"
-              : "Agence Nationale de l'Auto-Entrepreneur (ANAE) • Loi n° 22-23"}
-          </p>
-        </div>
+        {/* Top Decorative Brand Accent Strip */}
+        {template.key === "MODERN" && (
+          <div
+            className="h-2.5 w-full"
+            style={{
+              background: `linear-gradient(90deg, ${palette.hex}, ${palette.darkHex})`,
+            }}
+          />
+        )}
+        {template.key === "CLASSIC" && (
+          <div
+            className="h-2 w-full"
+            style={{ backgroundColor: palette.darkHex }}
+          />
+        )}
+        {template.key === "MINIMALIST" && (
+          <div
+            className="h-0.5 w-full"
+            style={{ backgroundColor: palette.borderHex }}
+          />
+        )}
+        {template.key === "COMPACT" && (
+          <div
+            className="h-1.5 w-full"
+            style={{ backgroundColor: palette.hex }}
+          />
+        )}
 
-        {/* Receipt Header & Status Badge */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border-b border-slate-100 pb-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-wide">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{isArabic ? "وصل خالص ومسدد بالكامل" : "QUITTANCE LIBÉRATOIRE / REÇU DE PAIEMENT"}</span>
+        <div className="p-8 sm:p-12 space-y-8">
+          {/* Centered Logo if position is CENTER */}
+          {seller.logoUrl && logoPos === "CENTER" && (
+            <div className="flex justify-center pb-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={seller.logoUrl}
+                alt={seller.fullName || "Logo"}
+                className="max-h-16 max-w-[220px] object-contain"
+              />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              {isArabic ? "وصل تسديد مالي" : "Quittance de Paiement"}
-            </h1>
-            <p className="text-sm font-bold text-emerald-700 font-mono">
-              N° {receipt.receiptNumber}
+          )}
+
+          {/* National Legal Header */}
+          <div className="text-center border-b border-slate-100 pb-5 space-y-1">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              الجمهورية الجزائرية الديمقراطية الشعبية
+            </p>
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              République Algérienne Démocratique et Populaire
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: palette.hex }}>
+              {isArabic
+                ? "الوكالة الوطنية للمقاول الذاتي (ANAE) • القانون رقم 22-23"
+                : "Agence Nationale de l'Auto-Entrepreneur (ANAE) • Loi n° 22-23"}
             </p>
           </div>
+
+          {/* Receipt Header & Status Badge */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 border-b border-slate-100 pb-6">
+            <div className="flex items-center gap-4">
+              {seller.logoUrl && logoPos === "LEFT" && (
+                <div className="shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={seller.logoUrl}
+                    alt={seller.fullName || "Logo"}
+                    className="max-h-14 max-w-[180px] object-contain"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div
+                  className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold tracking-wide"
+                  style={{
+                    backgroundColor: palette.lightBgHex,
+                    borderColor: palette.borderHex,
+                    color: palette.darkHex,
+                  }}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" style={{ color: palette.hex }} />
+                  <span>{isArabic ? "وصل خالص ومسدد بالكامل" : "QUITTANCE LIBÉRATOIRE / REÇU DE PAIEMENT"}</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                  {isArabic ? "وصل تسديد مالي" : "Quittance de Paiement"}
+                </h1>
+                <p className="text-sm font-bold font-mono" style={{ color: palette.hex }}>
+                  N° {receipt.receiptNumber}
+                </p>
+              </div>
+            </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs text-slate-600 min-w-[240px]">
             <div className="flex justify-between items-center gap-4">
@@ -219,14 +300,26 @@ export function BilingualPaymentReceiptPaper({
                 </span>
               </div>
             )}
-            <div className="flex justify-between items-center gap-4 pt-1.5 border-t border-slate-200">
-              <span className="text-slate-500 font-medium">
-                {isArabic ? "الفاتورة الأصلية :" : "Facture acquittée :"}
-              </span>
-              <span className="font-mono font-bold text-emerald-700">
-                {receipt.invoiceNumber}
-              </span>
+              <div className="flex justify-between items-center gap-4 pt-1.5 border-t border-slate-200">
+                <span className="text-slate-500 font-medium">
+                  {isArabic ? "الفاتورة الأصلية :" : "Facture acquittée :"}
+                </span>
+                <span className="font-mono font-bold" style={{ color: palette.hex }}>
+                  {receipt.invoiceNumber}
+                </span>
+              </div>
             </div>
+
+            {seller.logoUrl && logoPos === "RIGHT" && (
+              <div className="shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={seller.logoUrl}
+                  alt={seller.fullName || "Logo"}
+                  className="max-h-14 max-w-[180px] object-contain"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -357,18 +450,30 @@ export function BilingualPaymentReceiptPaper({
         </div>
 
         {/* Financial Amount Box */}
-        <div className="p-6 rounded-2xl bg-emerald-50/60 border-2 border-emerald-300 space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">
+        <div
+          className="p-6 rounded-2xl border-2 space-y-3"
+          style={{
+            backgroundColor: palette.lightBgHex,
+            borderColor: palette.borderHex,
+          }}
+        >
+          <div
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3"
+            style={{ borderColor: palette.borderHex }}
+          >
+            <span className="text-xs font-bold uppercase tracking-wider" style={{ color: palette.darkHex }}>
               {isArabic ? "المبلغ الإجمالي المسدد بالأرقام :" : "Montant Total Encaissé (Chiffres) :"}
             </span>
-            <span className="text-2xl sm:text-3xl font-black text-emerald-800 font-mono">
+            <span
+              className="text-2xl sm:text-3xl font-black font-mono"
+              style={{ color: palette.darkHex }}
+            >
               {isArabic ? formatDZD_AR(receipt.total) : formatDZD(receipt.total)}
             </span>
           </div>
 
           <div className="space-y-1">
-            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold uppercase tracking-wider block" style={{ color: palette.hex }}>
               {isArabic ? "المبلغ المقبوض بالأحرف الكاملة :" : "Montant Reçu en Toutes Lettres :"}
             </span>
             <p className="text-sm font-bold text-slate-900 leading-relaxed italic">
@@ -380,8 +485,14 @@ export function BilingualPaymentReceiptPaper({
         </div>
 
         {/* Official Statutory Exemption & Discharge Clause */}
-        <div className="p-4 rounded-xl bg-slate-50 border-l-4 border-emerald-600 text-xs text-slate-700 space-y-1">
-          <span className="font-bold block text-slate-900 uppercase tracking-wider text-[11px]">
+        <div
+          className="p-4 rounded-xl border-l-4 text-xs text-slate-700 space-y-1"
+          style={{
+            backgroundColor: palette.lightBgHex,
+            borderLeftColor: palette.hex,
+          }}
+        >
+          <span className="font-bold block uppercase tracking-wider text-[11px]" style={{ color: palette.darkHex }}>
             {isArabic
               ? "الإبراء القانوني والإعفاء الضريبي (Loi 22-23) :"
               : "Décharge libératoire & Mentions légales :"}
@@ -419,14 +530,34 @@ export function BilingualPaymentReceiptPaper({
 
           <div className="flex items-center gap-6">
             {/* Algerian Circular Administrative Stamp */}
-            <div className="flex flex-col items-center justify-center w-36 h-36 rounded-full border-2 border-dashed border-emerald-600/40 p-2 text-center text-emerald-800 bg-emerald-50/20 rotate-[-4deg] select-none">
-              <div className="w-full h-full rounded-full border border-emerald-600/30 flex flex-col items-center justify-center p-1 text-[8.5px] font-bold leading-tight uppercase">
-                <span className="text-[7.5px] text-emerald-600">الجمهورية الجزائرية</span>
-                <span className="text-[9.5px] text-emerald-700 font-extrabold my-0.5">وصل مسدد وخالص</span>
-                <span className="text-[7.5px] text-emerald-800">المقاول الذاتي</span>
-                <span className="text-[7.5px] font-mono text-emerald-600 mt-0.5">LOI 22-23</span>
+            {seller.showStampSignature !== false && (
+              <div
+                className="flex flex-col items-center justify-center w-36 h-36 rounded-full border-2 border-dashed p-2 text-center rotate-[-4deg] select-none"
+                style={{
+                  borderColor: `${palette.hex}66`,
+                  backgroundColor: `${palette.lightBgHex}44`,
+                  color: palette.darkHex,
+                }}
+              >
+                <div
+                  className="w-full h-full rounded-full border flex flex-col items-center justify-center p-1 text-[8.5px] font-bold leading-tight uppercase"
+                  style={{ borderColor: `${palette.hex}55` }}
+                >
+                  <span className="text-[7.5px]" style={{ color: palette.hex }}>
+                    الجمهورية الجزائرية
+                  </span>
+                  <span className="text-[9.5px] font-extrabold my-0.5" style={{ color: palette.darkHex }}>
+                    وصل مسدد وخالص
+                  </span>
+                  <span className="text-[7.5px]" style={{ color: palette.darkHex }}>
+                    المقاول الذاتي
+                  </span>
+                  <span className="text-[7.5px] font-mono mt-0.5" style={{ color: palette.hex }}>
+                    LOI 22-23
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Signature Box */}
             <div className="w-48 h-32 rounded-2xl border border-slate-200 bg-slate-50/50 p-3 flex flex-col justify-between text-center">

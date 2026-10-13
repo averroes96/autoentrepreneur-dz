@@ -804,61 +804,85 @@ export async function restoreVaultData(
     }
 
     // 8. Restore Sequences
+    const [existingInvoiceSeqs, existingQuoteSeqs, existingCreditNoteSeqs, existingPastTurnovers] =
+      await Promise.all([
+        tx.invoiceSequence.findMany({ where: { tenantId } }),
+        tx.quoteSequence.findMany({ where: { tenantId } }),
+        tx.creditNoteSequence.findMany({ where: { tenantId } }),
+        tx.pastTurnover.findMany({ where: { tenantId } }),
+      ]);
+
+    const invoiceSeqByYear = new Map(existingInvoiceSeqs.map((s) => [s.fiscalYear, s]));
     for (const seq of payload.invoiceSequences || []) {
-      const existing = await tx.invoiceSequence.findUnique({
-        where: { tenantId_fiscalYear: { tenantId, fiscalYear: seq.fiscalYear } },
-      });
+      const existing = invoiceSeqByYear.get(seq.fiscalYear);
       if (existing) {
-        await tx.invoiceSequence.update({
-          where: { id: existing.id },
-          data: { lastSequence: Math.max(existing.lastSequence, seq.lastSequence) },
-        });
+        if (seq.lastSequence > existing.lastSequence) {
+          await tx.invoiceSequence.update({
+            where: { id: existing.id },
+            data: { lastSequence: seq.lastSequence },
+          });
+        }
       } else {
-        await tx.invoiceSequence.create({
+        const created = await tx.invoiceSequence.create({
           data: { tenantId, fiscalYear: seq.fiscalYear, lastSequence: seq.lastSequence },
         });
+        invoiceSeqByYear.set(seq.fiscalYear, created);
       }
     }
 
+    const quoteSeqByYear = new Map(existingQuoteSeqs.map((s) => [s.fiscalYear, s]));
     for (const seq of payload.quoteSequences || []) {
-      const existing = await tx.quoteSequence.findUnique({
-        where: { tenantId_fiscalYear: { tenantId, fiscalYear: seq.fiscalYear } },
-      });
+      const existing = quoteSeqByYear.get(seq.fiscalYear);
       if (existing) {
-        await tx.quoteSequence.update({
-          where: { id: existing.id },
-          data: { lastSequence: Math.max(existing.lastSequence, seq.lastSequence) },
-        });
+        if (seq.lastSequence > existing.lastSequence) {
+          await tx.quoteSequence.update({
+            where: { id: existing.id },
+            data: { lastSequence: seq.lastSequence },
+          });
+        }
       } else {
-        await tx.quoteSequence.create({
+        const created = await tx.quoteSequence.create({
           data: { tenantId, fiscalYear: seq.fiscalYear, lastSequence: seq.lastSequence },
         });
+        quoteSeqByYear.set(seq.fiscalYear, created);
       }
     }
 
+    const creditNoteSeqByYear = new Map(existingCreditNoteSeqs.map((s) => [s.fiscalYear, s]));
     for (const seq of payload.creditNoteSequences || []) {
-      const existing = await tx.creditNoteSequence.findUnique({
-        where: { tenantId_fiscalYear: { tenantId, fiscalYear: seq.fiscalYear } },
-      });
+      const existing = creditNoteSeqByYear.get(seq.fiscalYear);
       if (existing) {
-        await tx.creditNoteSequence.update({
-          where: { id: existing.id },
-          data: { lastSequence: Math.max(existing.lastSequence, seq.lastSequence) },
-        });
+        if (seq.lastSequence > existing.lastSequence) {
+          await tx.creditNoteSequence.update({
+            where: { id: existing.id },
+            data: { lastSequence: seq.lastSequence },
+          });
+        }
       } else {
-        await tx.creditNoteSequence.create({
+        const created = await tx.creditNoteSequence.create({
           data: { tenantId, fiscalYear: seq.fiscalYear, lastSequence: seq.lastSequence },
         });
+        creditNoteSeqByYear.set(seq.fiscalYear, created);
       }
     }
 
     // 9. Restore Past Turnovers
+    const pastTurnoverByYear = new Map(existingPastTurnovers.map((pt) => [pt.fiscalYear, pt]));
     for (const pt of payload.pastTurnovers || []) {
-      await tx.pastTurnover.upsert({
-        where: { tenantId_fiscalYear: { tenantId, fiscalYear: pt.fiscalYear } },
-        create: { tenantId, fiscalYear: pt.fiscalYear, turnoverDzd: pt.turnoverDzd },
-        update: { turnoverDzd: pt.turnoverDzd },
-      });
+      const existing = pastTurnoverByYear.get(pt.fiscalYear);
+      if (existing) {
+        if (existing.turnoverDzd !== pt.turnoverDzd) {
+          await tx.pastTurnover.update({
+            where: { id: existing.id },
+            data: { turnoverDzd: pt.turnoverDzd },
+          });
+        }
+      } else {
+        const created = await tx.pastTurnover.create({
+          data: { tenantId, fiscalYear: pt.fiscalYear, turnoverDzd: pt.turnoverDzd },
+        });
+        pastTurnoverByYear.set(pt.fiscalYear, created);
+      }
     }
 
     // Compute updated counts

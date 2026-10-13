@@ -201,7 +201,7 @@ export async function updateDraftQuote(
         lineItems: true,
       },
     });
-  });
+  }, { timeout: 30000, maxWait: 15000 });
 }
 
 /**
@@ -268,6 +268,18 @@ export async function finalizeAndSendQuote(tenantId: string, quoteId: string) {
       phone: profile.phone,
       activityCode: profile.activityCode,
       activityLabel: profile.activityLabel,
+      logoUrl: profile.logoUrl,
+      logoPosition: profile.logoPosition,
+      brandColor: profile.brandColor,
+      templateStyle: profile.templateStyle,
+      bankName: profile.bankName,
+      bankRib: profile.bankRib,
+      bankIban: profile.bankIban,
+      bankBic: profile.bankBic,
+      paymentTerms: profile.paymentTerms,
+      paymentInstructions: profile.paymentInstructions,
+      showStampSignature: profile.showStampSignature,
+      signatureUrl: profile.signatureUrl,
     };
 
     const clientSnapshot = {
@@ -299,7 +311,7 @@ export async function finalizeAndSendQuote(tenantId: string, quoteId: string) {
         },
       },
     });
-  });
+  }, { timeout: 30000, maxWait: 15000 });
 }
 
 /**

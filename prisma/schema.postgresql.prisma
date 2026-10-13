@@ -64,6 +64,25 @@ model AutoEntrepreneurProfile {
   invoicePrefix      String    @default("FAC")
   quotePrefix        String    @default("DEV")
   creditNotePrefix   String    @default("AVR")
+
+  // Visual Identity & Styling Engine (Phase 4)
+  logoUrl            String?
+  logoPosition       String    @default("LEFT") // LEFT, CENTER, RIGHT
+  brandColor         String    @default("EMERALD") // EMERALD, NAVY, BURGUNDY, SLATE, AMBER
+  templateStyle      String    @default("MODERN") // MODERN, CLASSIC, MINIMALIST, COMPACT
+
+  // Payment & Banking Coordinates
+  bankName           String?
+  bankRib            String?
+  bankIban           String?
+  bankBic            String?
+  paymentTerms       String?
+  paymentInstructions String?
+
+  // Official Commercial Seal & Signature
+  showStampSignature Boolean   @default(true)
+  signatureUrl       String?
+
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

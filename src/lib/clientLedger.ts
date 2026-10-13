@@ -39,6 +39,10 @@ export interface ClientLedgerData {
     email: string;
     activityCode: string;
     activityLabel: string;
+    logoUrl?: string | null;
+    logoPosition?: string | null;
+    brandColor?: string | null;
+    templateStyle?: string | null;
   };
   metrics: {
     totalBilledDzd: number;
@@ -121,6 +125,10 @@ export async function getClientLedger(
     email: profile?.email || "—",
     activityCode: profile?.activityCode || "—",
     activityLabel: profile?.activityLabel || "—",
+    logoUrl: profile?.logoUrl || null,
+    logoPosition: profile?.logoPosition || null,
+    brandColor: profile?.brandColor || null,
+    templateStyle: profile?.templateStyle || null,
   };
 
   // 1. Calculate Core Totals
