@@ -26,6 +26,7 @@ import { AnaeActivitySelector } from "./AnaeActivitySelector";
 import { CasnosSchemeSelector } from "./CasnosSchemeSelector";
 import { PaymentCoordinatesSection } from "./PaymentCoordinatesSection";
 import { DocumentDesignSection } from "./DocumentDesignSection";
+import { SealSignatureSection } from "./SealSignatureSection";
 import { useI18n } from "@/lib/i18n/I18nContext";
 
 interface ProfileData {
@@ -62,6 +63,8 @@ interface ProfileData {
   paymentTerms?: string | null;
   paymentInstructions?: string | null;
   showStampSignature?: boolean | null;
+  stampType?: string | null;
+  stampUrl?: string | null;
   signatureUrl?: string | null;
 }
 
@@ -538,11 +541,29 @@ export function ProfileFormClient({
           initialBrandColor={profile.brandColor}
           initialTemplateStyle={profile.templateStyle}
           sellerName={profile.fullName}
+          sellerRnae={profile.rnaeNumber}
+          sellerNif={profile.nif}
           activityLabel={profile.activityLabel}
           initialBankName={profile.bankName}
           initialBankRib={profile.bankRib}
           initialCcpNumber={profile.ccpNumber}
           initialCcpKey={profile.ccpKey}
+          showStampSignature={profile.showStampSignature}
+          stampType={profile.stampType}
+          stampUrl={profile.stampUrl}
+          signatureUrl={profile.signatureUrl}
+        />
+
+        {/* Section 7: Cachet Commercial & Signature Numérique (Module 3) */}
+        <SealSignatureSection
+          initialShowStampSignature={profile.showStampSignature}
+          initialStampType={profile.stampType}
+          initialStampUrl={profile.stampUrl}
+          initialSignatureUrl={profile.signatureUrl}
+          sellerFullName={profile.fullName}
+          sellerRnae={profile.rnaeNumber}
+          sellerNif={profile.nif}
+          brandColor={profile.brandColor}
         />
 
         <div className="flex justify-end">

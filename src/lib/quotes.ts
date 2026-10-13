@@ -287,6 +287,8 @@ export async function finalizeAndSendQuote(tenantId: string, quoteId: string) {
       paymentTerms: quote.paymentTerms || profile.paymentTerms || "UPON_RECEIPT",
       paymentInstructions: profile.paymentInstructions,
       showStampSignature: profile.showStampSignature,
+      stampType: profile.stampType || "AUTO",
+      stampUrl: profile.stampUrl,
       signatureUrl: profile.signatureUrl,
     };
 

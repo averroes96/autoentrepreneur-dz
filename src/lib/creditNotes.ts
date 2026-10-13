@@ -140,6 +140,8 @@ export async function createCreditNoteFromInvoice(data: CreateCreditNoteInput) {
       paymentTerms: profile.paymentTerms,
       paymentInstructions: profile.paymentInstructions,
       showStampSignature: profile.showStampSignature,
+      stampType: profile.stampType || "AUTO",
+      stampUrl: profile.stampUrl,
       signatureUrl: profile.signatureUrl,
     };
 

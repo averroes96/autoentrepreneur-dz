@@ -41,6 +41,7 @@ import {
   formatIban,
   PAYMENT_TERMS_CONFIG,
 } from "@/lib/banking";
+import { OfficialSeal } from "@/components/common/OfficialSeal";
 
 interface BilingualInvoicePaperProps {
   invoice: {
@@ -91,6 +92,8 @@ interface BilingualInvoicePaperProps {
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
     showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
     signatureUrl?: string | null;
   };
   client: {
@@ -923,33 +926,22 @@ export function BilingualInvoicePaper({
               </p>
             </div>
 
-            {/* Stamp Badge */}
+            {/* Official Commercial Seal & Signature (Module 3) */}
             {seller.showStampSignature !== false && (
-              <div
-                className="hidden sm:flex flex-col items-center justify-center w-36 h-36 rounded-full border-2 border-dashed p-2 text-center rotate-[-6deg] select-none"
-                style={{
-                  borderColor: `${palette.hex}88`,
-                  backgroundColor: `${palette.lightBgHex}88`,
-                  color: palette.darkHex,
-                }}
-              >
-                <div
-                  className="w-full h-full rounded-full border flex flex-col items-center justify-center p-1 text-[9px] font-bold leading-tight uppercase"
-                  style={{ borderColor: `${palette.hex}66` }}
-                >
-                  <span className="text-[8px]" style={{ color: palette.hex }}>
-                    الجمهورية الجزائرية
-                  </span>
-                  <span className="text-[10px] font-extrabold my-0.5" style={{ color: palette.darkHex }}>
-                    المقاول الذاتي
-                  </span>
-                  <span className="text-[8px]" style={{ color: palette.darkHex }}>
-                    معفى من TVA
-                  </span>
-                  <span className="text-[8px] font-mono mt-0.5" style={{ color: palette.hex }}>
-                    Loi 22-23
-                  </span>
-                </div>
+              <div className="flex flex-col items-center text-center shrink-0">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  {isArabic ? "الختم والتوقيع الرسمي" : "Cachet & Signature Officiels"}
+                </span>
+                <OfficialSeal
+                  fullName={seller.fullName}
+                  rnaeNumber={seller.rnaeNumber}
+                  nif={seller.nif}
+                  stampType={seller.stampType}
+                  stampUrl={seller.stampUrl}
+                  signatureUrl={seller.signatureUrl}
+                  inkColor={palette.hex}
+                  size="md"
+                />
               </div>
             )}
           </div>

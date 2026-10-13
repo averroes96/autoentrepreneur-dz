@@ -34,6 +34,7 @@ import {
   formatIban,
   PAYMENT_TERMS_CONFIG,
 } from "@/lib/banking";
+import { OfficialSeal } from "@/components/common/OfficialSeal";
 
 interface BilingualQuotePaperProps {
   quote: {
@@ -82,6 +83,8 @@ interface BilingualQuotePaperProps {
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
     showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
     signatureUrl?: string | null;
   };
   client: {
@@ -862,30 +865,85 @@ export function BilingualQuotePaper({
             </div>
           )}
 
-          {/* Signature & Seal Area */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6 border-t border-slate-100">
-            <div className="border border-dashed border-slate-200 rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between">
-              <span className="text-[11px] font-bold text-slate-500 uppercase">
-                {isArabic ? "توقيع وموافقة العميل (مسبوقة بعبارة قرأت ووافقت)" : "Bon pour accord (Signature & Cachet du client)"}
-              </span>
-              <span className="text-[10px] text-slate-400 italic">
-                {isArabic ? "التاريخ : ...................." : "Date : ...................."}
-              </span>
+          {/* Official "Bon pour Accord" & Prestataire Seal Block (Module 3) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6 border-t-2 border-slate-100">
+            {/* Client Approval Box (Bon pour Accord) */}
+            <div className="border-2 border-dashed border-slate-300 rounded-2xl p-5 bg-slate-50/50 flex flex-col justify-between min-h-[180px] space-y-3">
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">
+                    {isArabic ? "موافقة واعتماد الطلبية (العميل)" : "BON POUR ACCORD ET COMMANDE"}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                    Client
+                  </span>
+                </div>
+                <p className="text-[10px] font-semibold text-slate-500 italic">
+                  {isArabic
+                    ? "العبارة الخطية الإلزامية: «قرأت ووافقت، صالح للطلبية»"
+                    : "Mention manuscrite obligatoire : « Lu et approuvé, bon pour commande »"}
+                </p>
+              </div>
+
+              {/* Stamping & Signature blank space */}
+              <div className="flex-1 flex items-center justify-center border border-dashed border-slate-200 rounded-xl bg-white/70 py-4 my-1">
+                <span className="text-[10px] font-medium text-slate-400">
+                  {isArabic ? "مكان ختم وتوقيع العميل" : "Cadre réservé au cachet & signature du client"}
+                </span>
+              </div>
+
+              {/* Client acceptance metadata */}
+              <div className="pt-2 border-t border-slate-200/80 text-[10px] text-slate-600 flex justify-between items-center">
+                <span>{isArabic ? "تاريخ الموافقة : ..... / ..... / 20....." : "Date : ..... / ..... / 20....."}</span>
+                <span>{isArabic ? "صفة الموقّع : ...................." : "Qualité : ...................."}</span>
+              </div>
             </div>
 
+            {/* Provider Box (Auto-Entrepreneur) with Seal */}
             <div
-              className="border border-dashed rounded-2xl p-4 text-center min-h-[120px] flex flex-col justify-between"
+              className="border-2 rounded-2xl p-5 flex flex-col justify-between min-h-[180px] space-y-3"
               style={{
                 borderColor: palette.borderHex,
-                backgroundColor: `${palette.lightBgHex}66`,
+                backgroundColor: `${palette.lightBgHex}40`,
               }}
             >
-              <span className="text-[11px] font-bold uppercase" style={{ color: palette.darkHex }}>
-                {isArabic ? "توقيع وخاتم المقاول الذاتي" : "Signature & Cachet du Prestataire"}
-              </span>
-              <div className="text-[10px] text-slate-500">
-                <p>{seller.fullName}</p>
-                <p>RNAE: {seller.rnaeNumber}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wide" style={{ color: palette.darkHex }}>
+                  {isArabic ? "المقاول الذاتي (مقدّم الخدمة)" : "POUR L'AUTO-ENTREPRENEUR"}
+                </span>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded"
+                  style={{ backgroundColor: palette.lightBgHex, color: palette.darkHex }}
+                >
+                  Prestataire
+                </span>
+              </div>
+
+              {/* Seal or details */}
+              <div className="flex items-center justify-center py-1">
+                {seller.showStampSignature !== false ? (
+                  <OfficialSeal
+                    fullName={seller.fullName}
+                    rnaeNumber={seller.rnaeNumber}
+                    nif={seller.nif}
+                    stampType={seller.stampType}
+                    stampUrl={seller.stampUrl}
+                    signatureUrl={seller.signatureUrl}
+                    inkColor={palette.hex}
+                    size="md"
+                  />
+                ) : (
+                  <div className="text-center text-xs text-slate-600 space-y-1">
+                    <p className="font-bold text-slate-900">{seller.fullName}</p>
+                    <p className="text-[11px] font-mono">RNAE: {seller.rnaeNumber}</p>
+                    <p className="text-[11px] font-mono">NIF: {seller.nif}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 border-t border-slate-200/80 text-[10px] text-slate-500 flex justify-between items-center">
+                <span>{seller.fullName}</span>
+                <span className="font-mono">RNAE: {seller.rnaeNumber || "—"}</span>
               </div>
             </div>
           </div>

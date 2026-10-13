@@ -83,8 +83,10 @@ model AutoEntrepreneurProfile {
   paymentTerms        String?   @default("UPON_RECEIPT") // UPON_RECEIPT, 15_DAYS, 30_DAYS, 30_DAYS_END_OF_MONTH
   paymentInstructions String?
 
-  // Official Commercial Seal & Signature
+  // Official Commercial Seal & Signature (Module 3)
   showStampSignature Boolean   @default(true)
+  stampType          String    @default("AUTO") // AUTO, CUSTOM
+  stampUrl           String?
   signatureUrl       String?
 
   createdAt          DateTime  @default(now())

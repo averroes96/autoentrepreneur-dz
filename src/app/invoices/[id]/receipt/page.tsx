@@ -126,6 +126,14 @@ export default async function InvoiceReceiptPage({
             email: sellerData.email || tenant.profile.email,
             activityCode: sellerData.activityCode || tenant.profile.activityCode,
             activityLabel: sellerData.activityLabel || tenant.profile.activityLabel,
+            logoUrl: sellerData.logoUrl || tenant.profile.logoUrl,
+            logoPosition: sellerData.logoPosition || tenant.profile.logoPosition,
+            brandColor: sellerData.brandColor || tenant.profile.brandColor,
+            templateStyle: sellerData.templateStyle || tenant.profile.templateStyle,
+            showStampSignature: (sellerData.showStampSignature ?? tenant.profile.showStampSignature) ?? true,
+            stampType: sellerData.stampType || tenant.profile.stampType,
+            stampUrl: sellerData.stampUrl || tenant.profile.stampUrl,
+            signatureUrl: sellerData.signatureUrl || tenant.profile.signatureUrl,
           }}
           client={{
             name: clientData.name,

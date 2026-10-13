@@ -20,6 +20,7 @@ import {
   getBrandPalette,
   getTemplateStyle,
 } from "@/lib/invoiceDesign";
+import { OfficialSeal } from "@/components/common/OfficialSeal";
 
 interface BilingualCreditNotePaperProps {
   creditNote: {
@@ -68,6 +69,8 @@ interface BilingualCreditNotePaperProps {
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
     showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
     signatureUrl?: string | null;
   };
   client: {
@@ -525,6 +528,27 @@ export function BilingualCreditNotePaper({
               « {ar.vatExemptionClause} »
             </p>
           </div>
+
+          {/* Official Visual Seal / Stamp */}
+          {seller.showStampSignature !== false && (
+            <div className="flex justify-end pt-2">
+              <div className="flex flex-col items-center text-center shrink-0">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  {isArabic ? "الختم والتوقيع الرسمي" : "Cachet & Signature Officiels"}
+                </span>
+                <OfficialSeal
+                  fullName={seller.fullName}
+                  rnaeNumber={seller.rnaeNumber}
+                  nif={seller.nif}
+                  stampType={seller.stampType}
+                  stampUrl={seller.stampUrl}
+                  signatureUrl={seller.signatureUrl}
+                  inkColor={palette.hex}
+                  size="md"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Official Statutory Footer */}
           <div className="pt-6 border-t border-slate-100 text-center text-[11px] text-slate-400">

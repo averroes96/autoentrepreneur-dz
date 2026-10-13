@@ -26,6 +26,7 @@ import {
 } from "@/lib/invoiceDesign";
 import { formatRip } from "@/lib/banking";
 import { useI18n } from "@/lib/i18n/I18nContext";
+import { OfficialSeal } from "@/components/common/OfficialSeal";
 
 interface DocumentDesignSectionProps {
   initialLogoUrl?: string | null;
@@ -38,6 +39,12 @@ interface DocumentDesignSectionProps {
   initialBankRib?: string | null;
   initialCcpNumber?: string | null;
   initialCcpKey?: string | null;
+  sellerRnae?: string | null;
+  sellerNif?: string | null;
+  showStampSignature?: boolean | null;
+  stampType?: string | null;
+  stampUrl?: string | null;
+  signatureUrl?: string | null;
 }
 
 export function DocumentDesignSection({
@@ -46,11 +53,17 @@ export function DocumentDesignSection({
   initialBrandColor = "EMERALD",
   initialTemplateStyle = "MODERN",
   sellerName = "Auto-Entrepreneur",
+  sellerRnae = "—",
+  sellerNif = "—",
   activityLabel = "Services Numériques & Conseil",
   initialBankName,
   initialBankRib,
   initialCcpNumber,
   initialCcpKey,
+  showStampSignature = true,
+  stampType = "AUTO",
+  stampUrl = null,
+  signatureUrl = null,
 }: DocumentDesignSectionProps) {
   const { t, locale, dir } = useI18n();
   const isArabic = locale === "ar";
@@ -801,6 +814,28 @@ export function DocumentDesignSection({
                 <p className="italic leading-relaxed" style={{ color: activePalette.darkHex }}>
                   « Facture exonérée de TVA en vertu de l&apos;article 13 du Décret exécutif n° 23-197. »
                 </p>
+              </div>
+
+              {/* Preview Footer & Official Seal */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div className="text-[9px] text-slate-400 space-y-0.5">
+                  <p>Facture établie conformément à la Loi 22-23.</p>
+                  <p className="font-mono">RNAE : {sellerRnae || "—"} • NIF : {sellerNif || "—"}</p>
+                </div>
+                {showStampSignature !== false && (
+                  <div className="shrink-0 scale-75 origin-bottom-right">
+                    <OfficialSeal
+                      fullName={sellerName}
+                      rnaeNumber={sellerRnae}
+                      nif={sellerNif}
+                      stampType={stampType}
+                      stampUrl={stampUrl}
+                      signatureUrl={signatureUrl}
+                      inkColor={activePalette.hex}
+                      size="sm"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

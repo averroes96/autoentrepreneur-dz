@@ -310,6 +310,8 @@ export async function issueInvoice(tenantId: string, invoiceId: string) {
       paymentTerms: invoice.paymentTerms || profile.paymentTerms || "UPON_RECEIPT",
       paymentInstructions: profile.paymentInstructions,
       showStampSignature: profile.showStampSignature,
+      stampType: profile.stampType || "AUTO",
+      stampUrl: profile.stampUrl,
       signatureUrl: profile.signatureUrl,
     };
 

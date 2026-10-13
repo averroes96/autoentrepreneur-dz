@@ -26,6 +26,10 @@ export interface SellerBrandingFields {
   logoPosition?: string | null;
   brandColor?: string | null;
   templateStyle?: string | null;
+  showStampSignature?: boolean | null;
+  stampType?: string | null;
+  stampUrl?: string | null;
+  signatureUrl?: string | null;
 }
 
 function getLogoBuffer(logoUrl?: string | null): Buffer | null {
@@ -77,6 +81,82 @@ function drawTemplateAccentBar(
   }
 }
 
+function drawOfficialSealPdf(
+  doc: PDFKit.PDFDocument,
+  params: {
+    centerX: number;
+    centerY: number;
+    radius: number;
+    seller: {
+      fullName: string;
+      rnaeNumber: string;
+      nif: string;
+      stampType?: string | null;
+      stampUrl?: string | null;
+      signatureUrl?: string | null;
+    };
+    sealColor: string;
+  }
+): void {
+  const { centerX, centerY, radius, seller, sealColor } = params;
+  const isCustom = seller.stampType === "CUSTOM" && Boolean(seller.stampUrl);
+
+  if (isCustom && seller.stampUrl) {
+    const stampBuf = getLogoBuffer(seller.stampUrl);
+    if (stampBuf) {
+      tryDrawImage(doc, stampBuf, centerX - radius, centerY - radius, {
+        fit: [radius * 2, radius * 2],
+        align: "center",
+        valign: "center",
+      });
+    }
+  } else {
+    // Vector procedural administrative circular seal (Algerian standard)
+    doc.save();
+
+    // Outer double concentric rings
+    doc.circle(centerX, centerY, radius).lineWidth(1.4).strokeColor(sealColor).stroke();
+    doc.circle(centerX, centerY, radius - 2.5).lineWidth(0.6).strokeColor(sealColor).stroke();
+
+    // Inner security rings
+    doc.circle(centerX, centerY, radius - 11).lineWidth(0.5).dash(2, { space: 2 }).strokeColor(sealColor).stroke().undash();
+    doc.circle(centerX, centerY, radius - 13).lineWidth(0.5).strokeColor(sealColor).stroke();
+
+    // Top Arc Header
+    doc.fillColor(sealColor).fontSize(4.5).font("Helvetica-Bold");
+    doc.text("RÉPUBLIQUE ALGÉRIENNE", centerX - 30, centerY - radius + 4, { width: 60, align: "center" });
+
+    // Center Core Content
+    const displayName = (seller.fullName || "AUTO-ENTREPRENEUR").toUpperCase();
+    doc.fillColor(sealColor).fontSize(5.5).font("Helvetica-Bold");
+    doc.text(displayName.length > 20 ? displayName.slice(0, 19) + "." : displayName, centerX - 32, centerY - 9.5, { width: 64, align: "center" });
+
+    doc.fontSize(4.8).font("Helvetica-Bold").text("AUTO-ENTREPRENEUR", centerX - 30, centerY - 2.5, { width: 60, align: "center" });
+    doc.fontSize(3.8).font("Helvetica").text("STATUT RÉGI PAR LA LOI 22-23", centerX - 30, centerY + 3.5, { width: 60, align: "center" });
+
+    // Identifiers
+    doc.fontSize(4.2).font("Helvetica-Bold").text(`RNAE : ${seller.rnaeNumber || "—"}`, centerX - 30, centerY + 9, { width: 60, align: "center" });
+    doc.fontSize(4.2).font("Helvetica-Bold").text(`NIF : ${seller.nif || "—"}`, centerX - 30, centerY + 14.5, { width: 60, align: "center" });
+
+    // Bottom arc
+    doc.fontSize(4).font("Helvetica-Bold").text("EXONÉRÉ DE TVA (IFU)", centerX - 30, centerY + radius - 9, { width: 60, align: "center" });
+
+    doc.restore();
+  }
+
+  // Overlay handwritten signature if provided
+  if (seller.signatureUrl) {
+    const sigBuf = getLogoBuffer(seller.signatureUrl);
+    if (sigBuf) {
+      tryDrawImage(doc, sigBuf, centerX - radius * 0.7, centerY - radius * 0.35, {
+        fit: [radius * 1.4, radius * 0.9],
+        align: "center",
+        valign: "center",
+      });
+    }
+  }
+}
+
 export interface InvoicePdfData {
   invoice: {
     invoiceNumber: string | null;
@@ -121,6 +201,10 @@ export interface InvoicePdfData {
     ccpKey?: string | null;
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
+    showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
+    signatureUrl?: string | null;
   };
   client: {
     name: string;
@@ -551,14 +635,32 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       }
 
       // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
-      doc.roundedRect(margin, legalY, contentWidth, legalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
+      const hasSeal = data.seller.showStampSignature !== false;
+      const sealRadius = 26;
+      const sealBoxWidth = hasSeal ? 68 : 0;
+      const legalBoxWidth = hasSeal ? contentWidth - sealBoxWidth - 10 : contentWidth;
+
+      doc.roundedRect(margin, legalY, legalBoxWidth, legalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
       doc.rect(margin, legalY, 4, legalBoxH).fill(primaryColor);
 
       doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 6);
       doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, legalY + 17, {
-        width: contentWidth - 24,
+        width: legalBoxWidth - 20,
         lineGap: 1,
       });
+
+      // --- OFFICIAL ADMINISTRATIVE SEAL & SIGNATURE (MODULE 3) ---
+      if (hasSeal) {
+        const sealCenterX = margin + contentWidth - sealBoxWidth / 2;
+        const sealCenterY = legalY + legalBoxH / 2;
+        drawOfficialSealPdf(doc, {
+          centerX: sealCenterX,
+          centerY: sealCenterY,
+          radius: sealRadius,
+          seller: data.seller,
+          sealColor: primaryColor,
+        });
+      }
 
       // --- FOOTER ---
       doc.moveTo(margin, footerLineY).lineTo(margin + contentWidth, footerLineY).strokeColor(borderColor).stroke();
@@ -627,6 +729,10 @@ export interface QuotePdfData {
     ccpKey?: string | null;
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
+    showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
+    signatureUrl?: string | null;
   };
   client: {
     name: string;
@@ -934,7 +1040,6 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
       const footerLineY = 766;
       const legalBoxH = 38;
-      const approvalBoxH = 46;
 
       const hasBankDetails = Boolean(
         data.seller.bankRib ||
@@ -954,7 +1059,14 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       );
 
       const bankBoxH = hasBankDetails ? 44 : 0;
-      const neededBottomSpace = legalBoxH + approvalBoxH + (bankBoxH ? bankBoxH + 6 : 0) + 16;
+      const notesBoxH = data.quote.notes ? 26 : 0;
+      const approvalBoxH = 52;
+      const neededBottomSpace =
+        legalBoxH +
+        approvalBoxH +
+        (bankBoxH ? bankBoxH + 6 : 0) +
+        (notesBoxH ? notesBoxH + 6 : 0) +
+        16;
 
       // If content overflows into bottom area, add new page
       if (tableY + neededBottomSpace > footerLineY) {
@@ -965,11 +1077,19 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
       // Pin legal note right above the footer line
       const legalY = Math.max(
-        tableY + approvalBoxH + (bankBoxH ? bankBoxH + 6 : 0) + 12,
+        tableY + approvalBoxH + (bankBoxH ? bankBoxH + 6 : 0) + (notesBoxH ? notesBoxH + 6 : 0) + 12,
         footerLineY - 8 - legalBoxH
       );
       const approvalY = legalY - approvalBoxH - 8;
       const bankY = approvalY - (bankBoxH ? bankBoxH + 6 : 0);
+      const notesY = bankY - (notesBoxH ? notesBoxH + 6 : 0);
+
+      // --- NOTES BOX (IF PRESENT) ---
+      if (data.quote.notes) {
+        doc.roundedRect(margin, notesY, contentWidth, notesBoxH, cornerRadius).fillAndStroke(lightBg, borderColor);
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica-Bold").text("CONDITIONS DU DEVIS :", margin + 10, notesY + 5);
+        doc.fillColor(darkColor).fontSize(7).font("Helvetica").text(data.quote.notes, margin + 10, notesY + 14, { width: contentWidth - 20, lineGap: 1 });
+      }
 
       // --- PAYMENT DETAILS & BARIDIMOB BLOCK (QUOTES) ---
       if (hasBankDetails) {
@@ -1014,18 +1134,33 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
         doc.font("Helvetica-Bold").fillColor(darkColor).text(termsDef.shortFr);
       }
 
-      // --- NOTES & APPROVAL BOX ---
-      if (data.quote.notes) {
-        doc.roundedRect(margin, approvalY, contentWidth - 180, approvalBoxH, cornerRadius).fillAndStroke(lightBg, borderColor);
-        doc.fillColor(mutedColor).fontSize(7.5).font("Helvetica-Bold").text("CONDITIONS DU DEVIS :", margin + 10, approvalY + 6);
-        doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.quote.notes, margin + 10, approvalY + 16, { width: contentWidth - 200, lineGap: 1 });
-      }
+      // --- OFFICIAL "BON POUR ACCORD" & PRESTATAIRE SEAL (MODULE 3) ---
+      const dualBoxW = (contentWidth - 12) / 2;
+      const clientBoxX = margin;
+      const providerBoxX = margin + dualBoxW + 12;
 
-      // Client Signature & Stamp Box
-      const sigX = margin + contentWidth - 165;
-      doc.roundedRect(sigX, approvalY, 165, approvalBoxH, cornerRadius).fillAndStroke("#ffffff", borderColor);
-      doc.fillColor(mutedColor).fontSize(7).font("Helvetica-Bold").text("BON POUR ACCORD ET COMMANDE", sigX + 8, approvalY + 6, { width: 150, align: "center" });
-      doc.fontSize(6).font("Helvetica").text("Date et signature précédées de la mention 'Bon pour accord'", sigX + 8, approvalY + 18, { width: 150, align: "center" });
+      // 1. Client Acceptance Box (Bon pour Accord)
+      doc.roundedRect(clientBoxX, approvalY, dualBoxW, approvalBoxH, cornerRadius).fillAndStroke("#ffffff", borderColor);
+      doc.fillColor(darkColor).fontSize(7).font("Helvetica-Bold").text("BON POUR ACCORD ET COMMANDE (CLIENT)", clientBoxX + 8, approvalY + 5);
+      doc.fillColor(mutedColor).fontSize(5.5).font("Helvetica-Oblique").text("Mention manuscrite : « Lu et approuvé, bon pour commande »", clientBoxX + 8, approvalY + 14, { width: dualBoxW - 16 });
+      doc.fillColor(mutedColor).fontSize(5).font("Helvetica").text("Cadre réservé au cachet & signature du client", clientBoxX + 8, approvalY + 24, { width: dualBoxW - 16, align: "center" });
+      doc.fontSize(5.5).font("Helvetica").text("Date : ..... / ..... / 20.....     Qualité : ....................", clientBoxX + 8, approvalY + approvalBoxH - 9);
+
+      // 2. Provider Box (Auto-Entrepreneur) with Seal
+      doc.roundedRect(providerBoxX, approvalY, dualBoxW, approvalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
+      doc.fillColor(palette.darkHex).fontSize(7).font("Helvetica-Bold").text("POUR L'AUTO-ENTREPRENEUR (PRESTATAIRE)", providerBoxX + 8, approvalY + 5);
+      doc.fillColor(mutedColor).fontSize(6).font("Helvetica").text(data.seller.fullName, providerBoxX + 8, approvalY + 14);
+      doc.fontSize(5).text(`RNAE : ${data.seller.rnaeNumber || "—"}`, providerBoxX + 8, approvalY + 22);
+
+      if (data.seller.showStampSignature !== false) {
+        drawOfficialSealPdf(doc, {
+          centerX: providerBoxX + dualBoxW - 27,
+          centerY: approvalY + approvalBoxH / 2 + 1,
+          radius: 20,
+          seller: data.seller,
+          sealColor: accentColor,
+        });
+      }
 
       // --- MANDATORY LEGAL NOTE ---
       doc.roundedRect(margin, legalY, contentWidth, legalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
@@ -1093,6 +1228,10 @@ export interface CreditNotePdfData {
     logoPosition?: string | null;
     brandColor?: string | null;
     templateStyle?: string | null;
+    showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
+    signatureUrl?: string | null;
   };
   client: {
     name: string;
@@ -1412,14 +1551,31 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
         doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.creditNote.notes, margin + 10, notesY + 16, { width: contentWidth - 20, lineGap: 1 });
       }
 
-      // --- MANDATORY LEGAL NOTE ---
-      doc.roundedRect(margin, legalY, contentWidth, legalBoxH, cornerRadius).fillAndStroke("#f0fdf4", "#bbf7d0");
+      // --- MANDATORY LEGAL NOTE & OFFICIAL SEAL ---
+      const hasSeal = data.seller.showStampSignature !== false;
+      const sealRadius = 26;
+      const sealBoxWidth = hasSeal ? 68 : 0;
+      const legalBoxWidth = hasSeal ? contentWidth - sealBoxWidth - 10 : contentWidth;
+
+      doc.roundedRect(margin, legalY, legalBoxWidth, legalBoxH, cornerRadius).fillAndStroke("#f0fdf4", "#bbf7d0");
       doc.rect(margin, legalY, 4, legalBoxH).fill("#059669");
       doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 6);
       doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.creditNote.vatExemptionNote, margin + 12, legalY + 18, {
-        width: contentWidth - 24,
+        width: legalBoxWidth - 20,
         lineGap: 1,
       });
+
+      if (hasSeal) {
+        const sealCenterX = margin + contentWidth - sealBoxWidth / 2;
+        const sealCenterY = legalY + legalBoxH / 2;
+        drawOfficialSealPdf(doc, {
+          centerX: sealCenterX,
+          centerY: sealCenterY,
+          radius: sealRadius,
+          seller: data.seller,
+          sealColor: "#059669",
+        });
+      }
 
       // --- FOOTER ---
       doc.moveTo(margin, footerLineY).lineTo(margin + contentWidth, footerLineY).strokeColor(borderColor).stroke();
@@ -1725,6 +1881,10 @@ export interface PaymentReceiptPdfData {
     logoPosition?: string | null;
     brandColor?: string | null;
     templateStyle?: string | null;
+    showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
+    signatureUrl?: string | null;
   };
   client: {
     name: string;
@@ -1948,19 +2108,17 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
       );
 
       // Empreinte circulaire du cachet officiel
-      const stampCenterX = margin + sigBoxWidth - 100;
-      const stampCenterY = sigY + 60;
-      const radius = 38;
-
-      doc.circle(stampCenterX, stampCenterY, radius).lineWidth(1.5).strokeColor(primaryColor).stroke();
-      doc.circle(stampCenterX, stampCenterY, radius - 4).lineWidth(0.75).strokeColor(primaryColor).stroke();
-
-      doc.fontSize(5.5).font("Helvetica-Bold").fillColor(primaryColor);
-      doc.text("RÉPUBLIQUE ALGÉRIENNE", stampCenterX - 35, stampCenterY - 26, { width: 70, align: "center" });
-      doc.fontSize(6).text("AUTO-ENTREPRENEUR", stampCenterX - 35, stampCenterY - 14, { width: 70, align: "center" });
-      doc.fontSize(5).font("Helvetica").text("LOI N° 22-23", stampCenterX - 35, stampCenterY - 4, { width: 70, align: "center" });
-      doc.fontSize(6.5).font("Helvetica-Bold").text("QUITTANCE PAYÉE", stampCenterX - 35, stampCenterY + 6, { width: 70, align: "center" });
-      doc.fontSize(5).font("Helvetica").text(`RNAE: ${data.seller.rnaeNumber}`, stampCenterX - 35, stampCenterY + 18, { width: 70, align: "center" });
+      if (data.seller.showStampSignature !== false) {
+        const stampCenterX = margin + sigBoxWidth - 85;
+        const stampCenterY = sigY + 60;
+        drawOfficialSealPdf(doc, {
+          centerX: stampCenterX,
+          centerY: stampCenterY,
+          radius: 34,
+          seller: data.seller,
+          sealColor: primaryColor,
+        });
+      }
 
       // 8. Pied de page
       const footerY = 788;

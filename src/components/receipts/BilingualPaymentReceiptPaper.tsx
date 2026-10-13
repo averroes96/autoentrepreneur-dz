@@ -28,6 +28,7 @@ import {
   getBrandPalette,
   getTemplateStyle,
 } from "@/lib/invoiceDesign";
+import { OfficialSeal } from "@/components/common/OfficialSeal";
 
 export interface BilingualPaymentReceiptPaperProps {
   receipt: {
@@ -62,6 +63,8 @@ export interface BilingualPaymentReceiptPaperProps {
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
     showStampSignature?: boolean | null;
+    stampType?: string | null;
+    stampUrl?: string | null;
     signatureUrl?: string | null;
   };
   client: {
@@ -529,45 +532,24 @@ export function BilingualPaymentReceiptPaper({
           </div>
 
           <div className="flex items-center gap-6">
-            {/* Algerian Circular Administrative Stamp */}
+            {/* Algerian Circular Administrative Stamp & Signature */}
             {seller.showStampSignature !== false && (
-              <div
-                className="flex flex-col items-center justify-center w-36 h-36 rounded-full border-2 border-dashed p-2 text-center rotate-[-4deg] select-none"
-                style={{
-                  borderColor: `${palette.hex}66`,
-                  backgroundColor: `${palette.lightBgHex}44`,
-                  color: palette.darkHex,
-                }}
-              >
-                <div
-                  className="w-full h-full rounded-full border flex flex-col items-center justify-center p-1 text-[8.5px] font-bold leading-tight uppercase"
-                  style={{ borderColor: `${palette.hex}55` }}
-                >
-                  <span className="text-[7.5px]" style={{ color: palette.hex }}>
-                    الجمهورية الجزائرية
-                  </span>
-                  <span className="text-[9.5px] font-extrabold my-0.5" style={{ color: palette.darkHex }}>
-                    وصل مسدد وخالص
-                  </span>
-                  <span className="text-[7.5px]" style={{ color: palette.darkHex }}>
-                    المقاول الذاتي
-                  </span>
-                  <span className="text-[7.5px] font-mono mt-0.5" style={{ color: palette.hex }}>
-                    LOI 22-23
-                  </span>
-                </div>
+              <div className="flex flex-col items-center text-center shrink-0">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  {isArabic ? "الختم والتوقيع الرسمي (إبراء وقبض)" : "Cachet & Signature valant quittance"}
+                </span>
+                <OfficialSeal
+                  fullName={seller.fullName}
+                  rnaeNumber={seller.rnaeNumber}
+                  nif={seller.nif}
+                  stampType={seller.stampType}
+                  stampUrl={seller.stampUrl}
+                  signatureUrl={seller.signatureUrl}
+                  inkColor={palette.hex}
+                  size="md"
+                />
               </div>
             )}
-
-            {/* Signature Box */}
-            <div className="w-48 h-32 rounded-2xl border border-slate-200 bg-slate-50/50 p-3 flex flex-col justify-between text-center">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">
-                {isArabic ? "توقيع المقاول الذاتي" : "Signature & Cachet"}
-              </span>
-              <div className="text-[11px] font-bold text-slate-700 italic">
-                {seller.fullName}
-              </div>
-            </div>
           </div>
         </div>
       </div>

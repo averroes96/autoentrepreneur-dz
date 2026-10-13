@@ -75,6 +75,10 @@ export async function GET(
         ccpKey: sellerData.ccpKey,
         paymentTerms: sellerData.paymentTerms,
         paymentInstructions: sellerData.paymentInstructions,
+        showStampSignature: sellerData.showStampSignature ?? true,
+        signatureUrl: sellerData.signatureUrl,
+        stampType: sellerData.stampType,
+        stampUrl: sellerData.stampUrl,
       },
       client: clientData,
     });

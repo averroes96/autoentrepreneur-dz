@@ -242,8 +242,10 @@ export async function updateProfileAction(formData: FormData) {
   const paymentTerms = (formData.get("paymentTerms") as string)?.trim() || "UPON_RECEIPT";
   const paymentInstructions = (formData.get("paymentInstructions") as string)?.trim() || null;
 
-  // Commercial Stamp & Signature
+  // Commercial Stamp & Signature (Module 3)
   const showStampSignature = formData.get("showStampSignature") === "true" || formData.get("showStampSignature") === "on";
+  const stampType = (formData.get("stampType") as string)?.trim() || "AUTO";
+  const stampUrl = (formData.get("stampUrl") as string)?.trim() || null;
   const signatureUrl = (formData.get("signatureUrl") as string)?.trim() || null;
 
   const cardIssueDateRaw = formData.get("cardIssueDate") as string;
@@ -286,6 +288,8 @@ export async function updateProfileAction(formData: FormData) {
       paymentTerms,
       paymentInstructions,
       showStampSignature,
+      stampType,
+      stampUrl,
       signatureUrl,
     },
     create: {
@@ -321,6 +325,8 @@ export async function updateProfileAction(formData: FormData) {
       paymentTerms,
       paymentInstructions,
       showStampSignature,
+      stampType,
+      stampUrl,
       signatureUrl,
     },
   });
@@ -699,6 +705,10 @@ export async function emailInvoiceAction(invoiceId: string, recipientEmail?: str
         ccpKey: sellerData.ccpKey,
         paymentTerms: sellerData.paymentTerms,
         paymentInstructions: sellerData.paymentInstructions,
+        showStampSignature: sellerData.showStampSignature ?? true,
+        signatureUrl: sellerData.signatureUrl,
+        stampType: sellerData.stampType,
+        stampUrl: sellerData.stampUrl,
       },
       client: clientData,
     });
@@ -971,6 +981,10 @@ export async function emailQuoteAction(quoteId: string, recipientEmail?: string)
         ccpKey: sellerData.ccpKey,
         paymentTerms: sellerData.paymentTerms,
         paymentInstructions: sellerData.paymentInstructions,
+        showStampSignature: sellerData.showStampSignature ?? true,
+        signatureUrl: sellerData.signatureUrl,
+        stampType: sellerData.stampType,
+        stampUrl: sellerData.stampUrl,
       },
       client: clientData,
     });

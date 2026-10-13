@@ -82,6 +82,10 @@ export async function GET(
         logoPosition: sellerData.logoPosition || profile.logoPosition,
         brandColor: sellerData.brandColor || profile.brandColor,
         templateStyle: sellerData.templateStyle || profile.templateStyle,
+        showStampSignature: (sellerData.showStampSignature ?? profile.showStampSignature) ?? true,
+        signatureUrl: sellerData.signatureUrl || profile.signatureUrl,
+        stampType: sellerData.stampType || profile.stampType,
+        stampUrl: sellerData.stampUrl || profile.stampUrl,
       },
       client: {
         name: clientData.name,
