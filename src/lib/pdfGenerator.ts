@@ -122,7 +122,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
     try {
       const doc = new PDFDocument({
         size: "A4",
-        margin: 40,
+        margins: { top: 40, bottom: 25, left: 40, right: 40 },
         info: {
           Title: `Facture ${data.invoice.invoiceNumber || "Brouillon"}`,
           Author: data.seller.fullName,
@@ -396,10 +396,10 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       tableY += isForeign ? 76 : 56;
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
-      const footerLineY = 788;
-      const legalBoxH = 44;
+      const footerLineY = 766;
+      const legalBoxH = 42;
       const notesBoxH = data.invoice.notes ? 36 : 0;
-      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 10 : 0) + 16;
+      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 8 : 0) + 16;
 
       // If content overflows into bottom area, add new page
       if (tableY + neededBottomSpace > footerLineY) {
@@ -409,8 +409,8 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       }
 
       // Pin legal mention right above the footer line
-      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 10 : 0) + 12, footerLineY - 8 - legalBoxH);
-      const notesY = legalY - (notesBoxH ? notesBoxH + 10 : 0);
+      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 8 : 0) + 12, footerLineY - 8 - legalBoxH);
+      const notesY = legalY - (notesBoxH ? notesBoxH + 8 : 0);
 
       // --- NOTES / MODALITÉS DE RÈGLEMENT ---
       if (data.invoice.notes) {
@@ -503,7 +503,7 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
     try {
       const doc = new PDFDocument({
         size: "A4",
-        margin: 40,
+        margins: { top: 40, bottom: 25, left: 40, right: 40 },
         info: {
           Title: `Devis ${data.quote.quoteNumber || "Brouillon"}`,
           Author: data.seller.fullName,
@@ -790,10 +790,10 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       tableY += isQuoteForeign ? 74 : 54;
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
-      const footerLineY = 788;
+      const footerLineY = 766;
       const legalBoxH = 40;
-      const approvalBoxH = 48;
-      const neededBottomSpace = legalBoxH + approvalBoxH + 20;
+      const approvalBoxH = 46;
+      const neededBottomSpace = legalBoxH + approvalBoxH + 18;
 
       // If content overflows into bottom area, add new page
       if (tableY + neededBottomSpace > footerLineY) {
@@ -903,7 +903,7 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
     try {
       const doc = new PDFDocument({
         size: "A4",
-        margin: 40,
+        margins: { top: 40, bottom: 25, left: 40, right: 40 },
         info: {
           Title: `Avoir ${data.creditNote.creditNoteNumber || "Brouillon"}`,
           Author: data.seller.fullName,
@@ -1181,10 +1181,10 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       tableY += isCreditForeign ? 74 : 54;
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
-      const footerLineY = 788;
+      const footerLineY = 766;
       const legalBoxH = 40;
       const notesBoxH = data.creditNote.notes ? 36 : 0;
-      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 10 : 0) + 16;
+      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 8 : 0) + 16;
 
       // If content overflows into bottom area, add new page
       if (tableY + neededBottomSpace > footerLineY) {
@@ -1194,8 +1194,8 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       }
 
       // Pin legal note right above the footer line
-      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 10 : 0) + 12, footerLineY - 8 - legalBoxH);
-      const notesY = legalY - (notesBoxH ? notesBoxH + 10 : 0);
+      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 8 : 0) + 12, footerLineY - 8 - legalBoxH);
+      const notesY = legalY - (notesBoxH ? notesBoxH + 8 : 0);
 
       // --- NOTES / REMARQUES ---
       if (data.creditNote.notes) {
