@@ -60,6 +60,8 @@ interface BilingualInvoicePaperProps {
     vatExemptionNote: string;
     notes?: string | null;
     showDetailedItems?: boolean;
+    showBankDetails?: boolean;
+    showStampSignature?: boolean | null;
     lineItems: Array<{
       id: string;
       description: string;
@@ -81,6 +83,7 @@ interface BilingualInvoicePaperProps {
     logoPosition?: string | null;
     brandColor?: string | null;
     templateStyle?: string | null;
+    showBankDetails?: boolean | null;
     bankName?: string | null;
     bankRib?: string | null;
     bankIban?: string | null;
@@ -165,15 +168,26 @@ export function BilingualInvoicePaper({
     }
   };
 
-  const hasPaymentDetails = Boolean(
+  const showBankSection =
+    invoice.showBankDetails !== false &&
+    seller.showBankDetails !== false;
+
+  const hasConfiguredBank = Boolean(
     seller.bankRib ||
-    seller.bankName ||
     seller.ccpNumber ||
-    invoice.dueDate ||
-    invoice.paymentTerms ||
-    seller.paymentTerms ||
+    (seller.bankName && !seller.bankName.toLowerCase().includes("algérie poste") && !seller.bankName.toLowerCase().includes("banque")) ||
     seller.paymentInstructions
   );
+
+  const hasPaymentDetails = showBankSection && Boolean(
+    hasConfiguredBank ||
+    (invoice.showBankDetails === true && (seller.bankRib || seller.bankName || seller.ccpNumber))
+  );
+
+  const showStamp =
+    invoice.showStampSignature !== undefined && invoice.showStampSignature !== null
+      ? Boolean(invoice.showStampSignature)
+      : seller.showStampSignature !== false;
 
   const isPostalOrBaridi = Boolean(
     seller.bankName?.toLowerCase().includes("poste") ||
@@ -893,7 +907,7 @@ export function BilingualInvoicePaper({
           {/* Bottom Row: Legal VAT Exemption (Left) & Dedicated Cadre Cachet & Signature (Right) */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
             <div
-              className={`${seller.showStampSignature !== false ? "md:col-span-7" : "md:col-span-12"} p-4 rounded-xl border-l-4 text-xs flex flex-col justify-between`}
+              className={`${showStamp ? "md:col-span-7" : "md:col-span-12"} p-4 rounded-xl border-l-4 text-xs flex flex-col justify-between`}
               style={{
                 backgroundColor: palette.lightBgHex,
                 borderLeftColor: palette.hex,
@@ -917,7 +931,7 @@ export function BilingualInvoicePaper({
               </div>
             </div>
 
-            {seller.showStampSignature !== false && (
+            {showStamp && (
               <div className="md:col-span-5 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col items-center justify-between text-center min-h-[110px]">
                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                   {isArabic ? "إطار مخصص للختم والتوقيع" : "Cadre réservé au Cachet & Signature"}

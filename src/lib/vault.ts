@@ -622,6 +622,8 @@ export async function restoreVaultData(
             notes: q.notes,
             vatExemptionNote: q.vatExemptionNote || "Exonéré de la TVA",
             showDetailedItems: Boolean(q.showDetailedItems),
+            showBankDetails: q.showBankDetails !== undefined ? Boolean(q.showBankDetails) : true,
+            showStampSignature: q.showStampSignature !== undefined ? q.showStampSignature : null,
             sellerSnapshot: q.sellerSnapshot,
             clientSnapshot: q.clientSnapshot,
             sentAt: q.sentAt ? new Date(q.sentAt) : null,
@@ -688,6 +690,8 @@ export async function restoreVaultData(
             cancellationReason: inv.cancellationReason,
             notes: inv.notes,
             showDetailedItems: Boolean(inv.showDetailedItems),
+            showBankDetails: inv.showBankDetails !== undefined ? Boolean(inv.showBankDetails) : true,
+            showStampSignature: inv.showStampSignature !== undefined ? inv.showStampSignature : null,
             sourceQuoteId: linkedQuoteId,
             lineItems: {
               create: (inv.lineItems || []).map((li: any, idx: number) => ({

@@ -242,6 +242,9 @@ export async function updateProfileAction(formData: FormData) {
   const ccpKey = (formData.get("ccpKey") as string)?.trim() || null;
   const paymentTerms = (formData.get("paymentTerms") as string)?.trim() || "UPON_RECEIPT";
   const paymentInstructions = (formData.get("paymentInstructions") as string)?.trim() || null;
+  const showBankDetails = formData.has("showBankDetails")
+    ? formData.get("showBankDetails") === "true" || formData.get("showBankDetails") === "on"
+    : true;
 
   // Commercial Stamp & Signature (Module 3)
   const showStampSignature = formData.get("showStampSignature") === "true" || formData.get("showStampSignature") === "on";
@@ -278,6 +281,7 @@ export async function updateProfileAction(formData: FormData) {
       logoPosition,
       brandColor,
       templateStyle,
+      showBankDetails,
       bankName,
       bankRib,
       bankIban,
@@ -315,6 +319,7 @@ export async function updateProfileAction(formData: FormData) {
       logoPosition,
       brandColor,
       templateStyle,
+      showBankDetails,
       bankName,
       bankRib,
       bankIban,
@@ -346,6 +351,7 @@ export async function saveDocumentDesignAction(data: {
   logoUrl?: string | null;
   logoPosition?: string | null;
   showStampSignature: boolean;
+  showBankDetails?: boolean;
   stampType?: string | null;
   stampUrl?: string | null;
   signatureUrl?: string | null;
@@ -369,6 +375,7 @@ export async function saveDocumentDesignAction(data: {
       logoUrl: data.logoUrl,
       logoPosition: data.logoPosition || "LEFT",
       showStampSignature: data.showStampSignature,
+      ...(data.showBankDetails !== undefined && { showBankDetails: data.showBankDetails }),
       stampType: data.stampType || "AUTO",
       stampUrl: data.stampUrl,
       signatureUrl: data.signatureUrl,
@@ -534,6 +541,8 @@ export async function createInvoiceAction(payload: {
   exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
+  showBankDetails?: boolean;
+  showStampSignature?: boolean | null;
   lineItems: Array<{
     description: string;
     quantity?: number;
@@ -560,6 +569,8 @@ export async function createInvoiceAction(payload: {
       exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems ?? false,
+      showBankDetails: payload.showBankDetails,
+      showStampSignature: payload.showStampSignature,
       lineItems: payload.lineItems,
     });
 
@@ -583,6 +594,8 @@ export async function updateInvoiceAction(
     exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
+    showBankDetails?: boolean;
+    showStampSignature?: boolean | null;
     lineItems: Array<{
       description: string;
       quantity?: number;
@@ -604,6 +617,8 @@ export async function updateInvoiceAction(
       exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems,
+      showBankDetails: payload.showBankDetails,
+      showStampSignature: payload.showStampSignature,
       lineItems: payload.lineItems,
     });
 
@@ -787,6 +802,8 @@ export async function createQuoteAction(payload: {
   exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
+  showBankDetails?: boolean;
+  showStampSignature?: boolean | null;
   lineItems: Array<{
     description: string;
     quantity?: number;
@@ -812,6 +829,8 @@ export async function createQuoteAction(payload: {
       exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems,
+      showBankDetails: payload.showBankDetails,
+      showStampSignature: payload.showStampSignature,
       lineItems: payload.lineItems,
     });
 
@@ -836,6 +855,8 @@ export async function updateQuoteAction(
     exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
+    showBankDetails?: boolean;
+    showStampSignature?: boolean | null;
     lineItems?: Array<{
       description: string;
       quantity?: number;
@@ -856,6 +877,8 @@ export async function updateQuoteAction(
       exchangeRate: payload.exchangeRate,
       notes: payload.notes,
       showDetailedItems: payload.showDetailedItems,
+      showBankDetails: payload.showBankDetails,
+      showStampSignature: payload.showStampSignature,
       lineItems: payload.lineItems,
     });
 

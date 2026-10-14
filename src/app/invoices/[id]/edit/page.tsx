@@ -58,6 +58,8 @@ export default async function EditInvoicePage({
           defaultCurrency={tenant.profile.defaultCurrency}
           defaultPaymentTerms={tenant.profile.paymentTerms || "UPON_RECEIPT"}
           vatExemptionNote={tenant.profile.vatExemptionNote}
+          defaultShowBankDetails={tenant.profile.showBankDetails}
+          defaultShowStampSignature={tenant.profile.showStampSignature}
           existingInvoice={{
             id: invoice.id,
             clientId: invoice.clientId,
@@ -68,6 +70,8 @@ export default async function EditInvoicePage({
             paymentTerms: invoice.paymentTerms,
             notes: invoice.notes,
             showDetailedItems: invoice.showDetailedItems,
+            showBankDetails: invoice.showBankDetails,
+            showStampSignature: invoice.showStampSignature,
             lineItems: invoice.lineItems.map((li) => ({
               description: li.description,
               quantity: li.quantity,

@@ -37,6 +37,7 @@ interface PaymentCoordinatesSectionProps {
   initialCcpKey?: string | null;
   initialPaymentTerms?: string | null;
   initialPaymentInstructions?: string | null;
+  initialShowBankDetails?: boolean | null;
   sellerFullName?: string | null;
 }
 
@@ -51,10 +52,15 @@ export function PaymentCoordinatesSection({
   initialCcpKey,
   initialPaymentTerms = "UPON_RECEIPT",
   initialPaymentInstructions,
+  initialShowBankDetails = true,
   sellerFullName,
 }: PaymentCoordinatesSectionProps) {
   const { t, locale } = useI18n();
   const isArabic = locale === "ar";
+
+  const [showBankDetails, setShowBankDetails] = useState<boolean>(
+    initialShowBankDetails !== false
+  );
 
   // Bank selection state
   const [selectedBankId, setSelectedBankId] = useState<string>(() => {
@@ -154,9 +160,24 @@ export function PaymentCoordinatesSection({
             </p>
           </div>
         </div>
+
+        {/* Global Toggle on/off */}
+        <label className="relative inline-flex items-center cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={showBankDetails}
+            onChange={(e) => setShowBankDetails(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600" />
+          <span className="ml-3 rtl:mr-3 rtl:ml-0 text-xs font-semibold text-slate-700">
+            {isArabic ? "تفعيل على المستندات" : "Afficher sur les documents"}
+          </span>
+        </label>
       </div>
 
       {/* Hidden inputs to guarantee proper submission in standard FormData */}
+      <input type="hidden" name="showBankDetails" value={showBankDetails ? "true" : "false"} />
       <input type="hidden" name="bankName" value={finalBankName} />
       <input type="hidden" name="bankRib" value={cleanRibValue} />
       <input type="hidden" name="accountHolder" value={accountHolder} />
@@ -166,6 +187,24 @@ export function PaymentCoordinatesSection({
       <input type="hidden" name="bankIban" value={cleanBankString(bankIban)} />
       <input type="hidden" name="bankBic" value={bankBic} />
       <input type="hidden" name="paymentTerms" value={paymentTerms} />
+
+      {!showBankDetails && (
+        <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 flex items-start gap-2.5">
+          <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold">
+              {isArabic
+                ? "بيانات التسديد معطلة في المستندات"
+                : "Coordonnées bancaires masquées sur les documents"}
+            </p>
+            <p className="text-[11px] text-amber-800 mt-0.5">
+              {isArabic
+                ? "لن تظهر بطاقة الحساب البريدي أو البنكي على الفواتير وعروض الأسعار التي تقوم بإنشائها."
+                : "Vos informations restent sauvegardées dans votre profil mais ne seront pas imprimées au bas de vos factures et devis."}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 1. Bank Selector */}
       <div className="space-y-4">

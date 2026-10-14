@@ -62,6 +62,8 @@ export default async function EditQuotePage({
           clients={clients}
           defaultCurrency={quote.currency}
           vatExemptionNote={quote.vatExemptionNote}
+          defaultShowBankDetails={tenant.profile.showBankDetails}
+          defaultShowStampSignature={tenant.profile.showStampSignature}
           existingQuote={quote}
         />
       </main>

@@ -67,6 +67,7 @@ interface ProfileData {
   ccpKey?: string | null;
   paymentTerms?: string | null;
   paymentInstructions?: string | null;
+  showBankDetails?: boolean | null;
   showStampSignature?: boolean | null;
   stampType?: string | null;
   stampUrl?: string | null;
@@ -650,6 +651,7 @@ export function ProfileFormClient({
             initialCcpKey={profile.ccpKey}
             initialPaymentTerms={profile.paymentTerms}
             initialPaymentInstructions={profile.paymentInstructions}
+            initialShowBankDetails={profile.showBankDetails}
             sellerFullName={profile.fullName}
           />
         </div>

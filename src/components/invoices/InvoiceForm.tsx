@@ -39,6 +39,8 @@ interface InvoiceFormProps {
   defaultCurrency: string;
   defaultPaymentTerms?: string;
   vatExemptionNote: string;
+  defaultShowBankDetails?: boolean | null;
+  defaultShowStampSignature?: boolean | null;
   existingInvoice?: {
     id: string;
     clientId: string;
@@ -49,6 +51,8 @@ interface InvoiceFormProps {
     paymentTerms?: string | null;
     notes?: string | null;
     showDetailedItems?: boolean;
+    showBankDetails?: boolean;
+    showStampSignature?: boolean | null;
     lineItems: Array<{
       description: string;
       quantity: number;
@@ -63,6 +67,8 @@ export function InvoiceForm({
   defaultCurrency,
   defaultPaymentTerms,
   vatExemptionNote,
+  defaultShowBankDetails = true,
+  defaultShowStampSignature = true,
   existingInvoice,
 }: InvoiceFormProps) {
   const router = useRouter();
@@ -86,6 +92,16 @@ export function InvoiceForm({
   );
   const [notes, setNotes] = useState(existingInvoice?.notes || "");
   const [isDetailed, setIsDetailed] = useState(existingInvoice?.showDetailedItems ?? false);
+  const [showBankDetails, setShowBankDetails] = useState<boolean>(
+    existingInvoice?.showBankDetails !== undefined
+      ? existingInvoice.showBankDetails
+      : defaultShowBankDetails !== false
+  );
+  const [showStampSignature, setShowStampSignature] = useState<boolean>(
+    existingInvoice?.showStampSignature !== undefined && existingInvoice?.showStampSignature !== null
+      ? existingInvoice.showStampSignature
+      : defaultShowStampSignature !== false
+  );
 
   const handleCurrencyChange = (newCurr: string) => {
     setCurrency(newCurr);
@@ -211,6 +227,8 @@ export function InvoiceForm({
           exchangeRate,
           notes,
           showDetailedItems: isDetailed,
+          showBankDetails,
+          showStampSignature,
           lineItems: payloadItems,
         });
         if (res?.error) {
@@ -230,6 +248,8 @@ export function InvoiceForm({
           exchangeRate,
           notes,
           showDetailedItems: isDetailed,
+          showBankDetails,
+          showStampSignature,
           lineItems: payloadItems,
         });
         if (res?.error) {
@@ -407,6 +427,58 @@ export function InvoiceForm({
             </div>
           </div>
         )}
+
+        {/* Document Display Options */}
+        <div className="col-span-1 md:col-span-3 pt-4 border-t border-slate-100 space-y-2">
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            {locale === "ar" ? "خيارات الإظهار والختم على الفاتورة" : "Options d'affichage sur la facture"}
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Show Bank Details Toggle */}
+            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/80 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={showBankDetails}
+                onChange={(e) => setShowBankDetails(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-slate-900 block">
+                  {locale === "ar"
+                    ? "بيانات الحساب البنكي / بريدي موب"
+                    : "Coordonnées bancaires & BaridiMob"}
+                </span>
+                <span className="text-[11px] text-slate-500 leading-snug block mt-0.5">
+                  {locale === "ar"
+                    ? "إظهار بطاقة الحساب البريدي (RIP/CCP) وتفاصيل التسديد"
+                    : "Afficher le bloc RIP, CCP et modalités de paiement au bas de la facture"}
+                </span>
+              </div>
+            </label>
+
+            {/* Show Stamp & Signature Toggle */}
+            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/80 cursor-pointer transition">
+              <input
+                type="checkbox"
+                checked={showStampSignature}
+                onChange={(e) => setShowStampSignature(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              />
+              <div className="text-xs">
+                <span className="font-bold text-slate-900 block">
+                  {locale === "ar"
+                    ? "الختم الرسمي والتوقيع"
+                    : "Cachet officiel & Signature"}
+                </span>
+                <span className="text-[11px] text-slate-500 leading-snug block mt-0.5">
+                  {locale === "ar"
+                    ? "إدراج إطار الختم التجاري والتوقيع في أسفل الفاتورة"
+                    : "Apposer le cachet commercial et la signature dans le cadre réservé"}
+                </span>
+              </div>
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* Line Items Section */}

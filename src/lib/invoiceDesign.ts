@@ -220,6 +220,7 @@ export interface SellerIdentityProfile {
   ccpKey?: string | null;
   paymentTerms?: string | null;
   paymentInstructions?: string | null;
+  showBankDetails?: boolean | null;
   showStampSignature?: boolean | null;
   stampType?: string | null;
   stampUrl?: string | null;
@@ -259,6 +260,7 @@ export function resolveDocumentSeller(
     activityLabel: snapshot.activityLabel || profile.activityLabel || "",
 
     // Banking coordinates (snapshot with profile fallback)
+    showBankDetails: profile.showBankDetails !== undefined ? profile.showBankDetails : (snapshot.showBankDetails ?? true),
     bankName: snapshot.bankName || profile.bankName || null,
     bankRib: snapshot.bankRib || profile.bankRib || null,
     bankIban: snapshot.bankIban || profile.bankIban || null,

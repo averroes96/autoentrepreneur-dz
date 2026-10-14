@@ -708,18 +708,27 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
       const footerLineY = 766;
-      const hasSeal = seller.showStampSignature !== false;
+      const hasSeal =
+        (data.invoice as any).showStampSignature !== undefined && (data.invoice as any).showStampSignature !== null
+          ? Boolean((data.invoice as any).showStampSignature)
+          : seller.showStampSignature !== false;
       const bottomRowH = hasSeal ? 82 : 40;
       const notesBoxH = data.invoice.notes ? 30 : 0;
 
-      const hasBankDetails = Boolean(
+      const showBankSection =
+        (data.invoice as any).showBankDetails !== false &&
+        (data.seller as any).showBankDetails !== false;
+
+      const hasConfiguredBank = Boolean(
         data.seller.bankRib ||
-        data.seller.bankName ||
         data.seller.ccpNumber ||
-        data.invoice.dueDate ||
-        data.invoice.paymentTerms ||
-        data.seller.paymentTerms ||
+        (data.seller.bankName && !data.seller.bankName.toLowerCase().includes("algérie poste") && !data.seller.bankName.toLowerCase().includes("banque")) ||
         data.seller.paymentInstructions
+      );
+
+      const hasBankDetails = showBankSection && Boolean(
+        hasConfiguredBank ||
+        ((data.invoice as any).showBankDetails === true && (data.seller.bankRib || data.seller.bankName || data.seller.ccpNumber))
       );
 
       const isPostalOrBaridi = Boolean(
@@ -1275,13 +1284,25 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       const footerLineY = 766;
       const legalBoxH = 38;
 
-      const hasBankDetails = Boolean(
+      const hasSeal =
+        (data.quote as any).showStampSignature !== undefined && (data.quote as any).showStampSignature !== null
+          ? Boolean((data.quote as any).showStampSignature)
+          : seller.showStampSignature !== false;
+
+      const showBankSection =
+        (data.quote as any).showBankDetails !== false &&
+        (data.seller as any).showBankDetails !== false;
+
+      const hasConfiguredBank = Boolean(
         data.seller.bankRib ||
-        data.seller.bankName ||
         data.seller.ccpNumber ||
-        data.quote.paymentTerms ||
-        data.seller.paymentTerms ||
+        (data.seller.bankName && !data.seller.bankName.toLowerCase().includes("algérie poste") && !data.seller.bankName.toLowerCase().includes("banque")) ||
         data.seller.paymentInstructions
+      );
+
+      const hasBankDetails = showBankSection && Boolean(
+        hasConfiguredBank ||
+        ((data.quote as any).showBankDetails === true && (data.seller.bankRib || data.seller.bankName || data.seller.ccpNumber))
       );
 
       const isPostalOrBaridi = Boolean(
@@ -1384,7 +1405,7 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       doc.roundedRect(providerBoxX, approvalY, dualBoxW, approvalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
       doc.fillColor(palette.darkHex).fontSize(7).font("Helvetica-Bold").text("POUR L'AUTO-ENTREPRENEUR (CACHET & SIGNATURE)", providerBoxX + 8, approvalY + 5);
 
-      if (seller.showStampSignature !== false) {
+      if (hasSeal) {
         drawOfficialSealPdf(doc, {
           x: providerBoxX + (dualBoxW - 176) / 2,
           y: approvalY + 13,

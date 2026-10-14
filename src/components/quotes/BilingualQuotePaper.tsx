@@ -51,6 +51,8 @@ interface BilingualQuotePaperProps {
     vatExemptionNote: string;
     notes?: string | null;
     showDetailedItems?: boolean;
+    showBankDetails?: boolean;
+    showStampSignature?: boolean | null;
     lineItems: Array<{
       id: string;
       description: string;
@@ -72,6 +74,7 @@ interface BilingualQuotePaperProps {
     logoPosition?: string | null;
     brandColor?: string | null;
     templateStyle?: string | null;
+    showBankDetails?: boolean | null;
     bankName?: string | null;
     bankRib?: string | null;
     bankIban?: string | null;
@@ -156,14 +159,26 @@ export function BilingualQuotePaper({
     }
   };
 
-  const hasPaymentDetails = Boolean(
+  const showBankSection =
+    quote.showBankDetails !== false &&
+    seller.showBankDetails !== false;
+
+  const hasConfiguredBank = Boolean(
     seller.bankRib ||
-    seller.bankName ||
     seller.ccpNumber ||
-    quote.paymentTerms ||
-    seller.paymentTerms ||
+    (seller.bankName && !seller.bankName.toLowerCase().includes("algérie poste") && !seller.bankName.toLowerCase().includes("banque")) ||
     seller.paymentInstructions
   );
+
+  const hasPaymentDetails = showBankSection && Boolean(
+    hasConfiguredBank ||
+    (quote.showBankDetails === true && (seller.bankRib || seller.bankName || seller.ccpNumber))
+  );
+
+  const showStamp =
+    quote.showStampSignature !== undefined && quote.showStampSignature !== null
+      ? Boolean(quote.showStampSignature)
+      : seller.showStampSignature !== false;
 
   const isPostalOrBaridi = Boolean(
     seller.bankName?.toLowerCase().includes("poste") ||
@@ -931,7 +946,7 @@ export function BilingualQuotePaper({
 
               {/* Seal or details */}
               <div className="flex items-center justify-center py-1">
-                {seller.showStampSignature !== false ? (
+                {showStamp ? (
                   <OfficialSeal
                     fullName={seller.fullName}
                     rnaeNumber={seller.rnaeNumber}

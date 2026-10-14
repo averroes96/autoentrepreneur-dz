@@ -33,6 +33,8 @@ export default async function NewInvoicePage() {
           defaultCurrency={tenant.profile.defaultCurrency}
           defaultPaymentTerms={tenant.profile.paymentTerms || "UPON_RECEIPT"}
           vatExemptionNote={tenant.profile.vatExemptionNote}
+          defaultShowBankDetails={tenant.profile.showBankDetails}
+          defaultShowStampSignature={tenant.profile.showStampSignature}
         />
       </main>
     </div>

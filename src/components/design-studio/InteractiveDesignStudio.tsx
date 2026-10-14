@@ -86,6 +86,7 @@ interface InteractiveDesignStudioProps {
     ccpKey?: string | null;
     paymentTerms?: string | null;
     paymentInstructions?: string | null;
+    showBankDetails?: boolean | null;
     showStampSignature?: boolean | null;
     stampType?: string | null;
     stampUrl?: string | null;
@@ -137,6 +138,9 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
   );
   const [showStampSignature, setShowStampSignature] = useState<boolean>(
     profile.showStampSignature !== false
+  );
+  const [showBankDetails, setShowBankDetails] = useState<boolean>(
+    profile.showBankDetails !== false
   );
   const [stampType, setStampType] = useState<string>(
     profile.stampType === "CUSTOM"
@@ -215,6 +219,7 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
     setLogoUrl(profile.logoUrl || null);
     setLogoPosition((profile.logoPosition?.toUpperCase() as LogoPositionKey) || "LEFT");
     setShowStampSignature(profile.showStampSignature !== false);
+    setShowBankDetails(profile.showBankDetails !== false);
     setStampType(
       profile.stampType === "CUSTOM"
         ? "CUSTOM"
@@ -248,6 +253,7 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
         logoUrl,
         logoPosition,
         showStampSignature,
+        showBankDetails,
         stampType,
         stampUrl,
         signatureUrl,
@@ -286,6 +292,7 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
     logoUrl,
     logoPosition,
     showStampSignature,
+    showBankDetails,
     stampType,
     stampUrl,
     signatureUrl,
@@ -1030,6 +1037,27 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
           {/* TAB 4: BANK & BARIDIMOB */}
           {activeTab === "bank" && (
             <div className="p-5 space-y-5 animate-in fade-in duration-200">
+              {/* Master Toggle Bank Details on Documents */}
+              <div className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <p className="text-xs font-bold text-slate-800">
+                    Afficher les Coordonnées Bancaires / BaridiMob
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    Faire figurer le bloc RIP, CCP et modalités au bas des factures et devis.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showBankDetails}
+                    onChange={(e) => setShowBankDetails(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-600" />
+                </label>
+              </div>
+
               {/* Financial Institution Picker */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">

@@ -18,6 +18,8 @@ export interface CreateQuoteInput {
   exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
+  showBankDetails?: boolean;
+  showStampSignature?: boolean | null;
   lineItems: QuoteLineItemInput[];
 }
 
@@ -93,6 +95,8 @@ export async function createDraftQuote(data: CreateQuoteInput) {
       vatExemptionNote,
       notes: data.notes,
       showDetailedItems: data.showDetailedItems ?? false,
+      showBankDetails: data.showBankDetails !== undefined ? data.showBankDetails : (profile?.showBankDetails ?? true),
+      showStampSignature: data.showStampSignature !== undefined ? data.showStampSignature : null,
       lineItems: {
         create: normalizedItems,
       },
@@ -118,6 +122,8 @@ export async function updateDraftQuote(
     exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
+    showBankDetails?: boolean;
+    showStampSignature?: boolean | null;
     lineItems?: QuoteLineItemInput[];
   }
 ) {
@@ -195,6 +201,8 @@ export async function updateDraftQuote(
         ...(data.validUntil !== undefined && { validUntil: data.validUntil }),
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.showDetailedItems !== undefined && { showDetailedItems: data.showDetailedItems }),
+        ...(data.showBankDetails !== undefined && { showBankDetails: data.showBankDetails }),
+        ...(data.showStampSignature !== undefined && { showStampSignature: data.showStampSignature }),
         currency,
         exchangeRate,
         total: newTotal,
@@ -389,6 +397,8 @@ export async function convertQuoteToInvoice(tenantId: string, quoteId: string) {
           "Exonéré de la TVA en vertu de la loi n° 22-23 relative au statut de l'auto-entrepreneur et du Code des Impôts Directs.",
         notes: quote.notes ? `${quote.notes}\n(Issu du Devis ${quote.quoteNumber || "N° " + quote.id.slice(0, 8)})` : `Issu du Devis ${quote.quoteNumber || "N° " + quote.id.slice(0, 8)}`,
         showDetailedItems: quote.showDetailedItems,
+        showBankDetails: quote.showBankDetails,
+        showStampSignature: quote.showStampSignature,
         sourceQuoteId: quote.id,
         lineItems: {
           create: quote.lineItems.map((item, index) => ({

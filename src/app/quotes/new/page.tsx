@@ -38,6 +38,8 @@ export default async function NewQuotePage() {
           clients={clients}
           defaultCurrency={tenant.profile.defaultCurrency || "DZD"}
           vatExemptionNote={tenant.profile.vatExemptionNote}
+          defaultShowBankDetails={tenant.profile.showBankDetails}
+          defaultShowStampSignature={tenant.profile.showStampSignature}
         />
       </main>
     </div>

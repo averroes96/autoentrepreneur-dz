@@ -20,6 +20,8 @@ export interface CreateInvoiceInput {
   exchangeRate?: number;
   notes?: string;
   showDetailedItems?: boolean;
+  showBankDetails?: boolean;
+  showStampSignature?: boolean | null;
   lineItems: LineItemInput[];
 }
 
@@ -93,6 +95,8 @@ export async function createDraftInvoice(data: CreateInvoiceInput) {
       vatExemptionNote,
       notes: data.notes,
       showDetailedItems: data.showDetailedItems ?? false,
+      showBankDetails: data.showBankDetails !== undefined ? data.showBankDetails : (profile?.showBankDetails ?? true),
+      showStampSignature: data.showStampSignature !== undefined ? data.showStampSignature : null,
       lineItems: {
         create: normalizedItems,
       },
@@ -119,6 +123,8 @@ export async function updateDraftInvoice(
     exchangeRate?: number;
     notes?: string;
     showDetailedItems?: boolean;
+    showBankDetails?: boolean;
+    showStampSignature?: boolean | null;
     lineItems?: LineItemInput[];
   }
 ) {
@@ -206,6 +212,8 @@ export async function updateDraftInvoice(
         paymentTerms: effectivePaymentTerms,
         ...(data.notes !== undefined && { notes: data.notes }),
         ...(data.showDetailedItems !== undefined && { showDetailedItems: data.showDetailedItems }),
+        ...(data.showBankDetails !== undefined && { showBankDetails: data.showBankDetails }),
+        ...(data.showStampSignature !== undefined && { showStampSignature: data.showStampSignature }),
         currency,
         exchangeRate,
         total: newTotal,
