@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generatePaymentReceiptPdfBuffer } from "@/lib/pdfGenerator";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -46,9 +47,7 @@ export async function GET(
       return new NextResponse("Profil non configuré", { status: 400 });
     }
 
-    const sellerData = invoice.sellerSnapshot
-      ? JSON.parse(invoice.sellerSnapshot)
-      : profile;
+    const sellerData = resolveDocumentSeller(profile, invoice.sellerSnapshot);
 
     const clientData = invoice.clientSnapshot
       ? JSON.parse(invoice.clientSnapshot)
@@ -69,24 +68,7 @@ export async function GET(
       total: invoice.total,
       currency: invoice.currency || "DZD",
       notes: invoice.notes,
-      seller: {
-        fullName: sellerData.fullName || profile.fullName,
-        rnaeNumber: sellerData.rnaeNumber || profile.rnaeNumber,
-        nif: sellerData.nif || profile.nif,
-        address: sellerData.address || profile.address,
-        email: sellerData.email || profile.email,
-        phone: sellerData.phone || profile.phone,
-        activityCode: sellerData.activityCode || profile.activityCode,
-        activityLabel: sellerData.activityLabel || profile.activityLabel,
-        logoUrl: sellerData.logoUrl || profile.logoUrl,
-        logoPosition: sellerData.logoPosition || profile.logoPosition,
-        brandColor: sellerData.brandColor || profile.brandColor,
-        templateStyle: sellerData.templateStyle || profile.templateStyle,
-        showStampSignature: (sellerData.showStampSignature ?? profile.showStampSignature) ?? true,
-        signatureUrl: sellerData.signatureUrl || profile.signatureUrl,
-        stampType: sellerData.stampType || profile.stampType,
-        stampUrl: sellerData.stampUrl || profile.stampUrl,
-      },
+      seller: sellerData as any,
       client: {
         name: clientData.name,
         clientType: clientData.clientType,

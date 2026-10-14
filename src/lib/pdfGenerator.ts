@@ -238,15 +238,19 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
 
       const rawSeller = data.invoice.sellerSnapshot
         ? JSON.parse(data.invoice.sellerSnapshot)
-        : data.seller;
+        : {};
 
       const seller = {
-        ...data.seller,
         ...rawSeller,
-        logoUrl: rawSeller.logoUrl ?? data.seller?.logoUrl,
-        logoPosition: rawSeller.logoPosition ?? data.seller?.logoPosition,
-        brandColor: rawSeller.brandColor ?? data.seller?.brandColor,
-        templateStyle: rawSeller.templateStyle ?? data.seller?.templateStyle,
+        ...data.seller,
+        brandColor: data.seller?.brandColor || rawSeller.brandColor,
+        templateStyle: data.seller?.templateStyle || rawSeller.templateStyle,
+        logoUrl: data.seller?.logoUrl !== undefined ? data.seller.logoUrl : rawSeller.logoUrl,
+        logoPosition: data.seller?.logoPosition || rawSeller.logoPosition,
+        showStampSignature: data.seller?.showStampSignature !== undefined ? data.seller.showStampSignature : (rawSeller.showStampSignature ?? true),
+        stampType: data.seller?.stampType || rawSeller.stampType,
+        stampUrl: data.seller?.stampUrl !== undefined ? data.seller.stampUrl : rawSeller.stampUrl,
+        signatureUrl: data.seller?.signatureUrl !== undefined ? data.seller.signatureUrl : rawSeller.signatureUrl,
       };
 
       const client = data.invoice.clientSnapshot
@@ -635,7 +639,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       }
 
       // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
-      const hasSeal = data.seller.showStampSignature !== false;
+      const hasSeal = seller.showStampSignature !== false;
       const sealRadius = 26;
       const sealBoxWidth = hasSeal ? 68 : 0;
       const legalBoxWidth = hasSeal ? contentWidth - sealBoxWidth - 10 : contentWidth;
@@ -657,7 +661,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
           centerX: sealCenterX,
           centerY: sealCenterY,
           radius: sealRadius,
-          seller: data.seller,
+          seller: seller,
           sealColor: primaryColor,
         });
       }
@@ -766,15 +770,19 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
       const rawSeller = data.quote.sellerSnapshot
         ? JSON.parse(data.quote.sellerSnapshot)
-        : data.seller;
+        : {};
 
       const seller = {
-        ...data.seller,
         ...rawSeller,
-        logoUrl: rawSeller.logoUrl ?? data.seller?.logoUrl,
-        logoPosition: rawSeller.logoPosition ?? data.seller?.logoPosition,
-        brandColor: rawSeller.brandColor ?? data.seller?.brandColor,
-        templateStyle: rawSeller.templateStyle ?? data.seller?.templateStyle,
+        ...data.seller,
+        brandColor: data.seller?.brandColor || rawSeller.brandColor,
+        templateStyle: data.seller?.templateStyle || rawSeller.templateStyle,
+        logoUrl: data.seller?.logoUrl !== undefined ? data.seller.logoUrl : rawSeller.logoUrl,
+        logoPosition: data.seller?.logoPosition || rawSeller.logoPosition,
+        showStampSignature: data.seller?.showStampSignature !== undefined ? data.seller.showStampSignature : (rawSeller.showStampSignature ?? true),
+        stampType: data.seller?.stampType || rawSeller.stampType,
+        stampUrl: data.seller?.stampUrl !== undefined ? data.seller.stampUrl : rawSeller.stampUrl,
+        signatureUrl: data.seller?.signatureUrl !== undefined ? data.seller.signatureUrl : rawSeller.signatureUrl,
       };
 
       const client = data.quote.clientSnapshot
@@ -1152,12 +1160,12 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
       doc.fillColor(mutedColor).fontSize(6).font("Helvetica").text(data.seller.fullName, providerBoxX + 8, approvalY + 14);
       doc.fontSize(5).text(`RNAE : ${data.seller.rnaeNumber || "—"}`, providerBoxX + 8, approvalY + 22);
 
-      if (data.seller.showStampSignature !== false) {
+      if (seller.showStampSignature !== false) {
         drawOfficialSealPdf(doc, {
           centerX: providerBoxX + dualBoxW - 27,
           centerY: approvalY + approvalBoxH / 2 + 1,
           radius: 20,
-          seller: data.seller,
+          seller: seller,
           sealColor: accentColor,
         });
       }
@@ -1265,15 +1273,19 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
 
       const rawSeller = data.creditNote.sellerSnapshot
         ? JSON.parse(data.creditNote.sellerSnapshot)
-        : data.seller;
+        : {};
 
       const seller = {
-        ...data.seller,
         ...rawSeller,
-        logoUrl: rawSeller.logoUrl ?? data.seller?.logoUrl,
-        logoPosition: rawSeller.logoPosition ?? data.seller?.logoPosition,
-        brandColor: rawSeller.brandColor ?? data.seller?.brandColor,
-        templateStyle: rawSeller.templateStyle ?? data.seller?.templateStyle,
+        ...data.seller,
+        brandColor: data.seller?.brandColor || rawSeller.brandColor,
+        templateStyle: data.seller?.templateStyle || rawSeller.templateStyle,
+        logoUrl: data.seller?.logoUrl !== undefined ? data.seller.logoUrl : rawSeller.logoUrl,
+        logoPosition: data.seller?.logoPosition || rawSeller.logoPosition,
+        showStampSignature: data.seller?.showStampSignature !== undefined ? data.seller.showStampSignature : (rawSeller.showStampSignature ?? true),
+        stampType: data.seller?.stampType || rawSeller.stampType,
+        stampUrl: data.seller?.stampUrl !== undefined ? data.seller.stampUrl : rawSeller.stampUrl,
+        signatureUrl: data.seller?.signatureUrl !== undefined ? data.seller.signatureUrl : rawSeller.signatureUrl,
       };
 
       const client = data.creditNote.clientSnapshot
@@ -1552,7 +1564,7 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
       }
 
       // --- MANDATORY LEGAL NOTE & OFFICIAL SEAL ---
-      const hasSeal = data.seller.showStampSignature !== false;
+      const hasSeal = seller.showStampSignature !== false;
       const sealRadius = 26;
       const sealBoxWidth = hasSeal ? 68 : 0;
       const legalBoxWidth = hasSeal ? contentWidth - sealBoxWidth - 10 : contentWidth;
@@ -1572,7 +1584,7 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
           centerX: sealCenterX,
           centerY: sealCenterY,
           radius: sealRadius,
-          seller: data.seller,
+          seller: seller,
           sealColor: "#059669",
         });
       }

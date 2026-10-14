@@ -5,6 +5,7 @@ import { requireAuth, getCurrentTenantWithProfile } from "@/lib/auth";
 import { db } from "@/lib/db";
 import Navbar from "@/components/layout/Navbar";
 import { BilingualPaymentReceiptPaper } from "@/components/receipts/BilingualPaymentReceiptPaper";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -83,10 +84,8 @@ export default async function InvoiceReceiptPage({
     );
   }
 
-  // Parse frozen snapshots if available
-  const sellerData = invoice.sellerSnapshot
-    ? JSON.parse(invoice.sellerSnapshot)
-    : tenant.profile;
+  // Resolve seller data combining statutory snapshot with active template branding
+  const sellerData = resolveDocumentSeller(tenant.profile, invoice.sellerSnapshot);
 
   const clientData = invoice.clientSnapshot
     ? JSON.parse(invoice.clientSnapshot)
@@ -117,24 +116,7 @@ export default async function InvoiceReceiptPage({
             currency: invoice.currency || "DZD",
             notes: invoice.notes,
           }}
-          seller={{
-            fullName: sellerData.fullName || tenant.profile.fullName,
-            rnaeNumber: sellerData.rnaeNumber || tenant.profile.rnaeNumber,
-            nif: sellerData.nif || tenant.profile.nif,
-            address: sellerData.address || tenant.profile.address,
-            phone: sellerData.phone || tenant.profile.phone,
-            email: sellerData.email || tenant.profile.email,
-            activityCode: sellerData.activityCode || tenant.profile.activityCode,
-            activityLabel: sellerData.activityLabel || tenant.profile.activityLabel,
-            logoUrl: sellerData.logoUrl || tenant.profile.logoUrl,
-            logoPosition: sellerData.logoPosition || tenant.profile.logoPosition,
-            brandColor: sellerData.brandColor || tenant.profile.brandColor,
-            templateStyle: sellerData.templateStyle || tenant.profile.templateStyle,
-            showStampSignature: (sellerData.showStampSignature ?? tenant.profile.showStampSignature) ?? true,
-            stampType: sellerData.stampType || tenant.profile.stampType,
-            stampUrl: sellerData.stampUrl || tenant.profile.stampUrl,
-            signatureUrl: sellerData.signatureUrl || tenant.profile.signatureUrl,
-          }}
+          seller={sellerData}
           client={{
             name: clientData.name,
             clientType: clientData.clientType,

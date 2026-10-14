@@ -36,6 +36,7 @@ import {
   generateQuotePdfBuffer,
   generateCreditNotePdfBuffer,
 } from "@/lib/pdfGenerator";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 import {
   sendInvoiceEmail,
   sendPaymentReceiptEmail,
@@ -672,9 +673,7 @@ export async function emailInvoiceAction(invoiceId: string, recipientEmail?: str
 
     if (!profile) return { error: "Profil d'auto-entrepreneur introuvable." };
 
-    const sellerData = invoice.sellerSnapshot
-      ? JSON.parse(invoice.sellerSnapshot)
-      : profile;
+    const sellerData = resolveDocumentSeller(profile, invoice.sellerSnapshot);
 
     const clientData = invoice.clientSnapshot
       ? JSON.parse(invoice.clientSnapshot)
@@ -682,34 +681,7 @@ export async function emailInvoiceAction(invoiceId: string, recipientEmail?: str
 
     const pdfBuffer = await generateInvoicePdfBuffer({
       invoice,
-      seller: {
-        fullName: sellerData.fullName,
-        rnaeNumber: sellerData.rnaeNumber,
-        nif: sellerData.nif,
-        address: sellerData.address,
-        email: sellerData.email,
-        phone: sellerData.phone,
-        activityCode: sellerData.activityCode,
-        activityLabel: sellerData.activityLabel,
-        logoUrl: sellerData.logoUrl,
-        logoPosition: sellerData.logoPosition,
-        brandColor: sellerData.brandColor,
-        templateStyle: sellerData.templateStyle,
-        bankName: sellerData.bankName,
-        bankRib: sellerData.bankRib,
-        bankIban: sellerData.bankIban,
-        bankBic: sellerData.bankBic,
-        accountHolder: sellerData.accountHolder,
-        bankAgency: sellerData.bankAgency,
-        ccpNumber: sellerData.ccpNumber,
-        ccpKey: sellerData.ccpKey,
-        paymentTerms: sellerData.paymentTerms,
-        paymentInstructions: sellerData.paymentInstructions,
-        showStampSignature: sellerData.showStampSignature ?? true,
-        signatureUrl: sellerData.signatureUrl,
-        stampType: sellerData.stampType,
-        stampUrl: sellerData.stampUrl,
-      },
+      seller: sellerData as any,
       client: clientData,
     });
 
@@ -948,9 +920,7 @@ export async function emailQuoteAction(quoteId: string, recipientEmail?: string)
 
     if (!profile) return { error: "Profil non configuré." };
 
-    const sellerData = quote.sellerSnapshot
-      ? JSON.parse(quote.sellerSnapshot)
-      : profile;
+    const sellerData = resolveDocumentSeller(profile, quote.sellerSnapshot);
 
     const clientData = quote.clientSnapshot
       ? JSON.parse(quote.clientSnapshot)
@@ -958,34 +928,7 @@ export async function emailQuoteAction(quoteId: string, recipientEmail?: string)
 
     const pdfBuffer = await generateQuotePdfBuffer({
       quote,
-      seller: {
-        fullName: sellerData.fullName,
-        rnaeNumber: sellerData.rnaeNumber,
-        nif: sellerData.nif,
-        address: sellerData.address,
-        email: sellerData.email,
-        phone: sellerData.phone,
-        activityCode: sellerData.activityCode,
-        activityLabel: sellerData.activityLabel,
-        logoUrl: sellerData.logoUrl,
-        logoPosition: sellerData.logoPosition,
-        brandColor: sellerData.brandColor,
-        templateStyle: sellerData.templateStyle,
-        bankName: sellerData.bankName,
-        bankRib: sellerData.bankRib,
-        bankIban: sellerData.bankIban,
-        bankBic: sellerData.bankBic,
-        accountHolder: sellerData.accountHolder,
-        bankAgency: sellerData.bankAgency,
-        ccpNumber: sellerData.ccpNumber,
-        ccpKey: sellerData.ccpKey,
-        paymentTerms: sellerData.paymentTerms,
-        paymentInstructions: sellerData.paymentInstructions,
-        showStampSignature: sellerData.showStampSignature ?? true,
-        signatureUrl: sellerData.signatureUrl,
-        stampType: sellerData.stampType,
-        stampUrl: sellerData.stampUrl,
-      },
+      seller: sellerData as any,
       client: clientData,
     });
 

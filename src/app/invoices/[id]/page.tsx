@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import Navbar from "@/components/layout/Navbar";
 import { InvoiceDetailHeader } from "@/components/invoices/InvoiceDetailHeader";
 import { BilingualInvoicePaper } from "@/components/invoices/BilingualInvoicePaper";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 
 interface InvoiceDetailPageProps {
   params: Promise<{ id: string }>;
@@ -42,10 +43,8 @@ export default async function InvoiceDetailPage({
 
   if (!invoice) notFound();
 
-  // Parse frozen snapshots if issued
-  const sellerData = invoice.sellerSnapshot
-    ? JSON.parse(invoice.sellerSnapshot)
-    : tenant.profile;
+  // Resolve seller data combining statutory snapshot with active template branding
+  const sellerData = resolveDocumentSeller(tenant.profile, invoice.sellerSnapshot);
 
   const clientData = invoice.clientSnapshot
     ? JSON.parse(invoice.clientSnapshot)

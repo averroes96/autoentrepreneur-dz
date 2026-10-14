@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAuth, getCurrentTenantWithProfile } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { BilingualInvoicePaper } from "@/components/invoices/BilingualInvoicePaper";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +39,7 @@ export default async function PrintInvoicePage({
 
   if (!invoice) notFound();
 
-  const sellerData = invoice.sellerSnapshot
-    ? JSON.parse(invoice.sellerSnapshot)
-    : tenant.profile;
+  const sellerData = resolveDocumentSeller(tenant.profile, invoice.sellerSnapshot);
 
   const clientData = invoice.clientSnapshot
     ? JSON.parse(invoice.clientSnapshot)

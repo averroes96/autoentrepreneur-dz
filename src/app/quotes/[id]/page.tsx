@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import Navbar from "@/components/layout/Navbar";
 import { QuoteDetailHeader } from "@/components/quotes/QuoteDetailHeader";
 import { BilingualQuotePaper } from "@/components/quotes/BilingualQuotePaper";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -47,10 +48,8 @@ export default async function QuoteDetailPage({
 
   if (!quote) notFound();
 
-  // Parse frozen snapshots if sent/issued
-  const sellerData = quote.sellerSnapshot
-    ? JSON.parse(quote.sellerSnapshot)
-    : tenant.profile;
+  // Resolve seller data combining statutory snapshot with active template branding
+  const sellerData = resolveDocumentSeller(tenant.profile, quote.sellerSnapshot);
 
   const clientData = quote.clientSnapshot
     ? JSON.parse(quote.clientSnapshot)

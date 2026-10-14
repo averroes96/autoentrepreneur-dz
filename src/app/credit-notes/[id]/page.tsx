@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import Navbar from "@/components/layout/Navbar";
 import { CreditNoteDetailHeader } from "@/components/credit-notes/CreditNoteDetailHeader";
 import { BilingualCreditNotePaper } from "@/components/credit-notes/BilingualCreditNotePaper";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -41,10 +42,8 @@ export default async function CreditNoteDetailPage({
 
   if (!creditNote) notFound();
 
-  // Parse frozen snapshots
-  const sellerData = creditNote.sellerSnapshot
-    ? JSON.parse(creditNote.sellerSnapshot)
-    : tenant.profile;
+  // Resolve seller data combining statutory snapshot with active template branding
+  const sellerData = resolveDocumentSeller(tenant.profile, creditNote.sellerSnapshot);
 
   const clientData = creditNote.clientSnapshot
     ? JSON.parse(creditNote.clientSnapshot)

@@ -196,3 +196,89 @@ export function getTemplateStyle(style?: string | null): TemplateStyleDef {
   const upper = style.toUpperCase() as TemplateStyleKey;
   return TEMPLATE_STYLES[upper] || TEMPLATE_STYLES.MODERN;
 }
+
+export interface SellerIdentityProfile {
+  fullName?: string | null;
+  rnaeNumber?: string | null;
+  nif?: string | null;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  activityCode?: string | null;
+  activityLabel?: string | null;
+  logoUrl?: string | null;
+  logoPosition?: string | null;
+  brandColor?: string | null;
+  templateStyle?: string | null;
+  bankName?: string | null;
+  bankRib?: string | null;
+  bankIban?: string | null;
+  bankBic?: string | null;
+  accountHolder?: string | null;
+  bankAgency?: string | null;
+  ccpNumber?: string | null;
+  ccpKey?: string | null;
+  paymentTerms?: string | null;
+  paymentInstructions?: string | null;
+  showStampSignature?: boolean | null;
+  stampType?: string | null;
+  stampUrl?: string | null;
+  signatureUrl?: string | null;
+}
+
+/**
+ * Resolves seller data for rendering invoices, quotes, credit notes, and receipts:
+ * - Legal identity (fullName, rnaeNumber, nif, address, email, activity) is preserved from the snapshot (regulatory compliance), falling back to profile.
+ * - Banking coordinates are taken from snapshot if present, falling back to profile.
+ * - Document visual presentation (brandColor, templateStyle, logoUrl, logoPosition, showStampSignature, stampType, stampUrl, signatureUrl) reflects the active profile template so documents match the user's customized design settings.
+ */
+export function resolveDocumentSeller(
+  profile: SellerIdentityProfile,
+  snapshotRaw?: string | null | Record<string, any>
+): SellerIdentityProfile {
+  let snapshot: Record<string, any> = {};
+  if (typeof snapshotRaw === "string" && snapshotRaw.trim()) {
+    try {
+      snapshot = JSON.parse(snapshotRaw);
+    } catch {
+      snapshot = {};
+    }
+  } else if (snapshotRaw && typeof snapshotRaw === "object") {
+    snapshot = snapshotRaw;
+  }
+
+  return {
+    // Statutory identity (immutable snapshot with profile fallback)
+    fullName: snapshot.fullName || profile.fullName || "Auto-Entrepreneur",
+    rnaeNumber: snapshot.rnaeNumber || profile.rnaeNumber || "",
+    nif: snapshot.nif || profile.nif || "",
+    address: snapshot.address || profile.address || "",
+    email: snapshot.email || profile.email || "",
+    phone: snapshot.phone || profile.phone || "",
+    activityCode: snapshot.activityCode || profile.activityCode || "",
+    activityLabel: snapshot.activityLabel || profile.activityLabel || "",
+
+    // Banking coordinates (snapshot with profile fallback)
+    bankName: snapshot.bankName || profile.bankName || null,
+    bankRib: snapshot.bankRib || profile.bankRib || null,
+    bankIban: snapshot.bankIban || profile.bankIban || null,
+    bankBic: snapshot.bankBic || profile.bankBic || null,
+    accountHolder: snapshot.accountHolder || profile.accountHolder || profile.fullName || null,
+    bankAgency: snapshot.bankAgency || profile.bankAgency || null,
+    ccpNumber: snapshot.ccpNumber || profile.ccpNumber || null,
+    ccpKey: snapshot.ccpKey || profile.ccpKey || null,
+    paymentTerms: snapshot.paymentTerms || profile.paymentTerms || "UPON_RECEIPT",
+    paymentInstructions: snapshot.paymentInstructions || profile.paymentInstructions || null,
+
+    // Document visual presentation & template styling:
+    // Active profile settings take precedence so documents match the configured template.
+    brandColor: profile.brandColor || snapshot.brandColor || "EMERALD",
+    templateStyle: profile.templateStyle || snapshot.templateStyle || "MODERN",
+    logoUrl: profile.logoUrl !== undefined ? profile.logoUrl : snapshot.logoUrl,
+    logoPosition: profile.logoPosition || snapshot.logoPosition || "LEFT",
+    showStampSignature: profile.showStampSignature !== undefined ? profile.showStampSignature : (snapshot.showStampSignature ?? true),
+    stampType: profile.stampType || snapshot.stampType || "AUTO",
+    stampUrl: profile.stampUrl !== undefined ? profile.stampUrl : snapshot.stampUrl,
+    signatureUrl: profile.signatureUrl !== undefined ? profile.signatureUrl : snapshot.signatureUrl,
+  };
+}

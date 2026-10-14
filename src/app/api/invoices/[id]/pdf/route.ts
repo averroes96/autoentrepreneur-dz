@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateInvoicePdfBuffer } from "@/lib/pdfGenerator";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +43,7 @@ export async function GET(
       return new NextResponse("Profil non configuré", { status: 400 });
     }
 
-    const sellerData = invoice.sellerSnapshot
-      ? JSON.parse(invoice.sellerSnapshot)
-      : profile;
+    const sellerData = resolveDocumentSeller(profile, invoice.sellerSnapshot);
 
     const clientData = invoice.clientSnapshot
       ? JSON.parse(invoice.clientSnapshot)
@@ -52,34 +51,7 @@ export async function GET(
 
     const pdfBuffer = await generateInvoicePdfBuffer({
       invoice,
-      seller: {
-        fullName: sellerData.fullName,
-        rnaeNumber: sellerData.rnaeNumber,
-        nif: sellerData.nif,
-        address: sellerData.address,
-        email: sellerData.email,
-        phone: sellerData.phone,
-        activityCode: sellerData.activityCode,
-        activityLabel: sellerData.activityLabel,
-        logoUrl: sellerData.logoUrl,
-        logoPosition: sellerData.logoPosition,
-        brandColor: sellerData.brandColor,
-        templateStyle: sellerData.templateStyle,
-        bankName: sellerData.bankName,
-        bankRib: sellerData.bankRib,
-        bankIban: sellerData.bankIban,
-        bankBic: sellerData.bankBic,
-        accountHolder: sellerData.accountHolder,
-        bankAgency: sellerData.bankAgency,
-        ccpNumber: sellerData.ccpNumber,
-        ccpKey: sellerData.ccpKey,
-        paymentTerms: sellerData.paymentTerms,
-        paymentInstructions: sellerData.paymentInstructions,
-        showStampSignature: sellerData.showStampSignature ?? true,
-        signatureUrl: sellerData.signatureUrl,
-        stampType: sellerData.stampType,
-        stampUrl: sellerData.stampUrl,
-      },
+      seller: sellerData as any,
       client: clientData,
     });
 

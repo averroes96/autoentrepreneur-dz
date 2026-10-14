@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateCreditNotePdfBuffer } from "@/lib/pdfGenerator";
+import { resolveDocumentSeller } from "@/lib/invoiceDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -43,33 +44,14 @@ export async function GET(
       return new NextResponse("Profil non configuré", { status: 400 });
     }
 
-    const sellerData = creditNote.sellerSnapshot
-      ? JSON.parse(creditNote.sellerSnapshot)
-      : profile;
+    const sellerData = resolveDocumentSeller(profile, creditNote.sellerSnapshot);
 
     const pdfBuffer = await generateCreditNotePdfBuffer({
       creditNote: {
         ...creditNote,
         originalInvoiceNumber: creditNote.originalInvoice.invoiceNumber,
       },
-      seller: {
-        fullName: sellerData.fullName || profile.fullName,
-        rnaeNumber: sellerData.rnaeNumber || profile.rnaeNumber,
-        nif: sellerData.nif || profile.nif,
-        address: sellerData.address || profile.address,
-        email: sellerData.email || profile.email,
-        phone: sellerData.phone || profile.phone,
-        activityCode: sellerData.activityCode || profile.activityCode,
-        activityLabel: sellerData.activityLabel || profile.activityLabel,
-        logoUrl: sellerData.logoUrl || profile.logoUrl,
-        logoPosition: sellerData.logoPosition || profile.logoPosition,
-        brandColor: sellerData.brandColor || profile.brandColor,
-        templateStyle: sellerData.templateStyle || profile.templateStyle,
-        showStampSignature: (sellerData.showStampSignature ?? profile.showStampSignature) ?? true,
-        signatureUrl: sellerData.signatureUrl || profile.signatureUrl,
-        stampType: sellerData.stampType || profile.stampType,
-        stampUrl: sellerData.stampUrl || profile.stampUrl,
-      },
+      seller: sellerData as any,
       client: creditNote.client,
     });
 
