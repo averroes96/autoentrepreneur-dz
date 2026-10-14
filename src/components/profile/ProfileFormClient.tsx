@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { updateProfileAction, savePastTurnoverAction } from "@/app/actions";
 import { formatDZD } from "@/lib/tax";
@@ -22,6 +22,8 @@ import {
   Palette,
   Sparkles,
   ArrowRight,
+  Award,
+  Layers,
 } from "lucide-react";
 import { calculateProfileCompletion } from "@/lib/profile";
 import { NifInputWithValidation } from "./NifInputWithValidation";
@@ -89,6 +91,76 @@ export function ProfileFormClient({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Active Sub-Menu Tab State (Synced with Navbar parameters dropdown)
+  const [activeTab, setActiveTab] = useState<
+    "identity" | "compliance" | "banking" | "design" | "seal" | "invoicing" | "all"
+  >("identity");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (
+        tabParam &&
+        ["identity", "compliance", "banking", "design", "seal", "invoicing", "all"].includes(tabParam)
+      ) {
+        setActiveTab(tabParam as any);
+      }
+    }
+  }, []);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId as any);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (tabId === "identity") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", tabId);
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
+  const tabs = [
+    {
+      id: "identity",
+      label: locale === "ar" ? "الهوية والاتصال" : "Identité & Contact",
+      icon: User,
+    },
+    {
+      id: "compliance",
+      label: locale === "ar" ? "المطابقة القانونية & CASNOS" : "Réglementation & CASNOS",
+      icon: ShieldCheck,
+    },
+    {
+      id: "banking",
+      label: locale === "ar" ? "الحساب البنكي وبريدي موب" : "Banque & BaridiMob",
+      icon: CreditCard,
+    },
+    {
+      id: "design",
+      label: locale === "ar" ? "تصميم النماذج (WYSIWYG)" : "Design des Documents",
+      icon: Palette,
+      badge: "WYSIWYG",
+    },
+    {
+      id: "seal",
+      label: locale === "ar" ? "الختم التجاري والتوقيع" : "Cachet & Signature",
+      icon: Award,
+    },
+    {
+      id: "invoicing",
+      label: locale === "ar" ? "إعدادات الفوترة والضرائب" : "Facturation & Fiscalité",
+      icon: FileText,
+    },
+    {
+      id: "all",
+      label: locale === "ar" ? "عرض الكل (الكامل)" : "Tout afficher",
+      icon: Layers,
+    },
+  ];
 
   // Past turnover state
   const [turnoverYear, setTurnoverYear] = useState<number>(new Date().getFullYear() - 1);
@@ -262,6 +334,42 @@ export function ProfileFormClient({
         </div>
       </div>
 
+      {/* Parameters Sub-Menu Navigation Tabs */}
+      <div className="bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200 shadow-xs sticky top-20 z-10 backdrop-blur-md">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                  isActive
+                    ? "bg-emerald-600 text-white shadow-xs shadow-emerald-600/30 font-bold"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span>{tab.label}</span>
+                {tab.badge && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-violet-100 text-violet-700 border border-violet-200"
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Main Profile Form */}
       <form onSubmit={handleSubmitProfile} className="space-y-6">
         {success && (
@@ -279,321 +387,340 @@ export function ProfileFormClient({
         )}
 
         {/* Section 1: Identification & Coordonnées */}
-        <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <User className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-base font-bold text-slate-900">
-              {t("secIdentityContact")}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblFullName")}
-              </label>
-              <input
-                type="text"
-                name="fullName"
-                required
-                defaultValue={profile.fullName}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+        <div className={activeTab === "identity" || activeTab === "all" ? "block" : "hidden"}>
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <User className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-base font-bold text-slate-900">
+                {t("secIdentityContact")}
+              </h2>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblEmail")}
-              </label>
-              <input
-                type="email"
-                name="email"
-                defaultValue={profile.email}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblFullName")}
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  required
+                  defaultValue={profile.fullName}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblPhone")}
-              </label>
-              <input
-                type="text"
-                name="phone"
-                defaultValue={profile.phone}
-                placeholder="05 XX XX XX XX"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblEmail")}
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  defaultValue={profile.email}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblAddress")}
-              </label>
-              <input
-                type="text"
-                name="address"
-                required
-                defaultValue={profile.address}
-                placeholder={t("lblAddressPlaceholder")}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblPhone")}
+                </label>
+                <input
+                  type="text"
+                  name="phone"
+                  defaultValue={profile.phone}
+                  placeholder="05 XX XX XX XX"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblAddress")}
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  required
+                  defaultValue={profile.address}
+                  placeholder={t("lblAddressPlaceholder")}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Identifiants Administratifs ANAE & DGI */}
-        <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <ShieldCheck className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-base font-bold text-slate-900">
-              {t("secAdminIdentifiers")}
-            </h2>
-          </div>
+        {/* Section 2 & 3: Réglementation & CASNOS */}
+        <div className={activeTab === "compliance" || activeTab === "all" ? "space-y-6" : "hidden"}>
+          {/* Section 2: Identifiants Administratifs ANAE & DGI */}
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <ShieldCheck className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-base font-bold text-slate-900">
+                {t("secAdminIdentifiers")}
+              </h2>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblRnae")}
-              </label>
-              <input
-                type="text"
-                name="rnaeNumber"
-                required
-                defaultValue={profile.rnaeNumber}
-                placeholder="Ex: 24-001234"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblRnae")}
+                </label>
+                <input
+                  type="text"
+                  name="rnaeNumber"
+                  required
+                  defaultValue={profile.rnaeNumber}
+                  placeholder="Ex: 24-001234"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  {t("hintRnae")}
+                </span>
+              </div>
+
+              {/* NIF avec Validation Automatique 15 Chiffres & Détection Wilaya */}
+              <div>
+                <NifInputWithValidation defaultValue={profile.nif} name="nif" />
+              </div>
+            </div>
+
+            {/* 7 Domaines Officiels ANAE : Menu Déroulant Recherchable (Décret exécutif n° 23-197) */}
+            <div className="pt-2 border-t border-slate-100">
+              <AnaeActivitySelector
+                initialCode={profile.activityCode}
+                initialLabel={profile.activityLabel}
               />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                {t("hintRnae")}
-              </span>
-            </div>
-
-            {/* NIF avec Validation Automatique 15 Chiffres & Détection Wilaya */}
-            <div>
-              <NifInputWithValidation defaultValue={profile.nif} name="nif" />
             </div>
           </div>
 
-          {/* 7 Domaines Officiels ANAE : Menu Déroulant Recherchable (Décret exécutif n° 23-197) */}
-          <div className="pt-2 border-t border-slate-100">
-            <AnaeActivitySelector
-              initialCode={profile.activityCode}
-              initialLabel={profile.activityLabel}
-            />
-          </div>
-        </div>
-
-        {/* Section 3: Dates Clés & Sécurité Sociale (CASNOS) */}
-        <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <Calendar className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-base font-bold text-slate-900">
-              {t("secDatesCasnos")}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblCardIssueDate")}
-              </label>
-              <input
-                type="date"
-                name="cardIssueDate"
-                defaultValue={formatDateValue(profile.cardIssueDate)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                {t("hintCardIssueDate")}
-              </span>
+          {/* Section 3: Dates Clés & Sécurité Sociale (CASNOS) */}
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <Calendar className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-base font-bold text-slate-900">
+                {t("secDatesCasnos")}
+              </h2>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblActivityStartDate")}
-              </label>
-              <input
-                type="date"
-                name="activityStartDate"
-                defaultValue={formatDateValue(profile.activityStartDate)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                {t("hintActivityStartDate")}
-              </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblCardIssueDate")}
+                </label>
+                <input
+                  type="date"
+                  name="cardIssueDate"
+                  defaultValue={formatDateValue(profile.cardIssueDate)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  {t("hintCardIssueDate")}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblActivityStartDate")}
+                </label>
+                <input
+                  type="date"
+                  name="activityStartDate"
+                  defaultValue={formatDateValue(profile.activityStartDate)}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  {t("hintActivityStartDate")}
+                </span>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblCasnosStatus")}
+                </label>
+                <select
+                  name="casnosStatus"
+                  defaultValue={profile.casnosStatus}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="AFFILIATED">{t("optAffiliated")}</option>
+                  <option value="PENDING">{t("optPendingAffiliation")}</option>
+                  <option value="EXEMPT">{t("optExemptAffiliation")}</option>
+                </select>
+              </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblCasnosStatus")}
-              </label>
-              <select
-                name="casnosStatus"
-                defaultValue={profile.casnosStatus}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="AFFILIATED">{t("optAffiliated")}</option>
-                <option value="PENDING">{t("optPendingAffiliation")}</option>
-                <option value="EXEMPT">{t("optExemptAffiliation")}</option>
-              </select>
+            {/* Sélecteur Double Régime CASNOS & Simulateur d'Économie */}
+            <div className="pt-2 border-t border-slate-100">
+              <CasnosSchemeSelector defaultScheme={profile.casnosScheme} />
             </div>
-          </div>
-
-          {/* Sélecteur Double Régime CASNOS & Simulateur d'Économie */}
-          <div className="pt-2 border-t border-slate-100">
-            <CasnosSchemeSelector defaultScheme={profile.casnosScheme} />
           </div>
         </div>
 
         {/* Section 4: Paramètres de Facturation & Mention Légale Obligatoire */}
-        <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-            <FileText className="w-5 h-5 text-emerald-600" />
-            <h2 className="text-base font-bold text-slate-900">
-              {t("secInvoicingSettings")}
-            </h2>
-          </div>
+        <div className={activeTab === "invoicing" || activeTab === "all" ? "block" : "hidden"}>
+          <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <FileText className="w-5 h-5 text-emerald-600" />
+              <h2 className="text-base font-bold text-slate-900">
+                {t("secInvoicingSettings")}
+              </h2>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblInvoicePrefix")}
-              </label>
-              <input
-                type="text"
-                name="invoicePrefix"
-                defaultValue={profile.invoicePrefix || "FAC"}
-                placeholder="Ex: FAC"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                Ex: <code>{profile.invoicePrefix || "FAC"}-{new Date().getFullYear()}-0001</code>
-              </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblInvoicePrefix")}
+                </label>
+                <input
+                  type="text"
+                  name="invoicePrefix"
+                  defaultValue={profile.invoicePrefix || "FAC"}
+                  placeholder="Ex: FAC"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Ex: <code>{profile.invoicePrefix || "FAC"}-{new Date().getFullYear()}-0001</code>
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblQuotePrefix")}
+                </label>
+                <input
+                  type="text"
+                  name="quotePrefix"
+                  defaultValue={profile.quotePrefix || "DEV"}
+                  placeholder="Ex: DEV"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Ex: <code>{profile.quotePrefix || "DEV"}-{new Date().getFullYear()}-0001</code>
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {t("lblCreditNotePrefix")}
+                </label>
+                <input
+                  type="text"
+                  name="creditNotePrefix"
+                  defaultValue={profile.creditNotePrefix || "AVR"}
+                  placeholder="Ex: AVR"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Ex: <code>{profile.creditNotePrefix || "AVR"}-{new Date().getFullYear()}-0001</code>
+                </span>
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblQuotePrefix")}
+                {t("lblVatExemptionNote")}
               </label>
-              <input
-                type="text"
-                name="quotePrefix"
-                defaultValue={profile.quotePrefix || "DEV"}
-                placeholder="Ex: DEV"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              <textarea
+                name="vatExemptionNote"
+                required
+                rows={3}
+                defaultValue={profile.vatExemptionNote}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">
-                Ex: <code>{profile.quotePrefix || "DEV"}-{new Date().getFullYear()}-0001</code>
+                {t("hintVatExemptionNote")}
               </span>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {t("lblCreditNotePrefix")}
-              </label>
-              <input
-                type="text"
-                name="creditNotePrefix"
-                defaultValue={profile.creditNotePrefix || "AVR"}
-                placeholder="Ex: AVR"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm uppercase font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                Ex: <code>{profile.creditNotePrefix || "AVR"}-{new Date().getFullYear()}-0001</code>
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-              {t("lblVatExemptionNote")}
-            </label>
-            <textarea
-              name="vatExemptionNote"
-              required
-              rows={3}
-              defaultValue={profile.vatExemptionNote}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
-            <span className="text-[11px] text-slate-400 mt-1 block">
-              {t("hintVatExemptionNote")}
-            </span>
           </div>
         </div>
 
         {/* Section 5: Coordonnées Bancaires, CCP & BaridiMob (Phase 4 - Module 2) */}
-        <PaymentCoordinatesSection
-          initialBankName={profile.bankName}
-          initialBankRib={profile.bankRib}
-          initialBankIban={profile.bankIban}
-          initialBankBic={profile.bankBic}
-          initialAccountHolder={profile.accountHolder}
-          initialBankAgency={profile.bankAgency}
-          initialCcpNumber={profile.ccpNumber}
-          initialCcpKey={profile.ccpKey}
-          initialPaymentTerms={profile.paymentTerms}
-          initialPaymentInstructions={profile.paymentInstructions}
-          sellerFullName={profile.fullName}
-        />
-
-        {/* Banner Link to Interactive Design Studio (WYSIWYG) */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-lg">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-xs">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Nouveau • Module 4</span>
-              </div>
-              <h3 className="text-lg font-bold">Studio de Personnalisation en Direct (WYSIWYG)</h3>
-              <p className="text-sm text-purple-100">
-                Visualisez vos factures, devis, avoirs et quittances en temps réel sur écran divisé, avec bascule Français/Arabe instantanée et synchronisation 100% fidèle avec les fichiers PDF téléchargés.
-              </p>
-            </div>
-            <Link
-              href="/settings/document-design"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-violet-900 font-bold text-sm shadow-md hover:bg-violet-50 transition-all shrink-0 cursor-pointer"
-            >
-              <Palette className="w-4 h-4 text-violet-600" />
-              <span>Ouvrir le Studio en Direct</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+        <div className={activeTab === "banking" || activeTab === "all" ? "block" : "hidden"}>
+          <PaymentCoordinatesSection
+            initialBankName={profile.bankName}
+            initialBankRib={profile.bankRib}
+            initialBankIban={profile.bankIban}
+            initialBankBic={profile.bankBic}
+            initialAccountHolder={profile.accountHolder}
+            initialBankAgency={profile.bankAgency}
+            initialCcpNumber={profile.ccpNumber}
+            initialCcpKey={profile.ccpKey}
+            initialPaymentTerms={profile.paymentTerms}
+            initialPaymentInstructions={profile.paymentInstructions}
+            sellerFullName={profile.fullName}
+          />
         </div>
 
-        {/* Section 6: Identité Visuelle & Style des Documents (Phase 4 - Module 1) */}
-        <DocumentDesignSection
-          initialLogoUrl={profile.logoUrl}
-          initialLogoPosition={profile.logoPosition}
-          initialBrandColor={profile.brandColor}
-          initialTemplateStyle={profile.templateStyle}
-          sellerName={profile.fullName}
-          sellerRnae={profile.rnaeNumber}
-          sellerNif={profile.nif}
-          activityLabel={profile.activityLabel}
-          initialBankName={profile.bankName}
-          initialBankRib={profile.bankRib}
-          initialCcpNumber={profile.ccpNumber}
-          initialCcpKey={profile.ccpKey}
-          showStampSignature={profile.showStampSignature}
-          stampType={profile.stampType}
-          stampUrl={profile.stampUrl}
-          signatureUrl={profile.signatureUrl}
-        />
+        {/* Section 6: Identité Visuelle & Studio de Personnalisation (Phase 4 - Module 1 & 4) */}
+        <div className={activeTab === "design" || activeTab === "all" ? "space-y-6" : "hidden"}>
+          {/* Banner Link to Interactive Design Studio (WYSIWYG) */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-lg">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1 max-w-xl">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-xs">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Nouveau • Module 4</span>
+                </div>
+                <h3 className="text-lg font-bold">Studio de Personnalisation en Direct (WYSIWYG)</h3>
+                <p className="text-sm text-purple-100">
+                  Visualisez vos factures, devis, avoirs et quittances en temps réel sur écran divisé, avec bascule Français/Arabe instantanée et synchronisation 100% fidèle avec les fichiers PDF téléchargés.
+                </p>
+              </div>
+              <Link
+                href="/settings/document-design"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-violet-900 font-bold text-sm shadow-md hover:bg-violet-50 transition-all shrink-0 cursor-pointer"
+              >
+                <Palette className="w-4 h-4 text-violet-600" />
+                <span>Ouvrir le Studio en Direct</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          <DocumentDesignSection
+            initialLogoUrl={profile.logoUrl}
+            initialLogoPosition={profile.logoPosition}
+            initialBrandColor={profile.brandColor}
+            initialTemplateStyle={profile.templateStyle}
+            sellerName={profile.fullName}
+            sellerRnae={profile.rnaeNumber}
+            sellerNif={profile.nif}
+            activityLabel={profile.activityLabel}
+            initialBankName={profile.bankName}
+            initialBankRib={profile.bankRib}
+            initialCcpNumber={profile.ccpNumber}
+            initialCcpKey={profile.ccpKey}
+            showStampSignature={profile.showStampSignature}
+            stampType={profile.stampType}
+            stampUrl={profile.stampUrl}
+            signatureUrl={profile.signatureUrl}
+          />
+        </div>
 
         {/* Section 7: Cachet Commercial & Signature Numérique (Module 3) */}
-        <SealSignatureSection
-          initialShowStampSignature={profile.showStampSignature}
-          initialStampType={profile.stampType}
-          initialStampUrl={profile.stampUrl}
-          initialSignatureUrl={profile.signatureUrl}
-          sellerFullName={profile.fullName}
-          sellerRnae={profile.rnaeNumber}
-          sellerNif={profile.nif}
-          brandColor={profile.brandColor}
-        />
+        <div className={activeTab === "seal" || activeTab === "all" ? "block" : "hidden"}>
+          <SealSignatureSection
+            initialShowStampSignature={profile.showStampSignature}
+            initialStampType={profile.stampType}
+            initialStampUrl={profile.stampUrl}
+            initialSignatureUrl={profile.signatureUrl}
+            sellerFullName={profile.fullName}
+            sellerRnae={profile.rnaeNumber}
+            sellerNif={profile.nif}
+            brandColor={profile.brandColor}
+          />
+        </div>
 
-        <div className="flex justify-end">
+        {/* Save Bar */}
+        <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-xs text-slate-500">
+            {locale === "ar"
+              ? "تُحفظ كافة التعديلات مباشرة في ملفك القانوني المعتمد."
+              : "Vos modifications sont enregistrées en toute sécurité dans votre profil réglementaire."}
+          </span>
           <button
             type="submit"
             disabled={loading}
@@ -605,7 +732,8 @@ export function ProfileFormClient({
         </div>
       </form>
 
-      {/* Section 5: Historique des Exercices Passés (Règle des 3 ans - Décision #5) */}
+      {/* Section 8: Historique des Exercices Passés */}
+      <div className={activeTab === "invoicing" || activeTab === "all" ? "block" : "hidden"}>
       <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-xs space-y-5">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
           <History className="w-5 h-5 text-emerald-600" />
@@ -722,6 +850,7 @@ export function ProfileFormClient({
             </p>
           )}
         </form>
+      </div>
       </div>
     </div>
   );
