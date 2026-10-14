@@ -552,6 +552,7 @@ export function BilingualPaymentReceiptPaper({
                   fullName={seller.fullName}
                   rnaeNumber={seller.rnaeNumber}
                   nif={seller.nif}
+                  activityLabel={seller.activityLabel}
                   stampType={seller.stampType}
                   stampUrl={seller.stampUrl}
                   signatureUrl={seller.signatureUrl}

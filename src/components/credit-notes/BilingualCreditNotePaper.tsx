@@ -527,38 +527,47 @@ export function BilingualCreditNotePaper({
 
       {/* Bottom Section Anchored to Page Bottom */}
       <div className="mt-auto pt-8 space-y-6">
-          {/* Mandatory VAT Exemption Note */}
-          <div className="p-4 rounded-xl bg-emerald-50/80 border-l-4 border-emerald-600 text-xs text-emerald-950 space-y-1">
-            <span className="font-bold block text-emerald-900 uppercase tracking-wider text-[11px]">
-              {isArabic
-                ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
-                : "Mention légale d'exonération de TVA :"}
-            </span>
-            <p className="italic text-emerald-800 leading-relaxed">
-              « {ar.vatExemptionClause} »
-            </p>
-          </div>
-
-          {/* Official Visual Seal / Stamp */}
-          {seller.showStampSignature !== false && (
-            <div className="flex justify-end pt-2">
-              <div className="flex flex-col items-center text-center shrink-0">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  {isArabic ? "الختم والتوقيع الرسمي" : "Cachet & Signature Officiels"}
+          {/* Bottom Row: Legal VAT Exemption (Left) & Dedicated Cadre Cachet & Signature (Right) */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+            <div
+              className={`${seller.showStampSignature !== false ? "md:col-span-7" : "md:col-span-12"} p-4 rounded-xl bg-emerald-50/80 border-l-4 border-emerald-600 text-xs text-emerald-950 flex flex-col justify-between`}
+            >
+              <div className="space-y-1">
+                <span className="font-bold block text-emerald-900 uppercase tracking-wider text-[11px]">
+                  {isArabic
+                    ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
+                    : "Mention légale d'exonération de TVA :"}
                 </span>
-                <OfficialSeal
-                  fullName={seller.fullName}
-                  rnaeNumber={seller.rnaeNumber}
-                  nif={seller.nif}
-                  stampType={seller.stampType}
-                  stampUrl={seller.stampUrl}
-                  signatureUrl={seller.signatureUrl}
-                  inkColor={palette.hex}
-                  size="md"
-                />
+                <p className="italic text-emerald-800 leading-relaxed">
+                  « {ar.vatExemptionClause} »
+                </p>
+              </div>
+              <div className="text-[10px] text-emerald-700/70 pt-2 border-t border-emerald-200/60 mt-3">
+                {isArabic ? ar.legalFooterClause : "Facture d'avoir établie conformément à la Loi 22-23."}
               </div>
             </div>
-          )}
+
+            {seller.showStampSignature !== false && (
+              <div className="md:col-span-5 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col items-center justify-between text-center min-h-[110px]">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  {isArabic ? "إطار مخصص للختم والتوقيع" : "Cadre réservé au Cachet & Signature"}
+                </span>
+                <div className="py-0.5">
+                  <OfficialSeal
+                    fullName={seller.fullName}
+                    rnaeNumber={seller.rnaeNumber}
+                    nif={seller.nif}
+                    activityLabel={seller.activityLabel}
+                    stampType={seller.stampType}
+                    stampUrl={seller.stampUrl}
+                    signatureUrl={seller.signatureUrl}
+                    inkColor={palette.hex}
+                    size="md"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Official Statutory Footer */}
           <div className="pt-6 border-t border-slate-100 text-center text-[11px] text-slate-400">

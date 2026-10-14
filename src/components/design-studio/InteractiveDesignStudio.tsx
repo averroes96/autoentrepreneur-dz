@@ -138,8 +138,12 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
   const [showStampSignature, setShowStampSignature] = useState<boolean>(
     profile.showStampSignature !== false
   );
-  const [stampType, setStampType] = useState<"AUTO" | "CUSTOM">(
-    profile.stampType === "CUSTOM" ? "CUSTOM" : "AUTO"
+  const [stampType, setStampType] = useState<string>(
+    profile.stampType === "CUSTOM"
+      ? "CUSTOM"
+      : profile.stampType === "AUTO_ROUND"
+      ? "AUTO_ROUND"
+      : "AUTO"
   );
   const [stampUrl, setStampUrl] = useState<string | null>(profile.stampUrl || null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(profile.signatureUrl || null);
@@ -211,7 +215,13 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
     setLogoUrl(profile.logoUrl || null);
     setLogoPosition((profile.logoPosition?.toUpperCase() as LogoPositionKey) || "LEFT");
     setShowStampSignature(profile.showStampSignature !== false);
-    setStampType(profile.stampType === "CUSTOM" ? "CUSTOM" : "AUTO");
+    setStampType(
+      profile.stampType === "CUSTOM"
+        ? "CUSTOM"
+        : profile.stampType === "AUTO_ROUND"
+        ? "AUTO_ROUND"
+        : "AUTO"
+    );
     setStampUrl(profile.stampUrl || null);
     setSignatureUrl(profile.signatureUrl || null);
     setBankName(profile.bankName || "");
@@ -821,22 +831,40 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
                     <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
                       Type de Cachet Commercial
                     </label>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                       <button
                         type="button"
                         onClick={() => setStampType("AUTO")}
                         className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                          stampType === "AUTO"
+                          stampType === "AUTO" || stampType === "AUTO_RECTANGLE"
                             ? "border-violet-600 bg-violet-50/50 ring-2 ring-violet-500/30 text-violet-900 font-bold"
                             : "border-slate-200 hover:border-slate-300 text-slate-700"
                         }`}
                       >
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-1">
                           <Sparkles className="w-3.5 h-3.5 text-violet-600" />
-                          <span className="text-xs">Génération Auto</span>
+                          <span className="text-xs">Rectangulaire B2B</span>
                         </div>
                         <p className="text-[10px] text-slate-500 font-normal leading-snug">
-                          Cachet circulaire officiel conforme Loi 22-23 (RNAE & NIF).
+                          Standard Trodat (Recommandé). Lisibilité optimale.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setStampType("AUTO_ROUND")}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          stampType === "AUTO_ROUND"
+                            ? "border-violet-600 bg-violet-50/50 ring-2 ring-violet-500/30 text-violet-900 font-bold"
+                            : "border-slate-200 hover:border-slate-300 text-slate-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Award className="w-3.5 h-3.5 text-violet-600" />
+                          <span className="text-xs">Circulaire Officiel</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-normal leading-snug">
+                          Tampon rond 38mm avec arcs concentriques.
                         </p>
                       </button>
 
@@ -849,19 +877,19 @@ export function InteractiveDesignStudio({ profile }: InteractiveDesignStudioProp
                             : "border-slate-200 hover:border-slate-300 text-slate-700"
                         }`}
                       >
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 mb-1">
                           <Upload className="w-3.5 h-3.5 text-violet-600" />
                           <span className="text-xs">Scan Personnalisé</span>
                         </div>
                         <p className="text-[10px] text-slate-500 font-normal leading-snug">
-                          Fichier PNG transparent scanné de votre propre tampon.
+                          Fichier PNG transparent scanné de votre tampon.
                         </p>
                       </button>
                     </div>
                   </div>
 
-                  {/* Procedural Ink Picker if AUTO */}
-                  {stampType === "AUTO" && (
+                  {/* Procedural Ink Picker if AUTO or AUTO_ROUND */}
+                  {stampType !== "CUSTOM" && (
                     <div className="pt-2">
                       <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
                         Teinte d&apos;Encre Administrative

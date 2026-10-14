@@ -890,70 +890,62 @@ export function BilingualInvoicePaper({
             </div>
           )}
 
-          {/* Mandatory VAT Exemption Note */}
-          <div
-            className="p-4 rounded-xl border-l-4 text-xs space-y-1"
-            style={{
-              backgroundColor: palette.lightBgHex,
-              borderLeftColor: palette.hex,
-            }}
-          >
-            <span
-              className="font-bold block uppercase tracking-wider text-[11px]"
-              style={{ color: palette.darkHex }}
+          {/* Bottom Row: Legal VAT Exemption (Left) & Dedicated Cadre Cachet & Signature (Right) */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+            <div
+              className={`${seller.showStampSignature !== false ? "md:col-span-7" : "md:col-span-12"} p-4 rounded-xl border-l-4 text-xs flex flex-col justify-between`}
+              style={{
+                backgroundColor: palette.lightBgHex,
+                borderLeftColor: palette.hex,
+              }}
             >
-              {isArabic
-                ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
-                : "Mention légale d'exonération de TVA :"}
-            </span>
-            <p className="italic leading-relaxed" style={{ color: palette.darkHex }}>
-              « {isArabic ? ar.vatExemptionClause : invoice.vatExemptionNote} »
-            </p>
-          </div>
-
-          {/* Notes */}
-          {invoice.notes && (
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
-              <span className="font-semibold text-slate-500 uppercase tracking-wider text-[10px] block">
-                {isArabic ? ar.notesTitle : "Modalités de règlement & Remarques :"}
-              </span>
-              <p className="whitespace-pre-line">{invoice.notes}</p>
-            </div>
-          )}
-
-          {/* Official Visual Seal / Stamp */}
-          <div className="flex justify-between items-end pt-4">
-            <div className="text-[11px] text-slate-400 space-y-0.5 max-w-md">
-              <p>
-                {isArabic
-                  ? ar.legalFooterClause
-                  : "Facture établie conformément à la législation algérienne régissant le statut de l'auto-entrepreneur (Loi n° 22-23)."}
-              </p>
-              <p>
-                {isArabic
-                  ? `القيد بالسجل الوطني: ${seller.rnaeNumber || "—"}`
-                  : `Titulaire inscrit au Registre National de l'Auto-Entrepreneur sous le N° ${seller.rnaeNumber || "—"}.`}
-              </p>
-            </div>
-
-            {/* Official Commercial Seal & Signature (Module 3) */}
-            {seller.showStampSignature !== false && (
-              <div className="flex flex-col items-center text-center shrink-0">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  {isArabic ? "الختم والتوقيع الرسمي" : "Cachet & Signature Officiels"}
+              <div className="space-y-1">
+                <span
+                  className="font-bold block uppercase tracking-wider text-[11px]"
+                  style={{ color: palette.darkHex }}
+                >
+                  {isArabic
+                    ? "السند القانوني للإعفاء من الرسم على القيمة المضافة :"
+                    : "Mention légale d'exonération de TVA :"}
                 </span>
-                <OfficialSeal
-                  fullName={seller.fullName}
-                  rnaeNumber={seller.rnaeNumber}
-                  nif={seller.nif}
-                  stampType={seller.stampType}
-                  stampUrl={seller.stampUrl}
-                  signatureUrl={seller.signatureUrl}
-                  inkColor={palette.hex}
-                  size="md"
-                />
+                <p className="italic leading-relaxed text-xs" style={{ color: palette.darkHex }}>
+                  « {isArabic ? ar.vatExemptionClause : invoice.vatExemptionNote} »
+                </p>
+              </div>
+              <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-200/60 mt-3">
+                {isArabic ? ar.legalFooterClause : "Facture établie conformément à la législation algérienne (Loi 22-23)."}
+              </div>
+            </div>
+
+            {seller.showStampSignature !== false && (
+              <div className="md:col-span-5 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs flex flex-col items-center justify-between text-center min-h-[110px]">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  {isArabic ? "إطار مخصص للختم والتوقيع" : "Cadre réservé au Cachet & Signature"}
+                </span>
+                <div className="py-0.5">
+                  <OfficialSeal
+                    fullName={seller.fullName}
+                    rnaeNumber={seller.rnaeNumber}
+                    nif={seller.nif}
+                    activityLabel={seller.activityLabel}
+                    stampType={seller.stampType}
+                    stampUrl={seller.stampUrl}
+                    signatureUrl={seller.signatureUrl}
+                    inkColor={palette.hex}
+                    size="md"
+                  />
+                </div>
               </div>
             )}
+          </div>
+
+          {/* Statutory Registration Footer */}
+          <div className="pt-2 text-center text-[10px] text-slate-400 border-t border-slate-100">
+            <p>
+              {isArabic
+                ? `القيد بالسجل الوطني للمقاول الذاتي: ${seller.rnaeNumber || "—"} — الرقم الضريبي: ${seller.nif || "—"}`
+                : `Titulaire inscrit au Registre National de l'Auto-Entrepreneur (RNAE N° ${seller.rnaeNumber || "—"}) — NIF : ${seller.nif || "—"}.`}
+            </p>
           </div>
         </div>
         </div>

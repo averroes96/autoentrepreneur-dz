@@ -81,7 +81,112 @@ function drawTemplateAccentBar(
   }
 }
 
-function drawOfficialSealPdf(
+function drawProceduralSignaturePdf(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  scale = 1,
+  color = "#1e40af"
+): void {
+  doc.save();
+  doc.translate(x, y);
+  doc.scale(scale);
+  doc.rotate(-3);
+
+  doc
+    .moveTo(0, 14)
+    .bezierCurveTo(12, -8, 28, -14, 40, 4)
+    .bezierCurveTo(46, 15, 34, 22, 22, 16)
+    .bezierCurveTo(14, 10, 30, -4, 55, 0)
+    .bezierCurveTo(72, 4, 88, 10, 110, 7)
+    .bezierCurveTo(92, 15, 78, 19, 100, 20)
+    .lineWidth(1.1)
+    .strokeColor(color)
+    .stroke();
+
+  doc
+    .moveTo(8, 23)
+    .bezierCurveTo(40, 21, 80, 24, 115, 20)
+    .lineWidth(0.8)
+    .strokeColor(color)
+    .stroke();
+
+  doc.restore();
+}
+
+function drawRectangularStampPdf(
+  doc: PDFKit.PDFDocument,
+  params: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    seller: {
+      fullName: string;
+      rnaeNumber: string;
+      nif: string;
+      activityLabel?: string;
+      signatureUrl?: string | null;
+    };
+    inkColor: string;
+  }
+): void {
+  const { x, y, width, height, seller, inkColor } = params;
+  doc.save();
+  doc.translate(x, y);
+  doc.rotate(-2, { origin: [width / 2, height / 2] });
+
+  // Double rounded borders with realistic stamp look
+  doc.roundedRect(0, 0, width, height, 4).lineWidth(1.5).strokeColor(inkColor).stroke();
+  doc.roundedRect(2, 2, width - 4, height - 4, 2.5).lineWidth(0.6).strokeColor(inkColor).stroke();
+
+  const pad = 5;
+  const innerW = width - pad * 2;
+  const nameUpper = (seller.fullName || "AUTO-ENTREPRENEUR").toUpperCase();
+
+  // 1. Nom & Prénom
+  doc.fillColor(inkColor).fontSize(8.5).font("Helvetica-Bold");
+  doc.text(nameUpper.length > 25 ? nameUpper.slice(0, 24) + "…" : nameUpper, pad, 6, { width: innerW, align: "center" });
+
+  // 2. Statut Auto-Entrepreneur
+  doc.fontSize(6).font("Helvetica-Bold");
+  doc.text("AUTO-ENTREPRENEUR  •  STATUT LOI 22-23", pad, 17, { width: innerW, align: "center" });
+
+  // 3. Activité / Métier
+  const activity = seller.activityLabel || "Prestations de services";
+  doc.fontSize(5.5).font("Helvetica-Oblique");
+  doc.text(activity.length > 40 ? activity.slice(0, 39) + "…" : activity, pad, 25, { width: innerW, align: "center" });
+
+  // Separator line
+  doc.moveTo(pad + 12, 33).lineTo(width - pad - 12, 33).lineWidth(0.5).strokeColor(inkColor).stroke();
+
+  // 4. Identifiants légaux
+  doc.fontSize(6).font("Helvetica-Bold");
+  doc.text(`RNAE : ${seller.rnaeNumber || "—"}`, pad, 36, { width: innerW, align: "center" });
+  doc.text(`NIF : ${seller.nif || "—"}`, pad, 44, { width: innerW, align: "center" });
+
+  // 5. Régime fiscal
+  doc.fontSize(5).font("Helvetica");
+  doc.text("Régime IFU  •  Non Assujetti à la TVA", pad, 52, { width: innerW, align: "center" });
+
+  // Overlaid signature (either custom or procedural)
+  if (seller.signatureUrl) {
+    const sigBuf = getLogoBuffer(seller.signatureUrl);
+    if (sigBuf) {
+      tryDrawImage(doc, sigBuf, width * 0.35, height * 0.25, {
+        fit: [width * 0.6, height * 0.7],
+        align: "center",
+        valign: "center",
+      });
+    }
+  } else {
+    drawProceduralSignaturePdf(doc, width * 0.38, height * 0.44, 0.65, inkColor);
+  }
+
+  doc.restore();
+}
+
+function drawCircularStampPdf(
   doc: PDFKit.PDFDocument,
   params: {
     centerX: number;
@@ -91,60 +196,73 @@ function drawOfficialSealPdf(
       fullName: string;
       rnaeNumber: string;
       nif: string;
-      stampType?: string | null;
-      stampUrl?: string | null;
       signatureUrl?: string | null;
     };
-    sealColor: string;
+    inkColor: string;
   }
 ): void {
-  const { centerX, centerY, radius, seller, sealColor } = params;
-  const isCustom = seller.stampType === "CUSTOM" && Boolean(seller.stampUrl);
+  const { centerX, centerY, radius, seller, inkColor } = params;
+  doc.save();
+  doc.rotate(-3, { origin: [centerX, centerY] });
 
-  if (isCustom && seller.stampUrl) {
-    const stampBuf = getLogoBuffer(seller.stampUrl);
-    if (stampBuf) {
-      tryDrawImage(doc, stampBuf, centerX - radius, centerY - radius, {
-        fit: [radius * 2, radius * 2],
-        align: "center",
-        valign: "center",
-      });
-    }
-  } else {
-    // Vector procedural administrative circular seal (Algerian standard)
-    doc.save();
+  // Concentric rings
+  doc.circle(centerX, centerY, radius).lineWidth(1.5).strokeColor(inkColor).stroke();
+  doc.circle(centerX, centerY, radius - 2.2).lineWidth(0.6).strokeColor(inkColor).stroke();
+  doc.circle(centerX, centerY, radius - 10).lineWidth(0.5).dash(2, { space: 2 }).strokeColor(inkColor).stroke().undash();
+  doc.circle(centerX, centerY, radius - 11.8).lineWidth(0.6).strokeColor(inkColor).stroke();
 
-    // Outer double concentric rings
-    doc.circle(centerX, centerY, radius).lineWidth(1.4).strokeColor(sealColor).stroke();
-    doc.circle(centerX, centerY, radius - 2.5).lineWidth(0.6).strokeColor(sealColor).stroke();
-
-    // Inner security rings
-    doc.circle(centerX, centerY, radius - 11).lineWidth(0.5).dash(2, { space: 2 }).strokeColor(sealColor).stroke().undash();
-    doc.circle(centerX, centerY, radius - 13).lineWidth(0.5).strokeColor(sealColor).stroke();
-
-    // Top Arc Header
-    doc.fillColor(sealColor).fontSize(4.5).font("Helvetica-Bold");
-    doc.text("RÉPUBLIQUE ALGÉRIENNE", centerX - 30, centerY - radius + 4, { width: 60, align: "center" });
-
-    // Center Core Content
-    const displayName = (seller.fullName || "AUTO-ENTREPRENEUR").toUpperCase();
-    doc.fillColor(sealColor).fontSize(5.5).font("Helvetica-Bold");
-    doc.text(displayName.length > 20 ? displayName.slice(0, 19) + "." : displayName, centerX - 32, centerY - 9.5, { width: 64, align: "center" });
-
-    doc.fontSize(4.8).font("Helvetica-Bold").text("AUTO-ENTREPRENEUR", centerX - 30, centerY - 2.5, { width: 60, align: "center" });
-    doc.fontSize(3.8).font("Helvetica").text("STATUT RÉGI PAR LA LOI 22-23", centerX - 30, centerY + 3.5, { width: 60, align: "center" });
-
-    // Identifiers
-    doc.fontSize(4.2).font("Helvetica-Bold").text(`RNAE : ${seller.rnaeNumber || "—"}`, centerX - 30, centerY + 9, { width: 60, align: "center" });
-    doc.fontSize(4.2).font("Helvetica-Bold").text(`NIF : ${seller.nif || "—"}`, centerX - 30, centerY + 14.5, { width: 60, align: "center" });
-
-    // Bottom arc
-    doc.fontSize(4).font("Helvetica-Bold").text("EXONÉRÉ DE TVA (IFU)", centerX - 30, centerY + radius - 9, { width: 60, align: "center" });
-
-    doc.restore();
+  // Top arc (clockwise)
+  function drawArcTop(text: string, r: number, startAngle: number, endAngle: number) {
+    const chars = text.split("");
+    const step = (endAngle - startAngle) / Math.max(chars.length - 1, 1);
+    chars.forEach((ch, i) => {
+      const angleDeg = startAngle + i * step;
+      const rad = (angleDeg * Math.PI) / 180;
+      const px = centerX + r * Math.sin(rad);
+      const py = centerY - r * Math.cos(rad);
+      doc.save();
+      doc.translate(px, py);
+      doc.rotate(angleDeg);
+      doc.fontSize(4.5).font("Helvetica-Bold").fillColor(inkColor);
+      doc.text(ch, -doc.widthOfString(ch) / 2, -2.5);
+      doc.restore();
+    });
   }
 
-  // Overlay handwritten signature if provided
+  // Bottom arc (readable along lower curve)
+  function drawArcBottom(text: string, r: number, startAngle: number, endAngle: number) {
+    const chars = text.split("");
+    const step = (endAngle - startAngle) / Math.max(chars.length - 1, 1);
+    chars.forEach((ch, i) => {
+      const angleDeg = startAngle + i * step;
+      const rad = (angleDeg * Math.PI) / 180;
+      const px = centerX - r * Math.sin(rad);
+      const py = centerY + r * Math.cos(rad);
+      doc.save();
+      doc.translate(px, py);
+      doc.rotate(-angleDeg);
+      doc.fontSize(4.0).font("Helvetica-Bold").fillColor(inkColor);
+      doc.text(ch, -doc.widthOfString(ch) / 2, -2.5);
+      doc.restore();
+    });
+  }
+
+  drawArcTop("★  RÉPUBLIQUE ALGÉRIENNE  ★", radius - 6.5, -55, 55);
+  drawArcBottom("★  STATUT LOI 22-23  •  IFU  ★", radius - 6.5, -60, 60);
+
+  // Center Content: well-spaced & clean
+  const nameUpper = (seller.fullName || "AUTO-ENTREPRENEUR").toUpperCase();
+  doc.fillColor(inkColor).fontSize(6.5).font("Helvetica-Bold");
+  doc.text(nameUpper.length > 18 ? nameUpper.slice(0, 17) + "…" : nameUpper, centerX - 25, centerY - 10, { width: 50, align: "center" });
+
+  doc.fontSize(4.5).font("Helvetica-Bold").text("AUTO-ENTREPRENEUR", centerX - 25, centerY - 2, { width: 50, align: "center" });
+
+  doc.moveTo(centerX - 18, centerY + 4).lineTo(centerX + 18, centerY + 4).lineWidth(0.5).strokeColor(inkColor).stroke();
+
+  doc.fontSize(4.2).font("Helvetica-Bold").text(`RNAE : ${seller.rnaeNumber}`, centerX - 26, centerY + 6.5, { width: 52, align: "center" });
+  doc.fontSize(4.2).font("Helvetica-Bold").text(`NIF : ${seller.nif}`, centerX - 26, centerY + 12.5, { width: 52, align: "center" });
+
+  // Overlaid signature (either custom or procedural)
   if (seller.signatureUrl) {
     const sigBuf = getLogoBuffer(seller.signatureUrl);
     if (sigBuf) {
@@ -154,7 +272,95 @@ function drawOfficialSealPdf(
         valign: "center",
       });
     }
+  } else {
+    drawProceduralSignaturePdf(doc, centerX - 18, centerY - 4, 0.45, inkColor);
   }
+
+  doc.restore();
+}
+
+function drawOfficialSealPdf(
+  doc: PDFKit.PDFDocument,
+  params: {
+    centerX?: number;
+    centerY?: number;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    radius?: number;
+    seller: {
+      fullName: string;
+      rnaeNumber: string;
+      nif: string;
+      activityLabel?: string;
+      stampType?: string | null;
+      stampUrl?: string | null;
+      signatureUrl?: string | null;
+    };
+    sealColor: string;
+  }
+): void {
+  const { seller, sealColor } = params;
+  const isCustom = seller.stampType === "CUSTOM" && Boolean(seller.stampUrl);
+  const isRound = seller.stampType === "AUTO_ROUND";
+
+  if (isCustom && seller.stampUrl) {
+    const stampBuf = getLogoBuffer(seller.stampUrl);
+    if (stampBuf) {
+      const targetW = params.width || (params.radius ? params.radius * 2 : 120);
+      const targetH = params.height || (params.radius ? params.radius * 2 : 70);
+      const targetX = params.x !== undefined ? params.x : (params.centerX || 0) - targetW / 2;
+      const targetY = params.y !== undefined ? params.y : (params.centerY || 0) - targetH / 2;
+      tryDrawImage(doc, stampBuf, targetX, targetY, {
+        fit: [targetW, targetH],
+        align: "center",
+        valign: "center",
+      });
+      if (seller.signatureUrl) {
+        const sigBuf = getLogoBuffer(seller.signatureUrl);
+        if (sigBuf) {
+          tryDrawImage(doc, sigBuf, targetX + targetW * 0.25, targetY + targetH * 0.2, {
+            fit: [targetW * 0.6, targetH * 0.7],
+            align: "center",
+            valign: "center",
+          });
+        }
+      } else {
+        drawProceduralSignaturePdf(doc, targetX + targetW * 0.35, targetY + targetH * 0.4, 0.65, sealColor);
+      }
+    }
+    return;
+  }
+
+  if (isRound) {
+    const r = params.radius || 30;
+    const cX = params.centerX !== undefined ? params.centerX : (params.x || 0) + (params.width || 60) / 2;
+    const cY = params.centerY !== undefined ? params.centerY : (params.y || 0) + (params.height || 60) / 2;
+    drawCircularStampPdf(doc, {
+      centerX: cX,
+      centerY: cY,
+      radius: r,
+      seller,
+      inkColor: sealColor,
+    });
+    return;
+  }
+
+  // Default: Authentic Rectangular Griffe Commerciale B2B (Trodat / Colop standard)
+  const w = params.width || 176;
+  const h = params.height || 60;
+  const stampX = params.x !== undefined ? params.x : (params.centerX || 0) - w / 2;
+  const stampY = params.y !== undefined ? params.y : (params.centerY || 0) - h / 2;
+
+  drawRectangularStampPdf(doc, {
+    x: stampX,
+    y: stampY,
+    width: w,
+    height: h,
+    seller,
+    inkColor: sealColor,
+  });
 }
 
 export interface InvoicePdfData {
@@ -502,7 +708,8 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
       const footerLineY = 766;
-      const legalBoxH = 38;
+      const hasSeal = seller.showStampSignature !== false;
+      const bottomRowH = hasSeal ? 82 : 40;
       const notesBoxH = data.invoice.notes ? 30 : 0;
 
       const hasBankDetails = Boolean(
@@ -533,7 +740,7 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
       const bankBoxH = hasBankDetails ? (hasIbanOrExtra ? 54 : 44) : 0;
 
       const neededBottomSpace =
-        legalBoxH +
+        bottomRowH +
         (bankBoxH ? bankBoxH + 6 : 0) +
         (notesBoxH ? notesBoxH + 6 : 0) +
         14;
@@ -545,12 +752,12 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
         tableY = margin + 20;
       }
 
-      // Pin legal mention right above the footer line
-      const legalY = Math.max(
+      // Pin bottom row right above the footer line
+      const bottomY = Math.max(
         tableY + (bankBoxH ? bankBoxH + 6 : 0) + (notesBoxH ? notesBoxH + 6 : 0) + 10,
-        footerLineY - 8 - legalBoxH
+        footerLineY - 8 - bottomRowH
       );
-      const bankY = legalY - (bankBoxH ? bankBoxH + 6 : 0);
+      const bankY = bottomY - (bankBoxH ? bankBoxH + 6 : 0);
       const notesY = bankY - (notesBoxH ? notesBoxH + 6 : 0);
 
       // --- NOTES / REMARQUES ---
@@ -638,29 +845,48 @@ export function generateInvoicePdfBuffer(data: InvoicePdfData): Promise<Buffer> 
         }
       }
 
-      // --- MANDATORY VAT EXEMPTION NOTE (EDITABLE TEMPLATE STRING) ---
-      const hasSeal = seller.showStampSignature !== false;
-      const sealRadius = 26;
-      const sealBoxWidth = hasSeal ? 68 : 0;
-      const legalBoxWidth = hasSeal ? contentWidth - sealBoxWidth - 10 : contentWidth;
+      // --- MANDATORY VAT EXEMPTION NOTE & DEDICATED CACHET CARD ---
+      const stampBoxW = hasSeal ? 195 : 0;
+      const legalBoxW = hasSeal ? contentWidth - stampBoxW - 10 : contentWidth;
 
-      doc.roundedRect(margin, legalY, legalBoxWidth, legalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
-      doc.rect(margin, legalY, 4, legalBoxH).fill(primaryColor);
+      // 1. Legal VAT Exemption Card (Left)
+      doc.roundedRect(margin, bottomY, legalBoxW, bottomRowH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
+      doc.rect(margin, bottomY, 4, bottomRowH).fill(primaryColor);
 
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 6);
-      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, legalY + 17, {
-        width: legalBoxWidth - 20,
-        lineGap: 1,
+      doc.fillColor(palette.darkHex).fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE OBLIGATOIRE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, bottomY + 7);
+      doc.fillColor(palette.darkHex).fontSize(7.2).font("Helvetica-Oblique").text(data.invoice.vatExemptionNote, margin + 12, bottomY + 20, {
+        width: legalBoxW - 24,
+        lineGap: 2,
       });
 
-      // --- OFFICIAL ADMINISTRATIVE SEAL & SIGNATURE (MODULE 3) ---
       if (hasSeal) {
-        const sealCenterX = margin + contentWidth - sealBoxWidth / 2;
-        const sealCenterY = legalY + legalBoxH / 2;
+        doc.fillColor(mutedColor).fontSize(6.5).font("Helvetica").text(
+          "Régime fiscal : Impôt Forfaitaire Unique (IFU). Facture établie sans TVA (art. 13 Décret exécutif n° 23-197).",
+          margin + 12,
+          bottomY + 54,
+          { width: legalBoxW - 24 }
+        );
+      }
+
+      // 2. Dedicated Cadre Réservé au Cachet & Signature (Right)
+      if (hasSeal) {
+        const stampBoxX = margin + legalBoxW + 10;
+        doc.roundedRect(stampBoxX, bottomY, stampBoxW, bottomRowH, cornerRadius).fillAndStroke("#ffffff", borderColor);
+        doc.fillColor(mutedColor).fontSize(6.2).font("Helvetica-Bold").text(
+          "CADRE RÉSERVÉ AU CACHET & SIGNATURE :",
+          stampBoxX + 6,
+          bottomY + 6,
+          { width: stampBoxW - 12, align: "center" }
+        );
+
         drawOfficialSealPdf(doc, {
-          centerX: sealCenterX,
-          centerY: sealCenterY,
-          radius: sealRadius,
+          x: stampBoxX + (stampBoxW - 176) / 2,
+          y: bottomY + 16,
+          width: 176,
+          height: 60,
+          centerX: stampBoxX + stampBoxW / 2,
+          centerY: bottomY + 16 + 30,
+          radius: 29,
           seller: seller,
           sealColor: primaryColor,
         });
@@ -1068,7 +1294,7 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
       const bankBoxH = hasBankDetails ? 44 : 0;
       const notesBoxH = data.quote.notes ? 26 : 0;
-      const approvalBoxH = 52;
+      const approvalBoxH = 76;
       const neededBottomSpace =
         legalBoxH +
         approvalBoxH +
@@ -1156,18 +1382,23 @@ export function generateQuotePdfBuffer(data: QuotePdfData): Promise<Buffer> {
 
       // 2. Provider Box (Auto-Entrepreneur) with Seal
       doc.roundedRect(providerBoxX, approvalY, dualBoxW, approvalBoxH, cornerRadius).fillAndStroke(palette.lightBgHex, palette.borderHex);
-      doc.fillColor(palette.darkHex).fontSize(7).font("Helvetica-Bold").text("POUR L'AUTO-ENTREPRENEUR (PRESTATAIRE)", providerBoxX + 8, approvalY + 5);
-      doc.fillColor(mutedColor).fontSize(6).font("Helvetica").text(data.seller.fullName, providerBoxX + 8, approvalY + 14);
-      doc.fontSize(5).text(`RNAE : ${data.seller.rnaeNumber || "—"}`, providerBoxX + 8, approvalY + 22);
+      doc.fillColor(palette.darkHex).fontSize(7).font("Helvetica-Bold").text("POUR L'AUTO-ENTREPRENEUR (CACHET & SIGNATURE)", providerBoxX + 8, approvalY + 5);
 
       if (seller.showStampSignature !== false) {
         drawOfficialSealPdf(doc, {
-          centerX: providerBoxX + dualBoxW - 27,
-          centerY: approvalY + approvalBoxH / 2 + 1,
-          radius: 20,
+          x: providerBoxX + (dualBoxW - 176) / 2,
+          y: approvalY + 13,
+          width: 176,
+          height: 56,
+          centerX: providerBoxX + dualBoxW / 2,
+          centerY: approvalY + 13 + 28,
+          radius: 26,
           seller: seller,
           sealColor: accentColor,
         });
+      } else {
+        doc.fillColor(mutedColor).fontSize(7).font("Helvetica").text(data.seller.fullName, providerBoxX + 8, approvalY + 20);
+        doc.fontSize(6).text(`RNAE : ${data.seller.rnaeNumber || "—"}  •  NIF : ${data.seller.nif || "—"}`, providerBoxX + 8, approvalY + 32);
       }
 
       // --- MANDATORY LEGAL NOTE ---
@@ -1541,9 +1772,10 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
 
       // --- BOTTOM SECTION ANCHORED TO BOTTOM OF LAST PAGE ---
       const footerLineY = 766;
-      const legalBoxH = 40;
+      const hasSeal = seller.showStampSignature !== false;
+      const bottomRowH = hasSeal ? 82 : 40;
       const notesBoxH = data.creditNote.notes ? 36 : 0;
-      const neededBottomSpace = legalBoxH + (notesBoxH ? notesBoxH + 8 : 0) + 16;
+      const neededBottomSpace = bottomRowH + (notesBoxH ? notesBoxH + 8 : 0) + 16;
 
       // If content overflows into bottom area, add new page
       if (tableY + neededBottomSpace > footerLineY) {
@@ -1552,9 +1784,9 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
         tableY = margin + 20;
       }
 
-      // Pin legal note right above the footer line
-      const legalY = Math.max(tableY + (notesBoxH ? notesBoxH + 8 : 0) + 12, footerLineY - 8 - legalBoxH);
-      const notesY = legalY - (notesBoxH ? notesBoxH + 8 : 0);
+      // Pin bottom row right above the footer line
+      const bottomY = Math.max(tableY + (notesBoxH ? notesBoxH + 8 : 0) + 12, footerLineY - 8 - bottomRowH);
+      const notesY = bottomY - (notesBoxH ? notesBoxH + 8 : 0);
 
       // --- NOTES / REMARQUES ---
       if (data.creditNote.notes) {
@@ -1563,27 +1795,47 @@ export function generateCreditNotePdfBuffer(data: CreditNotePdfData): Promise<Bu
         doc.fillColor(darkColor).fontSize(7.5).font("Helvetica").text(data.creditNote.notes, margin + 10, notesY + 16, { width: contentWidth - 20, lineGap: 1 });
       }
 
-      // --- MANDATORY LEGAL NOTE & OFFICIAL SEAL ---
-      const hasSeal = seller.showStampSignature !== false;
-      const sealRadius = 26;
-      const sealBoxWidth = hasSeal ? 68 : 0;
-      const legalBoxWidth = hasSeal ? contentWidth - sealBoxWidth - 10 : contentWidth;
+      // --- MANDATORY LEGAL NOTE & DEDICATED CACHET CARD ---
+      const stampBoxW = hasSeal ? 195 : 0;
+      const legalBoxW = hasSeal ? contentWidth - stampBoxW - 10 : contentWidth;
 
-      doc.roundedRect(margin, legalY, legalBoxWidth, legalBoxH, cornerRadius).fillAndStroke("#f0fdf4", "#bbf7d0");
-      doc.rect(margin, legalY, 4, legalBoxH).fill("#059669");
-      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, legalY + 6);
-      doc.fillColor("#14532d").fontSize(7.5).font("Helvetica-Oblique").text(data.creditNote.vatExemptionNote, margin + 12, legalY + 18, {
-        width: legalBoxWidth - 20,
-        lineGap: 1,
+      // 1. Legal VAT Exemption Card (Left)
+      doc.roundedRect(margin, bottomY, legalBoxW, bottomRowH, cornerRadius).fillAndStroke("#f0fdf4", "#bbf7d0");
+      doc.rect(margin, bottomY, 4, bottomRowH).fill("#059669");
+      doc.fillColor("#166534").fontSize(7.5).font("Helvetica-Bold").text("MENTION LÉGALE D'EXONÉRATION DE TVA (LOI 22-23 / RÉGIME IFU) :", margin + 12, bottomY + 7);
+      doc.fillColor("#14532d").fontSize(7.2).font("Helvetica-Oblique").text(data.creditNote.vatExemptionNote, margin + 12, bottomY + 20, {
+        width: legalBoxW - 24,
+        lineGap: 2,
       });
 
       if (hasSeal) {
-        const sealCenterX = margin + contentWidth - sealBoxWidth / 2;
-        const sealCenterY = legalY + legalBoxH / 2;
+        doc.fillColor("#166534").fontSize(6.5).font("Helvetica").text(
+          "Régime fiscal : Impôt Forfaitaire Unique (IFU). Facture d'avoir établie sans TVA (Loi 22-23).",
+          margin + 12,
+          bottomY + 54,
+          { width: legalBoxW - 24 }
+        );
+      }
+
+      // 2. Dedicated Cadre Réservé au Cachet & Signature (Right)
+      if (hasSeal) {
+        const stampBoxX = margin + legalBoxW + 10;
+        doc.roundedRect(stampBoxX, bottomY, stampBoxW, bottomRowH, cornerRadius).fillAndStroke("#ffffff", borderColor);
+        doc.fillColor(mutedColor).fontSize(6.2).font("Helvetica-Bold").text(
+          "CADRE RÉSERVÉ AU CACHET & SIGNATURE :",
+          stampBoxX + 6,
+          bottomY + 6,
+          { width: stampBoxW - 12, align: "center" }
+        );
+
         drawOfficialSealPdf(doc, {
-          centerX: sealCenterX,
-          centerY: sealCenterY,
-          radius: sealRadius,
+          x: stampBoxX + (stampBoxW - 176) / 2,
+          y: bottomY + 16,
+          width: 176,
+          height: 60,
+          centerX: stampBoxX + stampBoxW / 2,
+          centerY: bottomY + 16 + 30,
+          radius: 29,
           seller: seller,
           sealColor: "#059669",
         });
@@ -2119,14 +2371,16 @@ export function generatePaymentReceiptPdfBuffer(data: PaymentReceiptPdfData): Pr
         sigY + 28
       );
 
-      // Empreinte circulaire du cachet officiel
+      // Empreinte du cachet officiel
       if (data.seller.showStampSignature !== false) {
-        const stampCenterX = margin + sigBoxWidth - 85;
-        const stampCenterY = sigY + 60;
         drawOfficialSealPdf(doc, {
-          centerX: stampCenterX,
-          centerY: stampCenterY,
-          radius: 34,
+          x: margin + sigBoxWidth - 192,
+          y: sigY + 40,
+          width: 176,
+          height: 60,
+          centerX: margin + sigBoxWidth - 104,
+          centerY: sigY + 70,
+          radius: 30,
           seller: data.seller,
           sealColor: primaryColor,
         });

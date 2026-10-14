@@ -23,6 +23,7 @@ interface SealSignatureSectionProps {
   sellerFullName?: string | null;
   sellerRnae?: string | null;
   sellerNif?: string | null;
+  sellerActivityLabel?: string | null;
   brandColor?: string | null;
 }
 
@@ -41,6 +42,7 @@ export function SealSignatureSection({
   sellerFullName = "Auto-Entrepreneur",
   sellerRnae = "—",
   sellerNif = "—",
+  sellerActivityLabel = "Prestations de services",
 }: SealSignatureSectionProps) {
   const { t, locale } = useI18n();
   const isArabic = locale === "ar";
@@ -48,8 +50,12 @@ export function SealSignatureSection({
   const [showStampSignature, setShowStampSignature] = useState(
     initialShowStampSignature !== false
   );
-  const [stampType, setStampType] = useState<"AUTO" | "CUSTOM">(
-    initialStampType === "CUSTOM" ? "CUSTOM" : "AUTO"
+  const [stampType, setStampType] = useState<string>(
+    initialStampType === "CUSTOM"
+      ? "CUSTOM"
+      : initialStampType === "AUTO_ROUND"
+      ? "AUTO_ROUND"
+      : "AUTO"
   );
   const [stampUrl, setStampUrl] = useState<string | null>(initialStampUrl || null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(
@@ -193,22 +199,40 @@ export function SealSignatureSection({
               <label className="text-xs font-bold text-slate-700 block">
                 {isArabic ? "طريقة إنشاء الختم" : "Mode de Cachet Commercial"}
               </label>
-              <div className="grid grid-cols-2 gap-3 p-1.5 bg-slate-100 rounded-xl border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-1.5 bg-slate-100 rounded-xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => setStampType("AUTO")}
                   className={`flex flex-col items-start p-3 rounded-lg text-left transition ${
-                    stampType === "AUTO"
+                    stampType === "AUTO" || stampType === "AUTO_RECTANGLE"
                       ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-bold"
                       : "text-slate-600 hover:text-slate-900 font-medium"
                   }`}
                 >
                   <div className="flex items-center gap-1.5 text-xs">
                     <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>{isArabic ? "ختم إداري تلقائي" : "Cachet Officiel Automatique"}</span>
+                    <span>{isArabic ? "مستطيل تجاري (B2B)" : "Cachet Rectangulaire"}</span>
                   </div>
                   <span className="text-[10px] text-slate-400 mt-0.5">
-                    {isArabic ? "مُولد بالنظام وفق القانون 22-23" : "Généré aux normes administratives"}
+                    {isArabic ? "معتمد Trodat (موصى به)" : "Standard Trodat (Recommandé)"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStampType("AUTO_ROUND")}
+                  className={`flex flex-col items-start p-3 rounded-lg text-left transition ${
+                    stampType === "AUTO_ROUND"
+                      ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-bold"
+                      : "text-slate-600 hover:text-slate-900 font-medium"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <Award className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>{isArabic ? "دائري رسمي" : "Cachet Circulaire"}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-0.5">
+                    {isArabic ? "طابع إداري 38 مم" : "Tampon rond officiel"}
                   </span>
                 </button>
 
@@ -223,17 +247,17 @@ export function SealSignatureSection({
                 >
                   <div className="flex items-center gap-1.5 text-xs">
                     <Upload className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>{isArabic ? "ختم مخصص (صورة)" : "Cachet Scanné (Fichier)"}</span>
+                    <span>{isArabic ? "ختم ممسوح (صورة)" : "Scan Personnalisé"}</span>
                   </div>
                   <span className="text-[10px] text-slate-400 mt-0.5">
-                    {isArabic ? "استيراد صورة ممسوحة ضوئياً" : "PNG scanné avec fond transparent"}
+                    {isArabic ? "ملف PNG شفاف" : "Fichier PNG transparent"}
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* If AUTO: Ink Color Selector */}
-            {stampType === "AUTO" ? (
+            {/* If AUTO or AUTO_ROUND: Ink Color Selector */}
+            {stampType !== "CUSTOM" ? (
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-700">
@@ -408,19 +432,22 @@ export function SealSignatureSection({
                 {isArabic ? "معاينة مباشرة في الوثائق" : "Aperçu en Direct sur Document"}
               </span>
               <p className="text-xs font-semibold text-slate-700">
-                {stampType === "AUTO"
-                  ? isArabic ? "ختم إداري رسمي" : "Cachet Administratif Circulaire"
+                {stampType === "AUTO" || stampType === "AUTO_RECTANGLE"
+                  ? isArabic ? "ختم تجاري مستطيل (نموذج معتمد)" : "Cachet Rectangulaire B2B (Standard)"
+                  : stampType === "AUTO_ROUND"
+                  ? isArabic ? "ختم إداري دائري رسمي" : "Cachet Circulaire Administratif"
                   : isArabic ? "ختم مخصص ممسوح" : "Cachet Importé"}
-                {signatureUrl ? " + Signature" : ""}
+                {signatureUrl ? " + Signature" : " + Griffe Automatique"}
               </p>
             </div>
 
             {/* Stamp Interactive Canvas Box */}
-            <div className="w-48 h-48 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center p-2 relative overflow-hidden">
+            <div className="w-full max-w-[280px] min-h-[140px] rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-center p-4 relative overflow-hidden">
               <OfficialSeal
                 fullName={sellerFullName}
                 rnaeNumber={sellerRnae}
                 nif={sellerNif}
+                activityLabel={sellerActivityLabel}
                 stampType={stampType}
                 stampUrl={stampUrl}
                 signatureUrl={signatureUrl}

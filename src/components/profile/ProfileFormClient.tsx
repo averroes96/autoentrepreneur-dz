@@ -710,6 +710,7 @@ export function ProfileFormClient({
             sellerFullName={profile.fullName}
             sellerRnae={profile.rnaeNumber}
             sellerNif={profile.nif}
+            sellerActivityLabel={profile.activityLabel}
             brandColor={profile.brandColor}
           />
         </div>
