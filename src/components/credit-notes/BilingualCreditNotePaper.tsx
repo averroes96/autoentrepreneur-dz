@@ -84,6 +84,7 @@ interface BilingualCreditNotePaperProps {
     phone?: string | null;
   };
   defaultLanguage?: "fr" | "ar";
+  hideToolbar?: boolean;
 }
 
 export function BilingualCreditNotePaper({
@@ -91,8 +92,15 @@ export function BilingualCreditNotePaper({
   seller,
   client,
   defaultLanguage = "fr",
+  hideToolbar = false,
 }: BilingualCreditNotePaperProps) {
   const [lang, setLang] = useState<"fr" | "ar">(defaultLanguage);
+
+  React.useEffect(() => {
+    if (defaultLanguage) {
+      setLang(defaultLanguage);
+    }
+  }, [defaultLanguage]);
   const isArabic = lang === "ar";
   const ar = ARABIC_NOMENCLATURE;
 
@@ -126,7 +134,8 @@ export function BilingualCreditNotePaper({
   return (
     <div className="space-y-4">
       {/* Language Switcher & Print Toolbar */}
-      <div className="no-print flex items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+      {!hideToolbar && (
+        <div className="no-print flex items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-emerald-600" />
           <span className="text-xs font-bold text-slate-700">
@@ -167,6 +176,7 @@ export function BilingualCreditNotePaper({
           <span>{isArabic ? "طباعة الوثيقة (A4)" : "Imprimer le document (A4)"}</span>
         </button>
       </div>
+      )}
 
       {/* Credit Note Paper Card */}
       <div

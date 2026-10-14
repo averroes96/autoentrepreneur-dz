@@ -340,6 +340,59 @@ export async function updateProfileAction(formData: FormData) {
   return { success: true };
 }
 
+export async function saveDocumentDesignAction(data: {
+  brandColor: string;
+  templateStyle: string;
+  logoUrl?: string | null;
+  logoPosition?: string | null;
+  showStampSignature: boolean;
+  stampType?: string | null;
+  stampUrl?: string | null;
+  signatureUrl?: string | null;
+  bankName?: string | null;
+  bankRib?: string | null;
+  bankIban?: string | null;
+  bankBic?: string | null;
+  ccpNumber?: string | null;
+  ccpKey?: string | null;
+  paymentTerms?: string | null;
+  paymentInstructions?: string | null;
+}) {
+  const session = await getSession();
+  if (!session) return { error: "Non autorisé." };
+
+  await db.autoEntrepreneurProfile.update({
+    where: { tenantId: session.tenantId },
+    data: {
+      brandColor: data.brandColor,
+      templateStyle: data.templateStyle,
+      logoUrl: data.logoUrl,
+      logoPosition: data.logoPosition || "LEFT",
+      showStampSignature: data.showStampSignature,
+      stampType: data.stampType || "AUTO",
+      stampUrl: data.stampUrl,
+      signatureUrl: data.signatureUrl,
+      ...(data.bankName !== undefined && { bankName: data.bankName }),
+      ...(data.bankRib !== undefined && { bankRib: data.bankRib }),
+      ...(data.bankIban !== undefined && { bankIban: data.bankIban }),
+      ...(data.bankBic !== undefined && { bankBic: data.bankBic }),
+      ...(data.ccpNumber !== undefined && { ccpNumber: data.ccpNumber }),
+      ...(data.ccpKey !== undefined && { ccpKey: data.ccpKey }),
+      ...(data.paymentTerms !== undefined && { paymentTerms: data.paymentTerms }),
+      ...(data.paymentInstructions !== undefined && { paymentInstructions: data.paymentInstructions }),
+    },
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/profile");
+  revalidatePath("/settings/document-design");
+  revalidatePath("/invoices");
+  revalidatePath("/quotes");
+  revalidatePath("/credit-notes");
+
+  return { success: true };
+}
+
 export async function savePastTurnoverAction(formData: FormData) {
   const session = await getSession();
   if (!session) return { error: "Non autorisé." };

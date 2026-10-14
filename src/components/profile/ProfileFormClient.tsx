@@ -19,6 +19,9 @@ import {
   History,
   AlertCircle,
   Database,
+  Palette,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { calculateProfileCompletion } from "@/lib/profile";
 import { NifInputWithValidation } from "./NifInputWithValidation";
@@ -533,6 +536,30 @@ export function ProfileFormClient({
           initialPaymentInstructions={profile.paymentInstructions}
           sellerFullName={profile.fullName}
         />
+
+        {/* Banner Link to Interactive Design Studio (WYSIWYG) */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 p-6 text-white shadow-lg">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-xs">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Nouveau • Module 4</span>
+              </div>
+              <h3 className="text-lg font-bold">Studio de Personnalisation en Direct (WYSIWYG)</h3>
+              <p className="text-sm text-purple-100">
+                Visualisez vos factures, devis, avoirs et quittances en temps réel sur écran divisé, avec bascule Français/Arabe instantanée et synchronisation 100% fidèle avec les fichiers PDF téléchargés.
+              </p>
+            </div>
+            <Link
+              href="/settings/document-design"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white text-violet-900 font-bold text-sm shadow-md hover:bg-violet-50 transition-all shrink-0 cursor-pointer"
+            >
+              <Palette className="w-4 h-4 text-violet-600" />
+              <span>Ouvrir le Studio en Direct</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
 
         {/* Section 6: Identité Visuelle & Style des Documents (Phase 4 - Module 1) */}
         <DocumentDesignSection

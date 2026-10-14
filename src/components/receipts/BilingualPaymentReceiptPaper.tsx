@@ -78,6 +78,7 @@ export interface BilingualPaymentReceiptPaperProps {
     phone?: string | null;
   };
   defaultLanguage?: "fr" | "ar";
+  hideToolbar?: boolean;
 }
 
 export function BilingualPaymentReceiptPaper({
@@ -85,8 +86,15 @@ export function BilingualPaymentReceiptPaper({
   seller,
   client,
   defaultLanguage = "fr",
+  hideToolbar = false,
 }: BilingualPaymentReceiptPaperProps) {
   const [lang, setLang] = useState<"fr" | "ar">(defaultLanguage);
+
+  React.useEffect(() => {
+    if (defaultLanguage) {
+      setLang(defaultLanguage);
+    }
+  }, [defaultLanguage]);
   const isArabic = lang === "ar";
 
   const palette = getBrandPalette(seller.brandColor);
@@ -116,7 +124,8 @@ export function BilingualPaymentReceiptPaper({
   return (
     <div className="space-y-4">
       {/* Top Toolbar (Hidden on print) */}
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
+      {!hideToolbar && (
+        <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs">
         <div className="flex items-center gap-2">
           <Link
             href={`/invoices/${receipt.invoiceId}`}
@@ -176,6 +185,7 @@ export function BilingualPaymentReceiptPaper({
           </a>
         </div>
       </div>
+      )}
 
       {/* Printable Receipt Paper Container */}
       <div

@@ -19,6 +19,7 @@ import {
   Receipt,
   Briefcase,
   Database,
+  Palette,
 } from "lucide-react";
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { useI18n } from "@/lib/i18n/I18nContext";
@@ -69,7 +70,8 @@ export function Navbar({ user, tenantName }: NavbarProps) {
     pathname.startsWith("/credit-notes") ||
     pathname.startsWith("/tax-summary") ||
     pathname.startsWith("/accountant") ||
-    pathname.startsWith("/backup");
+    pathname.startsWith("/backup") ||
+    pathname.startsWith("/settings/document-design");
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -113,6 +115,14 @@ export function Navbar({ user, tenantName }: NavbarProps) {
       color: "text-rose-600 bg-rose-50",
     },
     {
+      href: "/settings/document-design",
+      label: t("designStudioNavLabel"),
+      desc: t("designStudioNavDesc"),
+      icon: Palette,
+      isActive: pathname.startsWith("/settings/document-design"),
+      color: "text-violet-600 bg-violet-50",
+    },
+    {
       href: "/tax-summary",
       label: t("taxSummary"),
       desc: t("taxSummaryDesc"),
@@ -139,7 +149,7 @@ export function Navbar({ user, tenantName }: NavbarProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <header className="no-print sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand & Nav */}

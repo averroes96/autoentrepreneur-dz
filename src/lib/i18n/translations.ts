@@ -726,6 +726,12 @@ export const translations = {
     vaultIntegrityVerified: "Intégrité SHA-256 validée avec succès",
     invalidVaultFile: "Fichier de sauvegarde invalide ou corrompu.",
     incorrectPassphrase: "Mot de passe de déchiffrement incorrect ou archive altérée.",
+
+    // Module 4: Live Interactive Template Customizer (WYSIWYG)
+    designStudioNavLabel: "Studio de Personnalisation",
+    designStudioNavDesc: "Éditeur visuel en direct (WYSIWYG) des factures, devis & reçus",
+    designStudioTitle: "Studio de Personnalisation Graphique & Légale",
+    designStudioSubtitle: "Personnalisez vos factures, devis, avoirs et quittances en temps réel avec synchronisation Vectorielle PDF & Impression Web.",
   },
 
   ar: {
@@ -1448,6 +1454,12 @@ export const translations = {
     vaultIntegrityVerified: "تم التحقق من سلامة البصمة الرقمية SHA-256 بنجاح",
     invalidVaultFile: "ملف النسخة الاحتياطية غير صالح أو تالف.",
     incorrectPassphrase: "كلمة المرور غير صحيحة أو الأرشيف تالف.",
+
+    // Module 4: Live Interactive Template Customizer (WYSIWYG)
+    designStudioNavLabel: "استوديو تخصيص النماذج",
+    designStudioNavDesc: "محرر مرئي مباشر وتفاعلي للفواتير وكشوف التقدير والوصولات",
+    designStudioTitle: "استوديو التخصيص البصري والقانوني للنماذج",
+    designStudioSubtitle: "خصص فواتيرك، عروضك، إشعارات الدائن والوصولات مباشرة. تطابق تام 100% بين المعاينة والطباعة وملفات PDF المتجهة.",
   },
 } as const;
 
