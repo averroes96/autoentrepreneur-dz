@@ -72,6 +72,7 @@ model AutoEntrepreneurProfile {
   templateStyle      String    @default("MODERN") // MODERN, CLASSIC, MINIMALIST, COMPACT
 
   // Payment & Banking Coordinates (Module 2)
+  showBankDetails     Boolean   @default(true)
   bankName            String?
   bankRib             String?   // 20-digit RIP (Algérie Poste / Bank)
   bankIban            String?   // IBAN for foreign currency payments (EUR, USD, etc.)
@@ -156,6 +157,8 @@ model Invoice {
   cancellationReason String?
   notes              String?
   showDetailedItems  Boolean   @default(false)
+  showBankDetails    Boolean   @default(true)
+  showStampSignature Boolean?
   sourceQuoteId      String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -205,6 +208,8 @@ model Quote {
   notes              String?
   vatExemptionNote   String
   showDetailedItems  Boolean         @default(false)
+  showBankDetails    Boolean         @default(true)
+  showStampSignature Boolean?
   sellerSnapshot     String?
   clientSnapshot     String?
   sentAt             DateTime?
