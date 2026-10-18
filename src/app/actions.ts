@@ -17,6 +17,7 @@ import {
   toggleInvoicePayment,
   cancelInvoice,
   deleteDraftInvoice,
+  deleteInvoicePermanently,
 } from "@/lib/invoicing";
 import {
   createDraftQuote,
@@ -702,15 +703,22 @@ export async function deleteInvoiceAction(invoiceId: string) {
   if (!session) return { error: "Non autorisé." };
 
   try {
-    await deleteDraftInvoice(session.tenantId, invoiceId);
+    await deleteInvoicePermanently(session.tenantId, invoiceId);
     revalidatePath("/", "layout");
     revalidatePath("/invoices");
     revalidatePath("/dashboard");
+    revalidatePath("/tax-summary");
+    revalidatePath("/credit-notes");
     return { success: true };
   } catch (err: any) {
     return { error: err.message };
   }
 }
+
+export async function deleteInvoicePermanentlyAction(invoiceId: string) {
+  return deleteInvoiceAction(invoiceId);
+}
+
 
 export async function emailInvoiceAction(invoiceId: string, recipientEmail?: string) {
   const session = await getSession();

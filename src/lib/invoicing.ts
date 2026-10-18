@@ -453,20 +453,58 @@ export async function cancelInvoice(
 }
 
 /**
- * Deletes a draft invoice.
- * Note: Only drafts can be deleted; issued invoices are permanent and can only be cancelled.
+ * Deletes an invoice permanently regardless of status (DRAFT, ISSUED, CANCELLED).
+ * Cascades line items and linked credit notes (with their line items), and restores
+ * any converted source quote back to ACCEPTED status.
+ */
+export async function deleteInvoicePermanently(tenantId: string, invoiceId: string) {
+  return db.$transaction(async (tx) => {
+    const invoice = await tx.invoice.findFirst({
+      where: { id: invoiceId, tenantId },
+      include: {
+        creditNotes: {
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!invoice) throw new Error("Facture introuvable.");
+
+    // Delete associated credit notes and their line items if any exist
+    if (invoice.creditNotes && invoice.creditNotes.length > 0) {
+      const creditNoteIds = invoice.creditNotes.map((cn) => cn.id);
+      await tx.creditNoteLineItem.deleteMany({
+        where: { creditNoteId: { in: creditNoteIds } },
+      });
+      await tx.creditNote.deleteMany({
+        where: { id: { in: creditNoteIds } },
+      });
+    }
+
+    // Delete invoice line items
+    await tx.invoiceLineItem.deleteMany({
+      where: { invoiceId },
+    });
+
+    // If invoice originated from a quote that is CONVERTED, restore quote status to ACCEPTED
+    if (invoice.sourceQuoteId) {
+      await tx.quote.updateMany({
+        where: { id: invoice.sourceQuoteId, status: "CONVERTED" },
+        data: { status: "ACCEPTED" },
+      });
+    }
+
+    // Finally delete the invoice record permanently
+    return tx.invoice.delete({
+      where: { id: invoiceId },
+    });
+  }, { maxWait: 15000, timeout: 30000 });
+}
+
+/**
+ * Legacy wrapper: deletes an invoice permanently.
  */
 export async function deleteDraftInvoice(tenantId: string, invoiceId: string) {
-  const invoice = await db.invoice.findFirst({
-    where: { id: invoiceId, tenantId },
-  });
-
-  if (!invoice) throw new Error("Facture introuvable.");
-  if (invoice.status !== "DRAFT") {
-    throw new Error("Seules les factures en brouillon peuvent être supprimées. Pour une facture émise, utilisez l'annulation.");
-  }
-
-  return db.invoice.delete({
-    where: { id: invoiceId },
-  });
+  return deleteInvoicePermanently(tenantId, invoiceId);
 }
+

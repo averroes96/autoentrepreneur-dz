@@ -341,20 +341,43 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
             <Ban className="w-3.5 h-3.5" />
             <span>{t("btnCancel")}</span>
           </button>
+
+          {/* Delete Permanently Action */}
+          <button
+            type="button"
+            onClick={() => deleteModalRef.current?.showModal()}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
+            title={t("btnDeletePermanently")}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{t("btnDeletePermanently")}</span>
+          </button>
         </>
       )}
 
       {/* If CANCELLED */}
       {invoice.status === "CANCELLED" && (
-        <a
-          href={`/api/invoices/${invoice.id}/pdf`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>{t("btnDownloadArchivePdf")}</span>
-        </a>
+        <>
+          <a
+            href={`/api/invoices/${invoice.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium shadow-2xs transition"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{t("btnDownloadArchivePdf")}</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={() => deleteModalRef.current?.showModal()}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs font-medium transition cursor-pointer"
+            title={t("btnDeletePermanently")}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{t("btnDeletePermanently")}</span>
+          </button>
+        </>
       )}
 
       {/* Modal: Issue Invoice Confirmation */}
@@ -466,7 +489,7 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
         </div>
       </dialog>
 
-      {/* Modal: Delete Draft */}
+      {/* Modal: Delete Draft / Delete Permanently */}
       <dialog
         ref={deleteModalRef}
         className="rounded-2xl shadow-2xl p-0 backdrop:bg-slate-900/50 backdrop:backdrop-blur-xs max-w-sm w-full m-auto border border-slate-200"
@@ -474,10 +497,16 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
         <div className="bg-white p-6">
           <div className="flex items-center gap-3 text-rose-700 mb-3">
             <Trash2 className="w-5 h-5 text-rose-600 shrink-0" />
-            <h2 className="text-base font-bold text-slate-900">{t("deleteDraftModalTitle")}</h2>
+            <h2 className="text-base font-bold text-slate-900">
+              {invoice.status === "DRAFT"
+                ? t("deleteDraftModalTitle")
+                : t("deleteInvoicePermanentlyModalTitle")}
+            </h2>
           </div>
-          <p className="text-xs text-slate-600 mb-6">
-            {t("deleteDraftQuestion")}
+          <p className="text-xs text-slate-600 mb-6 leading-relaxed">
+            {invoice.status === "DRAFT"
+              ? t("deleteDraftQuestion")
+              : t("deleteInvoicePermanentlyWarning", { number: invoice.invoiceNumber ? `« ${invoice.invoiceNumber} »` : "" })}
           </p>
           <div className="flex items-center justify-end gap-3">
             <button
@@ -493,7 +522,11 @@ export function InvoiceDetailControls({ invoice }: { invoice: InvoiceData }) {
               onClick={handleDeleteConfirm}
               className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs disabled:opacity-50 transition cursor-pointer"
             >
-              {loading ? t("btnDeleting") : t("btnDeleteDraft")}
+              {loading
+                ? t("btnDeleting")
+                : invoice.status === "DRAFT"
+                ? t("btnDeleteDraft")
+                : t("btnConfirmPermanentDelete")}
             </button>
           </div>
         </div>
